@@ -4,10 +4,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class Usuario extends Authenticatable
 {
-    use Notifiable;
+    use Notifiable, HasRoles; // añadimos hasRoles para que spatie maneje los roles de usuario
     protected $table = 'usuario';
     protected $primaryKey = 'id_usuario';
     public $timestamps = false;

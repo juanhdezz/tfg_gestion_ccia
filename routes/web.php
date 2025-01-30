@@ -15,16 +15,15 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+// Rutas para usuarios autenticados que ademas sean administradores
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin', function () {
         return "Bienvenido admin" ; // Vista del panel de administración
     })->name('admin');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });
-
 require __DIR__.'/auth.php';

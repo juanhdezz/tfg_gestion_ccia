@@ -29,6 +29,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/gestion-usuarios/{id}/edit',[UsuarioController::class, 'edit'])->name('usuarios.edit');
     Route::put('/gestion-usuarios/{id}',[UsuarioController::class, 'update'])->name('usuarios.update');
     Route::delete('/gestion-usuarios/{id}',[UsuarioController::class, 'destroy'])->name('usuarios.destroy');
+    Route::get('/exportar-usuarios', [UsuarioController::class, 'export'])->name('usuarios.export');
 });
 
 

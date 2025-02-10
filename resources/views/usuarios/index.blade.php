@@ -2,7 +2,10 @@
 <x-app-layout>
     <div class="container mx-auto p-4">
         <div class="flex justify-end mb-4">
-            <a href="{{ route('usuarios.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            <a href="{{ route('usuarios.export') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Exportar Usuarios
+            </a>
+            <a href="{{ route('usuarios.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  ml-2">
                 Añadir Usuario
             </a>
         </div>

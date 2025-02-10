@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\AsignaturaController;
+
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -30,6 +32,19 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/gestion-usuarios/{id}',[UsuarioController::class, 'update'])->name('usuarios.update');
     Route::delete('/gestion-usuarios/{id}',[UsuarioController::class, 'destroy'])->name('usuarios.destroy');
     Route::get('/exportar-usuarios', [UsuarioController::class, 'export'])->name('usuarios.export');
+
+    Route::get('/gestion-asignaturas/{id}/edit',[AsignaturaController::class, 'edit'])->name('asignaturas.edit');
+    Route::put('/gestion-asignaturas/{id}',[AsignaturaController::class, 'update'])->name('asignaturas.update');
+    Route::get('/gestion-asignaturas/create',[AsignaturaController::class, 'create'])->name('asignaturas.create');
+    Route::get('/gestion-asignaturas',[AsignaturaController::class, 'index'])->name('asignaturas.index');
+    Route::get('/gestion-asignaturas/{id}',[AsignaturaController::class, 'show'])->name('asignaturas.show');
+    
+    Route::post('/gestion-asignaturas',[AsignaturaController::class, 'store'])->name('asignaturas.store');
+    
+    Route::delete('/gestion-asignaturas/{id}',[AsignaturaController::class, 'destroy'])->name('asignaturas.destroy');
+
+
+
 });
 
 

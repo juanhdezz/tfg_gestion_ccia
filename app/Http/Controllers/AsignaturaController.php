@@ -9,13 +9,15 @@ class AsignaturaController extends Controller
 {
     public function index()
     {
-        $asignaturas = asignatura::all();
+        // Cargar las asignaturas con su titulacion asociada
+        $asignaturas = Asignatura::with('titulacion')->get();
         return view('asignaturas.index', compact('asignaturas'));
     }
 
     public function show($id)
     {
-        $asignatura = Asignatura::find($id);
+        // Cargar la asignatura con su titulacion
+        $asignatura = Asignatura::with('titulacion')->find($id);
         if (is_null($asignatura)) {
             return redirect()->route('asignaturas.index')->with('error', 'Asignatura not found');
         }
@@ -35,7 +37,7 @@ class AsignaturaController extends Controller
 
     public function edit($id)
     {
-        $asignatura = Asignatura::find($id);
+        $asignatura = Asignatura::with('titulacion')->find($id);
         if (is_null($asignatura)) {
             return redirect()->route('asignaturas.index')->with('error', 'Asignatura not found');
         }
@@ -61,5 +63,4 @@ class AsignaturaController extends Controller
         $asignatura->delete();
         return redirect()->route('asignaturas.index')->with('success', 'Asignatura deleted successfully');
     }
-
 }

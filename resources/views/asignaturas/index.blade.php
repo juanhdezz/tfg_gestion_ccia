@@ -1,6 +1,7 @@
 <!-- filepath: /c:/xampp/htdocs/laravel/tfg_gestion_ccia/resources/views/asignaturas/index.blade.php -->
 <x-app-layout>
     <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Gestión de Asignaturas</h1>
         <div class="flex justify-end mb-4">
             {{-- <a href="{{ route('asignaturas.export') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Exportar Asignaturas
@@ -16,7 +17,7 @@
                         <th scope="col" class="px-6 py-3">Estado</th>
                         <th scope="col" class="px-6 py-3">ID Asignatura</th>
                         <th scope="col" class="px-6 py-3">Nombre Asignatura</th>
-                        <th scope="col" class="px-6 py-3">ID Titulación</th>
+                        <th scope="col" class="px-6 py-3">Titulación</th>
                         <th scope="col" class="px-6 py-3">Curso</th>
                         <th scope="col" class="px-6 py-3">Cuatrimestre</th>
                         <th scope="col" class="px-6 py-3">Créditos Totales</th>
@@ -35,13 +36,13 @@
                             {{ $asignatura->id_asignatura }}
                         </td>
                         <td class="px-6 py-4">
-                            {{ $asignatura->nombre_asignatura }}
+                            <strong> {{ $asignatura->nombre_asignatura }} </strong>
                         </td>
                         <td class="px-6 py-4">
-                            {{ $asignatura->id_titulacion }}
+                            {{ $asignatura->titulacion->nombre_titulacion }}
                         </td>
                         <td class="px-6 py-4">
-                            {{ $asignatura->curso }}
+                            {{ $asignatura->curso }}º
                         </td>
                         <td class="px-6 py-4">
                             {{ $asignatura->cuatrimestre }}

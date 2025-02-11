@@ -10,8 +10,8 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- ID Titulación -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">ID Titulación</h3>
-                    <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->id_titulacion }}</p>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Titulación</h3>
+                    <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->titulacion->nombre_titulacion }}</p>
                 </div>
 
                 <!-- Especialidad -->
@@ -29,7 +29,7 @@
                 <!-- Nombre Asignatura -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Nombre Asignatura</h3>
-                    <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->nombre_asignatura }}</p>
+                    <p class="mt-1 text-gray-900 dark:text-white"><strong>{{ $asignatura->nombre_asignatura }}</strong></p>
                 </div>
 
                 <!-- Siglas Asignatura -->

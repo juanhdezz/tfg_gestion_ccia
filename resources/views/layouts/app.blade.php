@@ -7,6 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Gestión Interna</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -46,9 +47,9 @@
     
                         <!-- User menu -->
                         <div class="relative">
-                            {{ Auth::user()->nombre }}
                             <button onclick="toggleDropdown()" class="focus:outline-none">
-                                <img src="{{ Auth::user()->foto }}" class="w-10 h-10 rounded-full border" alt="Foto de perfil">
+                                {{-- <img src="{{ Auth::user()->foto }}" class="w-10 h-10 rounded-full border" alt="Foto de perfil"> --}}
+                                Usuario : {{ Auth::user()->nombre }}
                             </button>
                             <!-- Menú desplegable -->
                             <div id="profileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg hidden">

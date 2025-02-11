@@ -6,6 +6,7 @@ use App\Models\Usuario;
 use Illuminate\Http\Request;
 use App\Exports\ListaUsuariosExport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Despacho;
 
 class UsuarioController extends Controller
 {
@@ -26,7 +27,11 @@ class UsuarioController extends Controller
 
     public function create()
     {
-        return view('usuarios.create');
+        // Obtener todos los despachos
+    $despachos = Despacho::all();
+
+    // Pasar los despachos a la vista
+    return view('usuarios.create', compact('despachos'));
     }
 
     public function store(Request $request)
@@ -38,10 +43,11 @@ class UsuarioController extends Controller
     public function edit($id)
     {
         $usuario = Usuario::find($id);
+        $despachos = Despacho::all();
         if (is_null($usuario)) {
             return redirect()->route('usuarios.index')->with('error', 'Usuario not found');
         }
-        return view('usuarios.edit', compact('usuario'));
+        return view('usuarios.edit', compact('usuario'),compact('despachos'));
     }
 
     public function update(Request $request, $id)

@@ -39,7 +39,7 @@
                             {{ $usuario->tipo_usuario }}
                         </td>
                         <td class="px-6 py-4">
-                            {{ $usuario->id_despacho }}
+                            {{ $usuario->despacho ? $usuario->despacho->nombre_despacho : 'Sin despacho' }}
                         </td>
                         <td class="px-6 py-4">
                             {{ $usuario->miembro_actual }}

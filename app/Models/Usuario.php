@@ -52,4 +52,9 @@ class Usuario extends Authenticatable
     {
         return bcrypt($this->passwd);
     }
+
+    public function despacho()
+{
+    return $this->belongsTo(Despacho::class, 'id_despacho');
+}
 }

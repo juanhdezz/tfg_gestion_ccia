@@ -38,6 +38,15 @@
                     <input type="text" id="id_despacho" name="id_despacho" value="{{ $usuario->id_despacho }}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                 </div> --}}
                 <div class="mb-4">
+                    <label for="id_despacho" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Despacho:</label>
+                    <select id="id_despacho" name="id_despacho" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                        <option value="">Seleccionar Despacho</option>
+                        @foreach ($despachos as $despacho)
+                            <option value="{{ $despacho->id_despacho }}">{{ $despacho->nombre_despacho }} ({{ $despacho->siglas_despacho }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-4">
                     <label for="telefono_despacho" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono Despacho:</label>
                     <input type="text" id="telefono_despacho" name="telefono_despacho" value="{{ $usuario->telefono_despacho }}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                 </div>

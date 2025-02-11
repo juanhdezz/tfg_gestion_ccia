@@ -38,4 +38,9 @@ class Asignatura extends Model
         'estado'  
     ];
 
+    public function titulacion()
+    {
+        return $this->belongsTo(Titulacion::class, 'id_titulacion', 'id_titulacion');
+    }
+
 }

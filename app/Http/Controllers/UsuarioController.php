@@ -35,10 +35,17 @@ class UsuarioController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $usuario = Usuario::create($request->all());
-        return redirect()->route('usuarios.index')->with('success', 'Usuario created successfully');
-    }
+{    
+
+    // Encriptar la contraseña
+    $data = $request->all();
+    $data['passwd'] = bcrypt($request->passwd);
+
+    // Crear el usuario
+    $usuario = Usuario::create($data);
+
+    return redirect()->route('usuarios.index')->with('success', 'Usuario creado exitosamente');
+}
 
     public function edit($id)
     {
@@ -56,7 +63,13 @@ class UsuarioController extends Controller
         if (is_null($usuario)) {
             return redirect()->route('usuarios.index')->with('error', 'Usuario not found');
         }
+        
         $usuario->update($request->all());
+        if ($request->filled('passwd')) {
+            $usuario->update([
+                'passwd' => bcrypt($request->passwd),
+            ]);
+        }
         return redirect()->route('usuarios.index')->with('success', 'Usuario updated successfully');
     }
 

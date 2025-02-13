@@ -50,7 +50,8 @@ class Usuario extends Authenticatable
 
     public function getAuthPassword()
     {
-        return bcrypt($this->passwd);
+        //return bcrypt($this->passwd); // encriptamos la contraseña ya que en la base de datos esta guardada sin encriptar
+        return $this->passwd;
     }
 
     public function despacho()

@@ -73,6 +73,22 @@
                     </select>
                 </div>
 
+                <!-- Selección de Titulación -->
+            <div>
+                <label for="id_titulacion" class="block text-sm font-medium text-gray-700">Titulación</label>
+                <select id="id_titulacion" name="id_titulacion"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm">
+                    <option value="">Seleccione una titulación</option>
+                    @foreach($titulaciones as $titulacion)
+                        <option value="{{ $titulacion->id_titulacion }}">{{ $titulacion->nombre_titulacion }}</option>
+                    @endforeach
+                </select>
+                @error('id_titulacion')
+                    <span class="text-red-600 text-sm">{{ $message }}</span>
+                @enderror
+            </div>
+
+
                 <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-700">Crear Asignatura</button>
             </form>
         </div>

@@ -23,8 +23,15 @@ class ProfileController extends Controller
             'nombre_abreviado' => 'nullable|string|max:255',
             'correo' => 'required|email|max:255|unique:usuario,correo,' . $user->id_usuario . ',id_usuario',
             'telefono' => 'nullable|string|max:20',
-            'foto' => 'nullable|url|max:255'
+            'foto' => 'nullable|url|max:255',
+            'passwd' => 'nullable|string',
         ]);
+
+        if ($validatedData['passwd']) {
+            $validatedData['passwd'] = bcrypt($validatedData['passwd']);
+        } else {
+            unset($validatedData['passwd']);
+        }
 
         $user->update($validatedData);
 

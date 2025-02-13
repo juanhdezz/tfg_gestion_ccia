@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asignatura;
 use Illuminate\Http\Request;
+use App\Models\Titulacion;
 
 class AsignaturaController extends Controller
 {
@@ -25,9 +26,11 @@ class AsignaturaController extends Controller
     }
 
     public function create()
-    {
-        return view('asignaturas.create');
-    }
+{
+    $titulaciones = Titulacion::all(); // Obtener todas las titulaciones
+    return view('asignaturas.create', compact('titulaciones'));
+}
+
 
     public function store(Request $request)
     {

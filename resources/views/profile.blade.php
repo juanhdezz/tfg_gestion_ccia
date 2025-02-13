@@ -74,36 +74,22 @@
                 <img src="{{ Auth::user()->foto ?? 'https://via.placeholder.com/100' }}" class="mt-4 w-20 h-20 rounded-full border">
             </div>
 
-            <!-- Contraseña Actual -->
+            {{-- <div class="mb-4">
+                <label for="passwd" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña:</label>
+                <input type="password" id="passwd" name="passwd" value="{{ $usuario->passwd }}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+            </div> --}}
+
+            {{-- nueva contraseña --}}
             <div>
-                <label for="current_password" class="block text-sm font-medium text-gray-700">Contraseña Actual</label>
-                <input type="password" id="current_password" name="current_password" 
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm">
-                @error('current_password')
+                <label for="passwd" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
+                <input type="password" id="passwd" name="passwd" class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm"
+                value="{{ old('passwd') }}">
+                
+                @error('passwd')
                     <span class="text-red-600 text-sm">{{ $message }}</span>
                 @enderror
             </div>
-
-            <!-- Nueva Contraseña -->
-            <div>
-                <label for="new_password" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
-                <input type="password" id="new_password" name="new_password" 
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm">
-                @error('new_password')
-                    <span class="text-red-600 text-sm">{{ $message }}</span>
-                @enderror
-            </div>
-
-            <!-- Confirmar Nueva Contraseña -->
-            <div>
-                <label for="new_password_confirmation" class="block text-sm font-medium text-gray-700">Confirmar Nueva Contraseña</label>
-                <input type="password" id="new_password_confirmation" name="new_password_confirmation" 
-                       class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm">
-                @error('new_password_confirmation')
-                    <span class="text-red-600 text-sm">{{ $message }}</span>
-                @enderror
-            </div>
-
+            
             <button type="submit" 
                     class="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-indigo-700 transition">
                 Guardar Cambios

@@ -33,6 +33,13 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::delete('/gestion-usuarios/{id}',[UsuarioController::class, 'destroy'])->name('usuarios.destroy');
     Route::get('/exportar-usuarios', [UsuarioController::class, 'export'])->name('usuarios.export');
 
+    Route::get('/gestion-asignaturas/grupos',[AsignaturaController::class, 'grupos']
+    )->name('asignaturas.grupos');
+    
+    //Ruta para actualizar los grupos de una asignatura mediante la vista de grupos
+    Route::patch('/gestion-asignaturas/grupos/{asignatura}', [AsignaturaController::class, 'updateGrupos'])
+    ->name('asignaturas.updateGrupos');
+
     Route::get('/gestion-asignaturas/{id}/edit',[AsignaturaController::class, 'edit'])->name('asignaturas.edit');
     Route::put('/gestion-asignaturas/{id}',[AsignaturaController::class, 'update'])->name('asignaturas.update');
     Route::get('/gestion-asignaturas/create',[AsignaturaController::class, 'create'])->name('asignaturas.create');

@@ -6,6 +6,9 @@
             {{-- <a href="{{ route('asignaturas.export') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Exportar Asignaturas
             </a> --}}
+            <a href="{{ route('asignaturas.grupos') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  ml-2">
+                Gestionar Grupos
+            </a>
             <a href="{{ route('asignaturas.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  ml-2">
                 Añadir Asignatura
             </a>
@@ -59,16 +62,16 @@
                         <td class="px-6 py-4">
                             <div class="flex space-x-2">
                                 <a href="{{ route('asignaturas.show', $asignatura->id_asignatura) }}" class="font-medium text-green-600 dark:text-green-500 hover:underline">
-                                    Ver 
+                                    Ver &#128270;
                                 </a>
                                 <a href="{{ route('asignaturas.edit', $asignatura->id_asignatura) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                    Editar
+                                    Editar &#9999;
                                 </a>
                                 <form action="{{ route('asignaturas.destroy', $asignatura->id_asignatura) }}" method="POST" class="inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="font-medium text-red-600 dark:text-red-500 hover:underline">
-                                        Eliminar
+                                        Eliminar &#10060;
                                     </button>
                                 </form>
                             </div>

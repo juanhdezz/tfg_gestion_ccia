@@ -51,16 +51,16 @@
                         <td class="px-6 py-4">
                             <div class="flex space-x-2">
                                 <a href="{{ route('usuarios.show', $usuario->id_usuario) }}" class="font-medium text-green-600 dark:text-green-500 hover:underline">
-                                    Ver
+                                    Ver &#128270;
                                 </a>
                                 <a href="{{ route('usuarios.edit', $usuario->id_usuario) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                    Editar
+                                    Editar &#9999;
                                 </a>
                                 <form action="{{ route('usuarios.destroy', $usuario->id_usuario) }}" method="POST" class="inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="font-medium text-red-600 dark:text-red-500 hover:underline">
-                                        Eliminar
+                                        Eliminar &#10060;
                                     </button>
                                 </form>
                             </div>

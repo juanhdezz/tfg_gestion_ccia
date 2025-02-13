@@ -48,11 +48,11 @@
                 </div>
                 <div class="mb-4">
                     <label for="telefono_despacho" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono Despacho:</label>
-                    <input type="text" id="telefono_despacho" name="telefono_despacho" value="{{ $usuario->telefono_despacho }}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                    <input type="text" id="telefono_despacho" name="telefono_despacho" value="{{ $usuario->telefono_despacho }}"  class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                 </div>
                 <div class="mb-4">
                     <label for="telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono:</label>
-                    <input type="text" id="telefono" name="telefono" value="{{ $usuario->telefono }}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                    <input type="text" id="telefono" name="telefono" value="{{ $usuario->telefono }}"  class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                 </div>
                 <div class="mb-4">
                     <label for="ip_asociada" class="block text-sm font-medium text-gray-700 dark:text-gray-300">IP Asociada:</label>
@@ -115,11 +115,12 @@
                     <select id="tipo_usuario" name="tipo_usuario" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                         <option value="Administrador" {{ $usuario->tipo_usuario == 'Administrador' ? 'selected' : '' }}>Administrador</option>
                         <option value="Profesor" {{ $usuario->tipo_usuario == 'Profesor' ? 'selected' : '' }}>Profesor</option>
-                        <option value="Becario" {{ $usuario->tipo_usuario == 'Becario' ? 'selected' : '' }}>Becario</option>
+                        <option value="Contratado" {{ $usuario->tipo_usuario == 'Contratado' ? 'selected' : '' }}>Contratado</option>
                         <option value="Administrativo" {{ $usuario->tipo_usuario == 'Administrativo' ? 'selected' : '' }}>Administrativo</option>
                         <option value="Invitado" {{ $usuario->tipo_usuario == 'Invitado' ? 'selected' : '' }}>Invitado</option>
                         <option value="InvitadoP" {{ $usuario->tipo_usuario == 'InvitadoP' ? 'selected' : '' }}>InvitadoP</option>
                         <option value="NoAccess" {{ $usuario->tipo_usuario == 'NoAccess' ? 'selected' : '' }}>NoAccess</option>
+                        <option value="Estudiante" {{ $usuario->tipo_usuario == 'Estudiante' ? 'selected' : '' }}>Estudiante</option>
                         <option value="Profesor Externo" {{ $usuario->tipo_usuario == 'Profesor Externo' ? 'selected' : '' }}>Profesor Externo</option>
                     </select>
                 </div>

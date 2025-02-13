@@ -67,8 +67,9 @@
                 <div class="mb-4">
                     <label for="estado" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</label>
                     <select id="estado" name="estado" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
-                        <option value="Activo">Activo</option>
-                        <option value="Inactivo">Inactivo</option>
+                        <option value="Activa">Activa</option>
+                        <option value="A extinguir">A extinguir</option>
+                        <option value="Extinta">Extinta</option>
                     </select>
                 </div>
 

@@ -1,6 +1,7 @@
 <!-- filepath: /c:/xampp/htdocs/laravel/tfg_gestion_ccia/resources/views/usuarios/index.blade.php -->
 <x-app-layout>
     <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Gestión de Usuarios</h1>
         <div class="flex justify-end mb-4">
             <a href="{{ route('usuarios.export') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Exportar Usuarios
@@ -49,6 +50,9 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex space-x-2">
+                                <a href="{{ route('usuarios.show', $usuario->id_usuario) }}" class="font-medium text-green-600 dark:text-green-500 hover:underline">
+                                    Ver
+                                </a>
                                 <a href="{{ route('usuarios.edit', $usuario->id_usuario) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
                                     Editar
                                 </a>

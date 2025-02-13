@@ -18,8 +18,9 @@
                 <div class="mb-4">
                     <label for="estado" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Estado:</label>
                     <select id="estado" name="estado" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
-                        <option value="Activo" {{ $asignatura->estado == 'Activo' ? 'selected' : '' }}>Activo</option>
-                        <option value="Inactivo" {{ $asignatura->estado == 'Inactivo' ? 'selected' : '' }}>Inactivo</option>
+                        <option value="Activa" {{ $asignatura->estado == 'Activa' ? 'selected' : '' }}>Activa</option>
+                        <option value="A extinguir" {{ $asignatura->estado == 'A extinguir' ? 'selected' : '' }}>A extinguir</option>
+                        <option value="Extinta" {{ $asignatura->estado == 'Extinta' ? 'selected' : '' }}>Extinta</option>
                     </select>
                 </div>
 

@@ -105,10 +105,24 @@
                         <option value="No">No</option>
                     </select>
                 </div>
-                <div class="mb-4">
+                {{-- <div class="mb-4">
                     <label for="clave_acceso" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Clave de Acceso:</label>
                     <input type="text" id="clave_acceso" name="clave_acceso" class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
-                </div>
+                </div> --}}
+                <div class="mb-4">
+                    <label for="tipo_usuario" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo Usuario:</label>
+                    <select id="tipo_usuario" name="tipo_usuario" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                        <option value="Administrador">Administrador</option>
+                        <option value="Profesor">Profesor</option>
+                        <option value="Estudiante">Estudiante</option>
+                        <option value="Contratado">Contratado</option>
+                        <option value="Administrativo">Administrativo</option>
+                        <option value="Invitado">Invitado</option>
+                        <option value="InvitadoP">InvitadoP</option>
+                        <option value="NoAccess">NoAccess</option>
+                        <option value="Profesor Externo">Profesor Externo</option>
+
+                    </select>
                 <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-700">Crear Usuario</button>
             </form>
         </div>

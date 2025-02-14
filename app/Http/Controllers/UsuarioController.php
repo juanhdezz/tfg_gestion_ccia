@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Exports\ListaUsuariosExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Despacho;
+use Spatie\Permission\Models\Role;
+
 
 class UsuarioController extends Controller
 {
@@ -29,9 +31,10 @@ class UsuarioController extends Controller
     {
         // Obtener todos los despachos
     $despachos = Despacho::all();
+    $roles = Role::all(); // Obtener todos los roles
 
     // Pasar los despachos a la vista
-    return view('usuarios.create', compact('despachos'));
+    return view('usuarios.create', compact('despachos'),compact('roles'));
     }
 
     public function store(Request $request)
@@ -43,6 +46,7 @@ class UsuarioController extends Controller
 
     // Crear el usuario
     $usuario = Usuario::create($data);
+    $usuario->syncRoles($request->roles); // Asignar los roles al usuario
 
     return redirect()->route('usuarios.index')->with('success', 'Usuario creado exitosamente');
 }
@@ -51,10 +55,11 @@ class UsuarioController extends Controller
     {
         $usuario = Usuario::find($id);
         $despachos = Despacho::all();
+        $roles = Role::all(); // Obtener todos los roles disponibles
         if (is_null($usuario)) {
             return redirect()->route('usuarios.index')->with('error', 'Usuario not found');
         }
-        return view('usuarios.edit', compact('usuario'),compact('despachos'));
+        return view('usuarios.edit', compact('usuario', 'despachos', 'roles'));
     }
 
     public function update(Request $request, $id)
@@ -70,6 +75,13 @@ class UsuarioController extends Controller
                 'passwd' => bcrypt($request->passwd),
             ]);
         }
+
+        // Asignar los roles seleccionados
+    if ($request->has('roles')) {
+        $usuario->syncRoles($request->roles); // Sincronizar roles (remueve los anteriores y asigna los nuevos)
+    } else {
+        $usuario->syncRoles([]); // Si no se selecciona ninguno, se eliminan los roles existentes
+    }
         return redirect()->route('usuarios.index')->with('success', 'Usuario updated successfully');
     }
 

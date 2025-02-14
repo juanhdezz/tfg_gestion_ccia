@@ -6,10 +6,10 @@
             {{-- <a href="{{ route('asignaturas.export') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Exportar Asignaturas
             </a> --}}
-            <a href="{{ route('asignaturas.grupos') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  ml-2">
+            <a href="{{ route('asignaturas.grupos') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
                 Gestionar Grupos
             </a>
-            <a href="{{ route('asignaturas.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  ml-2">
+            <a href="{{ route('asignaturas.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
                 Añadir Asignatura
             </a>
         </div>
@@ -31,7 +31,7 @@
                 </thead>
                 <tbody>
                     @foreach ($asignaturas as $asignatura)
-                    <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200">
+                    <tr class="border-b dark:border-gray-700 border-gray-200 {{ $asignatura->estado == 'Extinta' ? 'bg-gray-900 dark:bg-gray-800' : 'odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800' }}">
                         <td class="px-6 py-4">
                             {{ $asignatura->estado }}
                         </td>

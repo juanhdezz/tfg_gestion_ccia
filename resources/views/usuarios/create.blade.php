@@ -29,6 +29,17 @@
                     <input type="email" id="correo" name="correo" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                 </div>
                 <div class="mb-4">
+                    <label for="roles" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Asignar Rol:</label>
+                    <select id="roles" name="roles[]" multiple required
+                        class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                        @foreach ($roles as $role)
+                            <option value="{{ $role->name }}">{{ ucfirst($role->name) }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Mantén presionada la tecla Ctrl (Cmd en Mac) para seleccionar múltiples roles.</p>
+                </div>
+                
+                <div class="mb-4">
                     <label for="foto" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Foto:</label>
                     <input type="text" id="foto" name="foto" class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                 </div>

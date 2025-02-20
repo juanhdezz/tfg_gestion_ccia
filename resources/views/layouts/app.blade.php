@@ -8,6 +8,8 @@
     <title>Gestión Interna</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -158,6 +160,11 @@
         function toggleDropdown() {
             document.getElementById("profileDropdown").classList.toggle("hidden");
         }
+
+
+        @if(session('swal'))
+        Swal.fire({!! json_encode(session('swal')) !!});
+        @endif
     </script>
 
     @stack('scripts')

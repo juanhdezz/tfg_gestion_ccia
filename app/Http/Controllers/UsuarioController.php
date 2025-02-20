@@ -47,6 +47,11 @@ class UsuarioController extends Controller
     // Crear el usuario
     $usuario = Usuario::create($data);
     $usuario->syncRoles($request->roles); // Asignar los roles al usuario
+    session()->flash('swal', [
+        'icon' => 'success',
+        'title' => 'Usuario añadido',
+        'text' => 'El usuario ha sido añadido exitosamente' 
+    ]);
 
     return redirect()->route('usuarios.index')->with('success', 'Usuario creado exitosamente');
 }
@@ -82,6 +87,11 @@ class UsuarioController extends Controller
     } else {
         $usuario->syncRoles([]); // Si no se selecciona ninguno, se eliminan los roles existentes
     }
+    session()->flash('swal', [
+        'icon' => 'success',
+        'title' => 'Usuario actualizado',
+        'text' => 'El usuario ha sido actualizado exitosamente' 
+    ]);
         return redirect()->route('usuarios.index')->with('success', 'Usuario updated successfully');
     }
 
@@ -92,6 +102,11 @@ class UsuarioController extends Controller
             return redirect()->route('usuarios.index')->with('error', 'Usuario not found');
         }
         $usuario->delete();
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Usuario eliminado',
+            'text' => 'El usuario ha sido eliminado exitosamente' 
+        ]);
         return redirect()->route('usuarios.index')->with('success', 'Usuario deleted successfully');
     }
 

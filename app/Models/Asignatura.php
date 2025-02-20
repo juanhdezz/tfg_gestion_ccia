@@ -12,6 +12,7 @@ class Asignatura extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'id_asignatura',
         'id_titulacion', 
         'especialidad', 
         'id_coordinador', 

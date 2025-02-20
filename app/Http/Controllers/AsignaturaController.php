@@ -35,6 +35,11 @@ class AsignaturaController extends Controller
     public function store(Request $request)
     {
         $asignatura = Asignatura::create($request->all());
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Asignatura eliminada',
+            'text' => 'La asignatura ha sido creada exitosamente' 
+        ]);
         return redirect()->route('asignaturas.index')->with('success', 'Asignatura created successfully');
     }
 
@@ -55,6 +60,11 @@ class AsignaturaController extends Controller
             return redirect()->route('asignaturas.index')->with('error', 'Asignatura not found');
         }
         $asignatura->update($request->all());
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Asignatura actualizada',
+            'text' => 'La asignatura ha sido eliminada exitosamente' 
+        ]);
         return redirect()->route('asignaturas.index')->with('success', 'Asignatura updated successfully');
     }
 
@@ -65,6 +75,11 @@ class AsignaturaController extends Controller
             return redirect()->route('asignaturas.index')->with('error', 'Asignatura not found');
         }
         $asignatura->delete();
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Asignatura eliminada',
+            'text' => 'La asignatura ha sido eliminada exitosamente' 
+        ]);
         return redirect()->route('asignaturas.index')->with('success', 'Asignatura deleted successfully');
     }
 

@@ -67,14 +67,14 @@ class AsignaturaController extends Controller
 public function store(Request $request)
 {
     // Validamos los datos del formulario para la asignatura
-    $validated = $request->validate([
-        'nombre_asignatura' => 'required|string|max:255',
-        'id_titulacion' => 'required|exists:titulaciones,id_titulacion',
-        'grupos_teoria' => 'nullable|array',
-        'grupos_practicas' => 'nullable|array',
-        'fraccionable' => 'nullable|boolean',
-        // Otros campos que sean necesarios
-    ]);
+    // $validated = $request->validate([
+    //     'nombre_asignatura' => 'required|string|max:255',
+    //     'id_titulacion' => 'required|exists:titulaciones,id_titulacion',
+    //     'grupos_teoria' => 'nullable|array',
+    //     'grupos_practicas' => 'nullable|array',
+    //     'fraccionable' => 'nullable|boolean',
+    //     // Otros campos que sean necesarios
+    // ]);
 
     // Creamos la asignatura
     $asignatura = Asignatura::create($request->all());

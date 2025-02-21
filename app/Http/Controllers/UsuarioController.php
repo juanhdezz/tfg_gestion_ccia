@@ -12,11 +12,19 @@ use Spatie\Permission\Models\Role;
 
 class UsuarioController extends Controller
 {
-    public function index()
-    {
-        $usuarios = Usuario::all();
-        return view('usuarios.index', compact('usuarios'));
-    }
+    public function index(Request $request)
+{
+    $search = $request->input('search');
+
+    $usuarios = Usuario::with(['despacho'])
+        ->when($search, function ($query, $search) {
+            return $query->where('nombre', 'LIKE', "%{$search}%")
+                         ->orWhere('apellidos', 'LIKE', "%{$search}%");
+        })
+        ->get();
+
+    return view('usuarios.index', compact('usuarios'));
+}
 
     public function show($id)
     {

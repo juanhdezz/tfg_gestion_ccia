@@ -1,10 +1,15 @@
+<!-- filepath: /c:/xampp/htdocs/laravel/tfg_gestion_ccia/resources/views/asignaturas/index.blade.php -->
 <x-app-layout>
     <div class="container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Gestión de Asignaturas</h1>
+        
+        <!-- Formulario de búsqueda -->
+        <form method="GET" action="{{ route('asignaturas.index') }}" class="mb-4">
+            <input type="text" name="search" placeholder="Buscar asignatura..." value="{{ request('search') }}"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600">
+        </form>
+
         <div class="flex justify-end mb-4">
-            {{-- <a href="{{ route('asignaturas.export') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                Exportar Asignaturas
-            </a> --}}
             <a href="{{ route('asignaturas.grupos') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
                 Gestionar Grupos
             </a>

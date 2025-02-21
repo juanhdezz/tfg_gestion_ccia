@@ -1,12 +1,18 @@
-<!-- filepath: /c:/xampp/htdocs/laravel/tfg_gestion_ccia/resources/views/usuarios/index.blade.php -->
 <x-app-layout>
     <div class="container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Gestión de Usuarios</h1>
+        
+        <!-- Formulario de búsqueda -->
+        <form method="GET" action="{{ route('usuarios.index') }}" class="mb-4">
+            <input type="text" name="search" placeholder="Buscar usuario..." value="{{ request('search') }}"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600">
+        </form>
+
         <div class="flex justify-end mb-4">
             <a href="{{ route('usuarios.export') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Exportar Usuarios
             </a>
-            <a href="{{ route('usuarios.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded  ml-2">
+            <a href="{{ route('usuarios.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
                 Añadir Usuario
             </a>
         </div>
@@ -95,5 +101,5 @@
             });
         });
     </script>
-@endpush
+    @endpush
 </x-app-layout>

@@ -1,3 +1,4 @@
+<!-- filepath: /c:/xampp/htdocs/laravel/tfg_gestion_ccia/resources/views/asignaturas/grupos.blade.php -->
 <x-app-layout>
     <div class="container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Gestión de Grupos</h1>
@@ -7,6 +8,12 @@
                 <span class="block sm:inline">{{ session('success') }}</span>
             </div>
         @endif
+
+        <!-- Formulario de búsqueda -->
+        <form method="GET" action="{{ route('asignaturas.grupos') }}" class="mb-4">
+            <input type="text" name="search" placeholder="Buscar asignatura..." value="{{ request('search') }}"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600">
+        </form>
 
         <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
             @foreach ($asignaturas->groupBy('titulacion.nombre_titulacion') as $titulacion => $asignaturasGrupo)

@@ -9,19 +9,24 @@ use App\Models\GrupoTeoriaPractica;
 
 class AsignaturaController extends Controller
 {
-    public function index()
-    {
-        // Cargar asignaturas con grupos de teoría y práctica relacionados
-        $asignaturas = Asignatura::with(['titulacion', 'grupos'])->get();
-    
-        // Calcular los totales de grupos de teoría y práctica por asignatura
-        foreach ($asignaturas as $asignatura) {
-            $asignatura->total_grupos_teoria = $asignatura->grupos->whereNotNull('grupo_teoria')->unique('grupo_teoria')->count();
-            $asignatura->total_grupos_practica = $asignatura->grupos->whereNotNull('grupo_practica')->count();
-        }
-    
-        return view('asignaturas.index', compact('asignaturas'));
+    public function index(Request $request)
+{
+    $search = $request->input('search');
+
+    $asignaturas = Asignatura::with(['titulacion', 'grupos'])
+        ->when($search, function ($query, $search) {
+            return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
+        })
+        ->get();
+
+    // Calcular los totales de grupos de teoría y práctica por asignatura
+    foreach ($asignaturas as $asignatura) {
+        $asignatura->total_grupos_teoria = $asignatura->grupos->whereNotNull('grupo_teoria')->unique('grupo_teoria')->count();
+        $asignatura->total_grupos_practica = $asignatura->grupos->whereNotNull('grupo_practica')->count();
     }
+
+    return view('asignaturas.index', compact('asignaturas'));
+}
     
 
 
@@ -175,9 +180,16 @@ public function edit($id)
         return redirect()->route('asignaturas.index')->with('success', 'Asignatura deleted successfully');
     }
 
-    public function grupos()
+    public function grupos(Request $request)
 {
-    $asignaturas = Asignatura::with(['titulacion', 'grupos'])->get();
+    $search = $request->input('search');
+
+    $asignaturas = Asignatura::with(['titulacion', 'grupos'])
+        ->when($search, function ($query, $search) {
+            return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
+        })
+        ->get();
+
     return view('asignaturas.grupos', compact('asignaturas'));
 }
 

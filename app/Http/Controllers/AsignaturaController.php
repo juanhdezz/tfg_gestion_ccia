@@ -17,6 +17,14 @@ class AsignaturaController extends Controller
         ->when($search, function ($query, $search) {
             return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
         })
+        ->where('estado', '!=', 'Extinta')
+        ->get();
+
+    $asignaturasExtintas = Asignatura::with(['titulacion', 'grupos'])
+        ->when($search, function ($query, $search) {
+            return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
+        })
+        ->where('estado', 'Extinta')
         ->get();
 
     // Calcular los totales de grupos de teoría y práctica por asignatura
@@ -25,7 +33,12 @@ class AsignaturaController extends Controller
         $asignatura->total_grupos_practica = $asignatura->grupos->whereNotNull('grupo_practica')->count();
     }
 
-    return view('asignaturas.index', compact('asignaturas'));
+    foreach ($asignaturasExtintas as $asignatura) {
+        $asignatura->total_grupos_teoria = $asignatura->grupos->whereNotNull('grupo_teoria')->unique('grupo_teoria')->count();
+        $asignatura->total_grupos_practica = $asignatura->grupos->whereNotNull('grupo_practica')->count();
+    }
+
+    return view('asignaturas.index', compact('asignaturas', 'asignaturasExtintas'));
 }
     
 

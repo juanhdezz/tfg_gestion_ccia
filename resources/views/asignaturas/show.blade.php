@@ -1,8 +1,9 @@
 <x-app-layout>
     <div class="container mx-auto p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full">
-            <h1 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Detalles de la Asignatura {{$asignatura->nombre_asignatura}}</h1>
-            
+            <h1 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Detalles de la Asignatura
+                {{ $asignatura->nombre_asignatura }}</h1>
+
             @if (session('error'))
                 <div class="bg-red-500 text-white p-2 rounded mb-4">{{ session('error') }}</div>
             @endif
@@ -29,7 +30,8 @@
                 <!-- Nombre Asignatura -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Nombre Asignatura</h3>
-                    <p class="mt-1 text-gray-900 dark:text-white"><strong>{{ $asignatura->nombre_asignatura }}</strong></p>
+                    <p class="mt-1 text-gray-900 dark:text-white"><strong>{{ $asignatura->nombre_asignatura }}</strong>
+                    </p>
                 </div>
 
                 <!-- Siglas Asignatura -->
@@ -74,16 +76,34 @@
                     <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->ects_practicas }}</p>
                 </div>
 
-                <!-- Grupos Teoría -->
+                <!-- Grupos Teoría y Práctica -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Grupos Teoría</h3>
-                    <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->grupos_teoria }}</p>
-                </div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Grupos</h3>
 
-                <!-- Grupos Prácticas -->
-                <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Grupos Prácticas</h3>
-                    <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->grupos_practicas }}</p>
+                    @foreach ($asignatura->grupos->whereNotNull('grupo_teoria')->unique('grupo_teoria') as $grupoTeoria)
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md mb-4">
+                            <div class="flex items-center gap-2 mb-3">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                    Grupo de Teoría {{ $grupoTeoria->grupo_teoria }}
+                                </h4>
+                            </div>
+
+                            <div class="ml-7">
+                                <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Grupos de Práctica:
+                                </h5>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                    @foreach ($asignatura->grupos->where('grupo_teoria', $grupoTeoria->grupo_teoria)->whereNotNull('grupo_practica') as $grupoPractica)
+                                        <div class="bg-blue-50 dark:bg-blue-900/30 rounded-md p-2 text-center">
+                                            <span class="text-blue-700 dark:text-blue-300 font-medium">
+                                                Grupo {{ $grupoPractica->grupo_practica }}
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
 
                 <!-- Web DECSAI -->
@@ -154,8 +174,10 @@
             </div>
 
             <div class="mt-6 flex justify-between">
-                <a href="{{ route('asignaturas.index') }}" class="text-blue-600 hover:underline">Volver a la lista de asignaturas</a>
-                <a href="{{ route('asignaturas.edit', $asignatura->id_asignatura) }}" class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700">Editar Asignatura</a>
+                <a href="{{ route('asignaturas.index') }}" class="text-blue-600 hover:underline">Volver a la lista de
+                    asignaturas</a>
+                <a href="{{ route('asignaturas.edit', $asignatura->id_asignatura) }}"
+                    class="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700">Editar Asignatura</a>
             </div>
         </div>
     </div>

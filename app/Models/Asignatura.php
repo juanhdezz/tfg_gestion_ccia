@@ -23,9 +23,7 @@ class Asignatura extends Model
         'creditos_teoria', 
         'creditos_practicas', 
         'ects_teoria', 
-        'ects_practicas', 
-        'grupos_teoria', 
-        'grupos_practicas', 
+        'ects_practicas',  
         'web_decsai', 
         'web_asignatura', 
         'enlace_temario', 
@@ -42,6 +40,12 @@ class Asignatura extends Model
     public function titulacion()
     {
         return $this->belongsTo(Titulacion::class, 'id_titulacion', 'id_titulacion');
+    }
+
+    // Relación con los grupos de teoría y práctica
+    public function grupos()
+    {
+        return $this->hasMany(GrupoTeoriaPractica::class, 'id_asignatura', 'id_asignatura');
     }
 
 }

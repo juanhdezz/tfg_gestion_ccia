@@ -1,4 +1,3 @@
-<!-- filepath: /c:/xampp/htdocs/laravel/tfg_gestion_ccia/resources/views/asignaturas/index.blade.php -->
 <x-app-layout>
     <div class="container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Gestión de Asignaturas</h1>
@@ -26,6 +25,8 @@
                         <th scope="col" class="px-6 py-3">Créditos Totales</th>
                         <th scope="col" class="px-6 py-3">ECTS Totales</th>
                         <th scope="col" class="px-6 py-3">Coordinador</th>
+                        <th scope="col" class="px-6 py-3">Total Grupos Teoría</th>
+                        <th scope="col" class="px-6 py-3">Total Grupos Práctica</th>
                         <th scope="col" class="px-6 py-3">Acciones</th>
                     </tr>
                 </thead>
@@ -58,6 +59,12 @@
                         </td>
                         <td class="px-6 py-4">
                             {{ $asignatura->id_coordinador }}
+                        </td>
+                        <td class="px-6 py-4">
+                            {{ $asignatura->total_grupos_teoria }}
+                        </td>
+                        <td class="px-6 py-4">
+                            {{ $asignatura->total_grupos_practica }}
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex space-x-2">
@@ -105,5 +112,5 @@
             });
         });
     </script>
-@endpush
+    @endpush
 </x-app-layout>

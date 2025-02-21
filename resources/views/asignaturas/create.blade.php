@@ -62,14 +62,19 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="grupos_teoria" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Grupos Teoría:</label>
-                        <input type="number" id="grupos_teoria" name="grupos_teoria" required min="1" class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                        <label for="grupos_teoria" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Grupos de Teoría:</label>
+                        <div id="grupos_teoria_container">
+                            <!-- Aquí se añadirán dinámicamente los grupos de teoría -->
+                        </div>
+                        <button type="button" onclick="agregarGrupoTeoria()" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-700">
+                            Añadir Grupo de Teoría
+                        </button>
                     </div>
 
-                    <div class="mb-4">
+                    {{-- <div class="mb-4">
                         <label for="grupos_practica" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Grupos Práctica:</label>
                         <input type="number" id="grupos_practica" name="grupos_practica" required min="1" class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
-                    </div>
+                    </div> --}}
 
                     <div class="mb-4">
                         <label for="tipo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo de Asignatura:</label>
@@ -127,4 +132,61 @@
             </form>
         </div>
     </div>
+
+    <script>
+        let grupoTeoriaIndex = 0;
+
+        function agregarGrupoTeoria() {
+            grupoTeoriaIndex++;
+            const container = document.getElementById('grupos_teoria_container');
+
+            // Crear un nuevo grupo de teoría con campos para los grupos de práctica asociados
+            const grupoTeoriaHTML = `
+                <div class="grupo-teoria mb-4" id="grupo_teoria_${grupoTeoriaIndex}">
+                    <div class="mb-2">
+                        <label for="grupo_teoria_${grupoTeoriaIndex}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Grupo Teoría ${grupoTeoriaIndex}:</label>
+                        <input type="text" name="grupo_teoria[${grupoTeoriaIndex}][nombre]" id="grupo_teoria_${grupoTeoriaIndex}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="grupos_practica_${grupoTeoriaIndex}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Grupos de Práctica:</label>
+                        <div id="grupos_practica_${grupoTeoriaIndex}_container">
+                            <!-- Aquí se añadirán dinámicamente los grupos de práctica para este grupo de teoría -->
+                        </div>
+                        <button type="button" onclick="agregarGrupoPractica(${grupoTeoriaIndex})" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-700">
+                            Añadir Grupo de Práctica
+                        </button>
+                    </div>
+
+                    <button type="button" onclick="eliminarGrupoTeoria(${grupoTeoriaIndex})" class="text-red-500 hover:text-red-700 mt-2">Eliminar Grupo de Teoría</button>
+                </div>
+            `;
+
+            // Añadir el grupo de teoría al contenedor
+            container.insertAdjacentHTML('beforeend', grupoTeoriaHTML);
+        }
+
+        function agregarGrupoPractica(grupoTeoriaIndex) {
+            const practicaContainer = document.getElementById(`grupos_practica_${grupoTeoriaIndex}_container`);
+
+            const grupoPracticaHTML = `
+                <div class="grupo-practica mb-2" id="grupo_practica_${grupoTeoriaIndex}_${Date.now()}">
+                    <input type="text" name="grupo_teoria[${grupoTeoriaIndex}][practicas][]" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white" placeholder="Nombre del Grupo de Práctica">
+                    <button type="button" onclick="eliminarGrupoPractica(${grupoTeoriaIndex}, ${Date.now()})" class="text-red-500 hover:text-red-700 mt-2">Eliminar Grupo de Práctica</button>
+                </div>
+            `;
+            
+            practicaContainer.insertAdjacentHTML('beforeend', grupoPracticaHTML);
+        }
+
+        function eliminarGrupoTeoria(index) {
+            const grupoTeoria = document.getElementById(`grupo_teoria_${index}`);
+            grupoTeoria.remove();
+        }
+
+        function eliminarGrupoPractica(grupoTeoriaIndex, practicaId) {
+            const grupoPractica = document.getElementById(`grupo_practica_${grupoTeoriaIndex}_${practicaId}`);
+            grupoPractica.remove();
+        }
+    </script>
 </x-app-layout>

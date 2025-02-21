@@ -20,90 +20,112 @@
                                 <th scope="col" class="px-6 py-3">Estado</th>
                                 <th scope="col" class="px-6 py-3">Nombre Asignatura</th>
                                 <th scope="col" class="px-6 py-3">Curso</th>
-                                <th scope="col" class="px-6 py-3">Créditos Teoría</th>
-                                <th scope="col" class="px-6 py-3">Créditos Prácticas</th>
-                                <th scope="col" class="px-6 py-3">Grupos Teoría</th>
-                                <th scope="col" class="px-6 py-3">Grupos Prácticas</th>
+                                <th scope="col" class="px-6 py-3">Grupos</th>
                                 <th scope="col" class="px-6 py-3">Fraccionable</th>
                                 <th scope="col" class="px-6 py-3">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($asignaturasGrupo as $asignatura)
-                            <tr class=" odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-                                <td class="px-6 py-4">
-                                    {{ $asignatura->estado }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    <strong>{{ $asignatura->nombre_asignatura }}</strong>
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ $asignatura->curso }}º
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ $asignatura->creditos_teoria }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ $asignatura->creditos_practicas }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    <form action="{{ route('asignaturas.updateGrupos', $asignatura->id_asignatura) }}" 
-                                          method="POST" 
-                                          class="inline-flex">
-                                        @csrf
-                                        @method('PATCH')
-                                        <div class="flex items-center">
-                                            <input type="number" 
-                                                   name="grupos_teoria" 
-                                                   value="{{ $asignatura->grupos_teoria }}"
-                                                   class="w-20 px-2 py-1 border rounded dark:bg-gray-700 dark:border-gray-600"
-                                                   min="1">
+                                <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
+                                    <td class="px-6 py-4">{{ $asignatura->estado }}</td>
+                                    <td class="px-6 py-4"><strong>{{ $asignatura->nombre_asignatura }}</strong></td>
+                                    <td class="px-6 py-4">{{ $asignatura->curso }}º</td>
+                                    <td class="px-6 py-4">
+                                        <form action="{{ route('asignaturas.updateGrupos', $asignatura->id_asignatura) }}" 
+                                              method="POST" 
+                                              class="space-y-4">
+                                            @csrf
+                                            @method('PATCH')
+                                            
+                                            <!-- Grupos existentes -->
+                                            @php
+                                                $gruposTeoria = $asignatura->grupos->whereNotNull('grupo_teoria')->unique('grupo_teoria');
+                                            @endphp
+                                    
+                                            @foreach($gruposTeoria as $grupoTeoria)
+                                                <div class="border rounded p-3 dark:border-gray-700">
+                                                    <!-- Grupo de teoría -->
+                                                    <div class="flex items-center gap-2 mb-2">
+                                                        <label class="font-medium">Grupo Teoría:</label>
+                                                        <input type="number" 
+                                                               name="grupos_teoria[{{ $grupoTeoria->grupo_teoria }}][numero]" 
+                                                               value="{{ $grupoTeoria->grupo_teoria }}"
+                                                               class="w-20 px-2 py-1 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                                               min="1">
+                                                        
+                                                        <!-- Botón para eliminar grupo de teoría -->
+                                                        <button type="submit" 
+                                                                name="eliminar_grupo_teoria" 
+                                                                value="{{ $grupoTeoria->grupo_teoria }}"
+                                                                class="ml-2 text-red-600 dark:text-red-500 hover:underline"
+                                                                onclick="return confirm('¿Estás seguro? Se eliminarán también los grupos de prácticas asociados.')">
+                                                            ❌
+                                                        </button>
+                                                    </div>
+                                    
+                                                    <!-- Grupos de práctica asociados -->
+                                                    <div class="ml-6 space-y-2">
+                                                        <label class="text-sm font-medium">Grupos de Práctica:</label>
+                                                        @foreach($asignatura->grupos->where('grupo_teoria', $grupoTeoria->grupo_teoria)->whereNotNull('grupo_practica') as $grupoPractica)
+                                                            <div class="flex items-center gap-2">
+                                                                <input type="number" 
+                                                                       name="grupos_teoria[{{ $grupoTeoria->grupo_teoria }}][practicas][]" 
+                                                                       value="{{ $grupoPractica->grupo_practica }}"
+                                                                       class="w-20 px-2 py-1 border rounded dark:bg-gray-700 dark:border-gray-600"
+                                                                       min="1">
+                                                                
+                                                                <!-- Botón para eliminar grupo de práctica -->
+                                                                <button type="submit" 
+                                                                        name="eliminar_grupo_practica" 
+                                                                        value="{{ $grupoPractica->id }}"
+                                                                        class="text-red-600 dark:text-red-500 hover:underline"
+                                                                        onclick="return confirm('¿Estás seguro de eliminar este grupo de prácticas?')">
+                                                                    ❌
+                                                                </button>
+                                                            </div>
+                                                        @endforeach
+                                    
+                                                        <!-- Botón para añadir grupo de práctica -->
+                                                        <button type="submit" 
+                                                                name="nuevo_grupo_practica" 
+                                                                value="{{ $grupoTeoria->grupo_teoria }}"
+                                                                class="text-sm px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+                                                            + Añadir Grupo Práctica
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                    
+                                            <!-- Botón para añadir nuevo grupo de teoría -->
                                             <button type="submit" 
-                                                    class="ml-2 text-blue-600 dark:text-blue-500 hover:underline">
-                                                ✓
+                                                    name="nuevo_grupo_teoria" 
+                                                    value="1"
+                                                    class="mt-4 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                                + Nuevo Grupo de Teoría
                                             </button>
-                                        </div>
-                                    </form>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <form action="{{ route('asignaturas.updateGrupos', $asignatura->id_asignatura) }}" 
-                                          method="POST" 
-                                          class="inline-flex">
-                                        @csrf
-                                        @method('PATCH')
-                                        <div class="flex items-center">
-                                            <input type="number" 
-                                                   name="grupos_practicas" 
-                                                   value="{{ $asignatura->grupos_practicas }}"
-                                                   class="w-20 px-2 py-1 border rounded dark:bg-gray-700 dark:border-gray-600"
-                                                   min="1">
-                                            <button type="submit" 
-                                                    class="ml-2 text-blue-600 dark:text-blue-500 hover:underline">
-                                                ✓
-                                            </button>
-                                        </div>
-                                    </form>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <form action="{{ route('asignaturas.updateGrupos', $asignatura->id_asignatura) }}" 
-                                          method="POST">
-                                        @csrf
-                                        @method('PATCH')
-                                        <input type="checkbox" 
-                                               name="fraccionable" 
-                                               value="1"
-                                               {{ $asignatura->fraccionable ? 'checked' : '' }}
-                                               onchange="this.form.submit()"
-                                               class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
-                                    </form>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <a href="{{ route('asignaturas.show', $asignatura->id_asignatura) }}" 
-                                       class="font-medium text-green-600 dark:text-green-500 hover:underline">
-                                        Ver &#128270;
-                                    </a>
-                                </td>
-                            </tr>
+                                        </form>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <form action="{{ route('asignaturas.updateGrupos', $asignatura->id_asignatura) }}" 
+                                              method="POST">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="checkbox" 
+                                                   name="fraccionable" 
+                                                   value="1"
+                                                   {{ $asignatura->fraccionable ? 'checked' : '' }}
+                                                   onchange="this.form.submit()"
+                                                   class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+                                        </form>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <a href="{{ route('asignaturas.show', $asignatura->id_asignatura) }}" 
+                                           class="font-medium text-green-600 dark:text-green-500 hover:underline">
+                                            Ver &#128270;
+                                        </a>
+                                    </td>
+                                </tr>
                             @endforeach
                         </tbody>
                     </table>

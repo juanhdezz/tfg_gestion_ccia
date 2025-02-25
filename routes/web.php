@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AsignaturaController;
+use App\Http\Controllers\UsuarioAsignaturaController;
 
 
 Route::get('/', function () {
@@ -65,6 +66,21 @@ Route::delete('/asignaturas/equivalencias', [AsignaturaController::class, 'elimi
 // Opcionalmente, puedes añadir una ruta para ver todas las equivalencias
 //Route::get('/asignaturas/equivalencias', [AsignaturaController::class, 'listarEquivalencias'])
 //->name('asignaturas.listar-equivalencias');
+
+Route::get('/usuario_asignatura', [UsuarioAsignaturaController::class, 'index'])->name('usuario_asignatura.index');
+Route::get('/usuario_asignatura/create', [UsuarioAsignaturaController::class, 'create'])->name('usuario_asignatura.create');
+Route::post('/usuario_asignatura', [UsuarioAsignaturaController::class, 'store'])->name('usuario_asignatura.store');
+// Rutas para editar y actualizar
+Route::get('/usuario-asignatura/{id_asignatura}/{id_usuario}/{tipo}/{grupo}/edit', [UsuarioAsignaturaController::class, 'edit'])
+    ->name('usuario_asignatura.edit');
+    Route::put('/usuario-asignatura/{id_asignatura}/{id_usuario}/{tipo}/{grupo}', [UsuarioAsignaturaController::class, 'update'])
+    ->name('usuario_asignatura.update');
+Route::post('/usuario_asignatura/update_ajax', [UsuarioAsignaturaController::class, 'updateAjax'])->name('usuario_asignatura.update_ajax');
+
+// Ruta para eliminar una asignación
+Route::delete('/usuario_asignatura/{id_asignatura}/{id_usuario}/{tipo}/{grupo}', [UsuarioAsignaturaController::class, 'destroy'])
+    ->name('usuario_asignatura.destroy');
+
 
 
 

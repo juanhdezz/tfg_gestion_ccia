@@ -10,6 +10,7 @@ class AsignaturaEquivalente extends Model
     use HasFactory;
 
     protected $table = 'asignaturas_equivalentes';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'id',

@@ -50,6 +50,22 @@ Route::middleware(['auth', 'admin'])->group(function () {
     
     Route::delete('/gestion-asignaturas/{id}',[AsignaturaController::class, 'destroy'])->name('asignaturas.destroy');
 
+    // Ruta para mostrar el formulario de equivalencias
+Route::get('/asignaturas/{id}/equivalencias', [AsignaturaController::class, 'mostrarFormularioEquivalencias'])
+->name('asignaturas.mostrar-formulario-equivalencias');
+
+// Ruta para procesar la creación de equivalencias
+Route::post('/asignaturas/equivalencias', [AsignaturaController::class, 'establecerEquivalencia'])
+->name('asignaturas.establecer-equivalencia');
+
+// Ruta para eliminar una equivalencia
+Route::delete('/asignaturas/equivalencias', [AsignaturaController::class, 'eliminarEquivalencia'])
+->name('asignaturas.eliminar-equivalencia');
+
+// Opcionalmente, puedes añadir una ruta para ver todas las equivalencias
+//Route::get('/asignaturas/equivalencias', [AsignaturaController::class, 'listarEquivalencias'])
+//->name('asignaturas.listar-equivalencias');
+
 
 
 });

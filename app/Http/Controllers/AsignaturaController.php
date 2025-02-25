@@ -6,6 +6,7 @@ use App\Models\Asignatura;
 use Illuminate\Http\Request;
 use App\Models\Titulacion;
 use App\Models\GrupoTeoriaPractica;
+use Illuminate\Support\Facades\DB;
 
 class AsignaturaController extends Controller
 {
@@ -310,5 +311,72 @@ public function updateGrupos(Request $request, $asignatura_id)
 
     return redirect()->route('asignaturas.grupos')
         ->with('error', 'No se recibieron datos para actualizar');
+}
+
+/**
+     * Establecer una equivalencia entre dos asignaturas
+     */
+    public function establecerEquivalencia(Request $request)
+    {
+        $request->validate([
+            'asignatura_id' => 'required|exists:asignatura,id_asignatura',
+            'equivalente_id' => 'required|exists:asignatura,id_asignatura|different:asignatura_id',
+        ]);
+        
+        $asignatura = Asignatura::findOrFail($request->asignatura_id);
+        
+        // Verificar si la equivalencia ya existe
+        if (!$asignatura->equivalencias()->where('id_asignatura', $request->equivalente_id)->exists()) {
+            $asignatura->equivalencias()->attach($request->equivalente_id);
+        }
+        
+        return redirect()->back()->with('success', 'Equivalencia establecida correctamente');
+    }
+    
+    /**
+     * Eliminar una equivalencia entre dos asignaturas
+     */
+    public function eliminarEquivalencia(Request $request)
+    {
+        $request->validate([
+            'asignatura_id' => 'required|exists:asignatura,id_asignatura',
+            'equivalente_id' => 'required|exists:asignatura,id_asignatura',
+        ]);
+        
+        $asignatura = Asignatura::findOrFail($request->asignatura_id);
+        $asignatura->equivalencias()->detach($request->equivalente_id);
+        
+        return redirect()->back()->with('success', 'Equivalencia eliminada correctamente');
+    }
+
+    /**
+ * Mostrar el formulario para establecer equivalencias
+ */
+public function mostrarFormularioEquivalencias($id)
+{
+    $asignatura = Asignatura::findOrFail($id);
+    $asignaturas = Asignatura::where('id_asignatura', '!=', $id)
+                    ->orderBy('nombre_asignatura')
+                    ->get();
+    $equivalenciasActuales = $asignatura->todasLasEquivalencias();
+    
+    return view('asignaturas.equivalencias', compact('asignatura', 'asignaturas', 'equivalenciasActuales'));
+}
+
+/**
+ * Listar todas las equivalencias registradas
+ */
+public function listarEquivalencias()
+{
+    // Consulta para obtener todas las equivalencias únicas
+    $equivalencias = DB::table('asignaturas_equivalentes')
+        ->join('asignatura as a1', 'asignatura_id', '=', 'a1.id_asignatura')
+        ->join('asignatura as a2', 'equivalente_id', '=', 'a2.id_asignatura')
+        ->select('a1.id_asignatura', 'a1.nombre_asignatura as asignatura1', 
+                'a2.id_asignatura as id_equivalente', 'a2.nombre_asignatura as asignatura2')
+        ->orderBy('a1.nombre_asignatura')
+        ->get();
+    
+    return view('asignaturas.lista-equivalencias', compact('equivalencias'));
 }
 }

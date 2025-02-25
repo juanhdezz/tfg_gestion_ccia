@@ -48,4 +48,38 @@ class Asignatura extends Model
         return $this->hasMany(GrupoTeoriaPractica::class, 'id_asignatura', 'id_asignatura');
     }
 
+    /**
+ * Las asignaturas equivalentes a esta asignatura
+ */
+public function equivalencias()
+{
+    return $this->belongsToMany(
+        Asignatura::class,
+        'asignaturas_equivalentes',
+        'asignatura_id',
+        'equivalente_id'
+    );
+}
+
+/**
+ * Las asignaturas que tienen esta asignatura como equivalente
+ */
+public function equivalenteDe()
+{
+    return $this->belongsToMany(
+        Asignatura::class,
+        'asignaturas_equivalentes',
+        'equivalente_id',
+        'asignatura_id'
+    );
+}
+
+    /**
+     * Obtener todas las asignaturas equivalentes (en ambas direcciones)
+     */
+    public function todasLasEquivalencias()
+    {
+        return $this->equivalencias->merge($this->equivalenteDe);
+    }
+
 }

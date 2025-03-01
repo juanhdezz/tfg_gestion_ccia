@@ -28,6 +28,7 @@
                                 <th scope="col" class="px-6 py-3">Asignatura</th>
                                 <th scope="col" class="px-6 py-3">Tipo</th>
                                 <th scope="col" class="px-6 py-3">Grupo</th>
+                                <th scope="col" class="px-6 py-3">Antigüedad</th>
                                 <th scope="col" class="px-6 py-3">Acciones</th>
                             </tr>
                         </thead>
@@ -38,6 +39,7 @@
                                     <td class="px-6 py-4">{{ $asignacion->asignatura->nombre_asignatura }}</td>
                                     <td class="px-6 py-4">{{ $asignacion->tipo }}</td>
                                     <td class="px-6 py-4">{{ $asignacion->grupo }}</td>
+                                    <td class="px-6 py-4">{{ $asignacion->antiguedad }}</td>
                                     <td class="px-6 py-4 flex space-x-2">
                                         <a href="{{ route('usuario_asignatura.edit', [$asignacion->id_asignatura, $asignacion->id_usuario, $asignacion->tipo, $asignacion->grupo]) }}" 
                                            class="text-blue-500 hover:underline">Editar</a>

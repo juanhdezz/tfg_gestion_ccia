@@ -25,16 +25,6 @@ class UsuarioAsignaturaController extends Controller
 
     public function store(Request $request)
     {
-        // $request->validate([
-        //     'id_asignatura' => 'required|exists:asignaturas,id_asignatura',
-        //     'id_usuario' => 'required|exists:users,id',
-        //     'tipo' => 'required|in:Teoría,Prácticas',
-        //     'grupo' => 'required|integer',
-        //     'creditos' => 'required|numeric',
-        //     'antiguedad' => 'required|integer',
-        //     'en_primera_fase' => 'nullable|boolean',
-        // ]);
-
         UsuarioAsignatura::create($request->all());
 
         return redirect()->route('usuario_asignatura.index')->with('success', 'Asignación creada correctamente.');

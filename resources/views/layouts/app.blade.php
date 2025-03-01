@@ -63,14 +63,15 @@
                 <!-- Top left image -->
                 <div class="absolute top-0 left-5 bg-white dark:bg-gray-800 bg-opacity-75 p-1 rounded">
                     <div class="relative w-16 h-12">
-                        <div class="absolute inset-0 bg-white dark:bg-gray-800 opacity-75 rounded"></div>
-                        <img src="logo_ugr.png" alt="Left Image" class="relative w-16 h-16 object-contain">
+                        <div class="absolute inset-0 bg-white dark:bg-gray-800 opacity-75 rounded">
+                            <img src="{{ asset('logo_ugr.png') }}" alt="Logo">
+                        </div>
                     </div>
                 </div>
     
                 <!-- Top center image -->
                 <div class="absolute top-0 left-1/2 transform -translate-x-1/2">
-                    <img src="departamento.png" alt="Center Image" class="w-80 h-20 object-contain">
+                    <img src="{{ asset('departamento.png') }}" alt="Center Image" class="w-80 h-20 object-contain">
                 </div>
             </div>
     

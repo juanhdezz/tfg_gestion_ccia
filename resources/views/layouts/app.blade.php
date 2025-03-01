@@ -204,6 +204,34 @@
     <!-- Main content -->
     <div id="main-content" class="p-4">
         <div class="p-4 border-2 border-gray-200 rounded-lg dark:border-gray-700 mt-14">
+            <!-- Breadcrumb -->
+            @if(isset($breadcrumbs))
+            <nav class="text-sm text-gray-600 mb-4 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+                <ol class="flex flex-wrap items-center space-x-2">
+                    <li>
+                        <a href="{{ route('dashboard') }}" class="flex items-center text-blue-600 hover:underline">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Inicio
+                        </a>
+                    </li>
+                    <li class="text-gray-400">/</li>
+                    @foreach($breadcrumbs as $breadcrumb)
+                        @if (!$loop->last)
+                            <li>
+                                <a href="{{ $breadcrumb['url'] }}" class="text-blue-600 hover:underline">{{ $breadcrumb['name'] }}</a>
+                            </li>
+                            <li class="text-gray-400">/</li>
+                        @else
+                            <li class="text-gray-800 dark:text-gray-300 font-medium">{{ $breadcrumb['name'] }}</li>
+                        @endif
+                    @endforeach
+                </ol>
+            </nav>
+            @endif
+    
+            <!-- Page content -->
             {{ $slot }}
         </div>
     </div>

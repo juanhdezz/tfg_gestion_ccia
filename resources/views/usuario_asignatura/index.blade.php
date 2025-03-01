@@ -34,7 +34,7 @@
                         <tbody>
                             @foreach ($asignacionesGrupo as $asignacion)
                                 <tr class="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-                                    <td class="px-6 py-4">{{ $asignacion->usuario->nombre }}</td>
+                                    <td class="px-6 py-4">{{ $asignacion->usuario->apellidos }} ,{{ $asignacion->usuario->nombre }}</td>
                                     <td class="px-6 py-4">{{ $asignacion->asignatura->nombre_asignatura }}</td>
                                     <td class="px-6 py-4">{{ $asignacion->tipo }}</td>
                                     <td class="px-6 py-4">{{ $asignacion->grupo }}</td>

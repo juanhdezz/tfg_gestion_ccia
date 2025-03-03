@@ -5,23 +5,67 @@ namespace App\Http\Controllers;
 use App\Models\UsuarioAsignatura;
 use App\Models\Usuario;
 use App\Models\Asignatura;
+use App\Models\GrupoTeoriaPractica;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Titulacion;
 
 class UsuarioAsignaturaController extends Controller
 {
-    public function index()
-    {
-        $asignaciones = UsuarioAsignatura::with(['usuario', 'asignatura'])->get();
-        return view('usuario_asignatura.index', compact('asignaciones'));
-    }
+    public function index(Request $request)
+{
+    // Obtener el término de búsqueda desde la solicitud
+    $search = $request->input('search');
 
-    public function create()
-    {
-        $usuarios = Usuario::all();
-        $asignaturas = Asignatura::all();
-        return view('usuario_asignatura.create', compact('usuarios', 'asignaturas'));
+    // Obtener todas las asignaciones con sus relaciones
+    $asignaciones = UsuarioAsignatura::with(['usuario', 'asignatura.titulacion'])->get();
+    
+    // Obtener todas las titulaciones con sus asignaturas y grupos
+    $titulaciones = Titulacion::with(['asignaturas' => function($query) use ($search) {
+        $query->where('estado', '!=', 'Extinta')
+              ->when($search, function($query) use ($search) {
+                  // Búsqueda en nombre de asignatura o código
+                  return $query->where('nombre_asignatura', 'LIKE', "%{$search}%")
+                              ->orWhere('id_asignatura', 'LIKE', "%{$search}%");
+              })
+              ->orderBy('nombre_asignatura');
+    }, 'asignaturas.grupos'])
+    ->when($search, function($query) use ($search) {
+        // Filtrar titulaciones que tienen al menos una asignatura que coincide con la búsqueda
+        return $query->whereHas('asignaturas', function($query) use ($search) {
+            return $query->where('nombre_asignatura', 'LIKE', "%{$search}%")
+                        ->orWhere('id_asignatura', 'LIKE', "%{$search}%");
+        });
+    })
+    ->get();
+    
+    return view('usuario_asignatura.index', compact('titulaciones', 'asignaciones', 'search'));
+}
+
+public function create($id_asignatura = null, $tipo = null, $grupo = null)
+{
+    // Obtener usuarios ordenados por apellido
+    $usuarios = Usuario::orderBy('apellidos')->orderBy('nombre')->get();
+    
+    // Obtener asignaturas con sus grupos
+    $asignaturas = Asignatura::with('grupos')
+                   ->where('estado', '!=', 'Extinta')
+                   ->orderBy('nombre_asignatura')
+                   ->get();
+    
+    // Si se proporcionaron parámetros, preparar preselección
+    $preseleccion = null;
+    if ($id_asignatura) {
+        $preseleccion = [
+            'id_asignatura' => $id_asignatura,
+            'tipo' => $tipo,
+            'grupo' => $grupo,
+            // No incluimos id_usuario porque no lo tenemos aún
+        ];
     }
+    
+    return view('usuario_asignatura.create', compact('usuarios', 'asignaturas', 'preseleccion'));
+}
 
     public function store(Request $request)
     {
@@ -32,17 +76,25 @@ class UsuarioAsignaturaController extends Controller
 
     public function edit($id_asignatura, $id_usuario, $tipo, $grupo)
 {
-    // Obtener la asignación específica
-    $asignacion = UsuarioAsignatura::where('id_asignatura', $id_asignatura)
+    // Obtener la asignación específica con la relación de asignatura y sus grupos
+    $asignacion = UsuarioAsignatura::with('asignatura.grupos')
+                                  ->where('id_asignatura', $id_asignatura)
                                   ->where('id_usuario', $id_usuario)
                                   ->where('tipo', $tipo)
                                   ->where('grupo', $grupo)
                                   ->firstOrFail();
     
+    // Cargar los usuarios y asignaturas para los selectores
     $usuarios = Usuario::all();
     $asignaturas = Asignatura::all();
-
-    return view('usuario_asignatura.edit', compact('asignacion', 'usuarios', 'asignaturas'));
+    
+    // Obtener los grupos únicos de esta asignatura para el selector
+    $grupos = GrupoTeoriaPractica::where('id_asignatura', $id_asignatura)
+                                ->get()
+                                ->unique('grupo_teoria')
+                                ->values();
+    
+    return view('usuario_asignatura.edit', compact('asignacion', 'usuarios', 'asignaturas', 'grupos'));
 }
 
 public function update(Request $request, $id_asignatura, $id_usuario, $tipo, $grupo)
@@ -133,6 +185,12 @@ public function destroy($id_asignatura, $id_usuario, $tipo, $grupo)
                      ->where('tipo', $tipo)
                      ->where('grupo', $grupo)
                      ->delete();
+    // Preparar mensaje para SweetAlert
+    session()->flash('swal', [
+        'icon' => 'success',
+        'title' => 'Asignación eliminada',
+        'text' => "Se ha eliminado la asignación del grupo {$grupo} de {$tipo}"
+    ]);
                      
     return redirect()->route('usuario_asignatura.index')->with('success', 'Asignación eliminada correctamente.');
 }

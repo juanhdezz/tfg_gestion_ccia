@@ -18,8 +18,59 @@
             @method('PUT')
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Asignatura (no editable) -->
+                <div class="mb-4 md:col-span-2">
+                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Asignatura</label>
+                    <div class="w-full border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 rounded px-3 py-2 text-gray-800 dark:text-gray-200">
+                        {{ $asignacion->asignatura->nombre_asignatura }}
+                    </div>
+                    <input type="hidden" name="id_asignatura" value="{{ $asignacion->id_asignatura }}">
+                </div>
+
+                <!-- Grupos de teoría y práctica (no editables) -->
+                <div class="mb-4 md:col-span-2">
+                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Grupos disponibles</label>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-gray-100 dark:bg-gray-700 rounded">
+                            <thead>
+                                <tr>
+                                    <th class="py-2 px-4 text-left text-gray-700 dark:text-white">Grupo de Teoría</th>
+                                    <th class="py-2 px-4 text-left text-gray-700 dark:text-white">Grupo de Práctica</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($asignacion->asignatura->grupos as $grupoItem)
+                                <tr class="border-t border-gray-200 dark:border-gray-600">
+                                    <td class="py-2 px-4 text-gray-800 dark:text-gray-200">{{ $grupoItem->grupo_teoria }}</td>
+                                    <td class="py-2 px-4 text-gray-800 dark:text-gray-200">{{ $grupoItem->grupo_practica }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tipo (no editable) -->
                 <div class="mb-4">
-                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Usuario</label>
+                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Tipo</label>
+                    <div class="w-full border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 rounded px-3 py-2 text-gray-800 dark:text-gray-200">
+                        {{ $asignacion->tipo }}
+                    </div>
+                    <input type="hidden" name="tipo" value="{{ $asignacion->tipo }}">
+                </div>
+
+                <!-- Grupo (no editable) -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Grupo asignado</label>
+                    <div class="w-full border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 rounded px-3 py-2 text-gray-800 dark:text-gray-200">
+                        {{ $asignacion->grupo }}
+                    </div>
+                    <input type="hidden" name="grupo" value="{{ $asignacion->grupo }}">
+                </div>
+                
+                <!-- Profesor (editable) -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Profesor</label>
                     <select name="id_usuario" class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2">
                         @foreach($usuarios as $usuario)
                             <option value="{{ $usuario->id_usuario }}" {{ $asignacion->id_usuario == $usuario->id_usuario ? 'selected' : '' }}>
@@ -28,42 +79,20 @@
                         @endforeach
                     </select>
                 </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Asignatura</label>
-                    <select name="id_asignatura" class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2" disabled>
-                        @foreach($asignaturas as $asignatura)
-                            <option value="{{ $asignatura->id_asignatura }}" {{ $asignacion->id_asignatura == $asignatura->id_asignatura ? 'selected' : '' }}>
-                                {{ $asignatura->nombre_asignatura }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <input type="hidden" name="id_asignatura" value="{{ $asignacion->id_asignatura }}">
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Tipo</label>
-                    <select name="tipo" class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2">
-                        <option value="Teoría" {{ $asignacion->tipo == 'Teoría' ? 'selected' : '' }}>Teoría</option>
-                        <option value="Prácticas" {{ $asignacion->tipo == 'Prácticas' ? 'selected' : '' }}>Prácticas</option>
-                    </select>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 dark:text-white font-semibold mb-2">Grupo</label>
-                    <input type="text" name="grupo" class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2" value="{{ $asignacion->grupo }}">
-                </div>
                 
-                <div class="mb-4">
-                    <label for="creditos" class="block text-gray-700 dark:text-white font-semibold mb-2">Créditos</label>
-                    <input type="number" step="0.1" id="creditos" name="creditos" class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2" value="{{ $asignacion->creditos }}" required>
-                </div>
-                
+                <!-- Antigüedad (editable) -->
                 <div class="mb-4">
                     <label for="antiguedad" class="block text-gray-700 dark:text-white font-semibold mb-2">Antigüedad</label>
                     <input type="number" id="antiguedad" name="antiguedad" class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2" value="{{ $asignacion->antiguedad }}" required>
                 </div>
                 
+                <!-- Créditos (editable) -->
+                <div class="mb-4">
+                    <label for="creditos" class="block text-gray-700 dark:text-white font-semibold mb-2">Créditos</label>
+                    <input type="number" step="0.1" id="creditos" name="creditos" class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded px-3 py-2" value="{{ $asignacion->creditos }}" required>
+                </div>
+                
+                <!-- En primera fase (editable) -->
                 <div class="mb-4">
                     <label class="flex items-center">
                         <input type="checkbox" name="en_primera_fase" class="mr-2" {{ $asignacion->en_primera_fase ? 'checked' : '' }}>
@@ -71,7 +100,7 @@
                     </label>
                 </div>
             </div>
-
+            
             <div class="flex items-center justify-between mt-6">
                 <a href="{{ route('usuario_asignatura.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
                     Cancelar

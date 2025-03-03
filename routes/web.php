@@ -68,7 +68,8 @@ Route::delete('/asignaturas/equivalencias', [AsignaturaController::class, 'elimi
 //->name('asignaturas.listar-equivalencias');
 
 Route::get('/usuario_asignatura', [UsuarioAsignaturaController::class, 'index'])->name('usuario_asignatura.index');
-Route::get('/usuario_asignatura/create', [UsuarioAsignaturaController::class, 'create'])->name('usuario_asignatura.create');
+Route::get('/usuario_asignatura/create/{id_asignatura?}/{tipo?}/{grupo?}', [UsuarioAsignaturaController::class, 'create'])
+    ->name('usuario_asignatura.create');
 Route::post('/usuario_asignatura', [UsuarioAsignaturaController::class, 'store'])->name('usuario_asignatura.store');
 // Rutas para editar y actualizar
 Route::get('/usuario-asignatura/{id_asignatura}/{id_usuario}/{tipo}/{grupo}/edit', [UsuarioAsignaturaController::class, 'edit'])

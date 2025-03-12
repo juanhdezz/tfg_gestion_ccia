@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AsignaturaController;
 use App\Http\Controllers\UsuarioAsignaturaController;
+use App\Http\Controllers\TutoriaController;
 
 
 Route::get('/', function () {
@@ -82,8 +83,7 @@ Route::post('/usuario_asignatura/update_ajax', [UsuarioAsignaturaController::cla
 Route::delete('/usuario_asignatura/{id_asignatura}/{id_usuario}/{tipo}/{grupo}', [UsuarioAsignaturaController::class, 'destroy'])
     ->name('usuario_asignatura.destroy');
 
-
-
+    
 
 });
 
@@ -95,6 +95,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/departamento', function(){
         return view('departamento');
     })->name('departamento');
+    Route::get('/tutorias', [App\Http\Controllers\TutoriaController::class, 'index'])->name('tutorias.index');
+    Route::post('/tutorias', [App\Http\Controllers\TutoriaController::class, 'store'])->name('tutorias.store');
+    Route::delete('/tutorias/{tutoria}', [App\Http\Controllers\TutoriaController::class, 'destroy'])->name('tutorias.destroy');
+Route::post('/tutorias/actualizar', [TutoriaController::class, 'actualizar'])->name('tutorias.actualizar');
+// Añadir esta ruta
+Route::get('/tutorias/ver', [TutoriaController::class, 'verTutorias'])->name('tutorias.ver');
     
 });
 

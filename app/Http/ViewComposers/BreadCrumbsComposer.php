@@ -30,6 +30,7 @@ class BreadcrumbsComposer
                     
                 case 'asignaturas.index':
                     $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
                         ['name' => 'Asignaturas', 'url' => route('asignaturas.index')]
                     ];
                     break;
@@ -41,27 +42,18 @@ class BreadcrumbsComposer
                     ];
                     break;
                     
-                case 'asignaturas.edit':
-                    // Para rutas con parámetros, puedes acceder a ellos a través del request
-                    $id = request()->route('asignatura');
-                    $asignatura = \App\Models\Asignatura::find($id);
-                    $nombre = $asignatura ? $asignatura->nombre_asignatura : 'Editar';
-                    
-                    $breadcrumbs = [
-                        ['name' => 'Asignaturas', 'url' => route('asignaturas.index')],
-                        ['name' => $nombre, 'url' => route('asignaturas.show', $id)],
-                        ['name' => 'Editar', 'url' => route('asignaturas.edit', $id)]
-                    ];
-                    break;
+                
                 
                 case 'usuario_asignatura.index':
                     $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
                         ['name' => 'Asignaciones', 'url' => route('usuario_asignatura.index')]
                     ];
                     break;
                 
                 case 'usuario_asignatura.create':
                     $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
                         ['name' => 'Asignaciones', 'url' => route('usuario_asignatura.index')],
                         ['name' => 'Nueva asignación', 'url' => route('usuario_asignatura.create')]
                     ];
@@ -74,6 +66,7 @@ class BreadcrumbsComposer
                     $grupo = request()->route('grupo');
                     
                     $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
                         ['name' => 'Asignaciones', 'url' => route('usuario_asignatura.index')],
                         ['name' => 'Editar', 'url' => route('usuario_asignatura.edit', [$id_asignatura, $id_usuario, $tipo, $grupo])]
                     ];

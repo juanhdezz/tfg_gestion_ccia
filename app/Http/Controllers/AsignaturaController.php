@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Asignatura;
@@ -11,173 +10,206 @@ use Illuminate\Support\Facades\DB;
 class AsignaturaController extends Controller
 {
     public function index(Request $request)
-{
-    $search = $request->input('search');
+    {
+        $search = $request->input('search');
+        $asignaturas = Asignatura::with(['titulacion'])
+            ->when($search, function ($query, $search) {
+                return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
+            })
+            ->where('estado', 'Activa')
+            ->get();
 
-    $asignaturas = Asignatura::with(['titulacion', 'grupos'])
-        ->when($search, function ($query, $search) {
-            return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
-        })
-        ->where('estado', '!=', 'Extinta')
-        ->get();
+        $asignaturasExtintas = Asignatura::with(['titulacion'])
+            ->when($search, function ($query, $search) {
+                return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
+            })
+            ->where('estado',"!=" ,'Activa')
+            ->get();
 
-    $asignaturasExtintas = Asignatura::with(['titulacion', 'grupos'])
-        ->when($search, function ($query, $search) {
-            return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
-        })
-        ->where('estado', 'Extinta')
-        ->get();
-
-    // Calcular los totales de grupos de teoría y práctica por asignatura
-    foreach ($asignaturas as $asignatura) {
-        $asignatura->total_grupos_teoria = $asignatura->grupos->whereNotNull('grupo_teoria')->unique('grupo_teoria')->count();
-        $asignatura->total_grupos_practica = $asignatura->grupos->whereNotNull('grupo_practica')->count();
+        return view('asignaturas.index', compact('asignaturas', 'asignaturasExtintas'));
     }
-
-    foreach ($asignaturasExtintas as $asignatura) {
-        $asignatura->total_grupos_teoria = $asignatura->grupos->whereNotNull('grupo_teoria')->unique('grupo_teoria')->count();
-        $asignatura->total_grupos_practica = $asignatura->grupos->whereNotNull('grupo_practica')->count();
-    }
-
-    return view('asignaturas.index', compact('asignaturas', 'asignaturasExtintas'));
-}
     
-
-
     public function show($id)
-{
-    // Cargar la asignatura con los grupos de teoría y práctica y la titulacion asociada
-    $asignatura = Asignatura::with(['grupos', 'titulacion'])->find($id);
+    {
+        // Cargar la asignatura con la titulación asociada
+        $asignatura = Asignatura::with(['titulacion'])->find($id);
+        if (is_null($asignatura)) {
+            return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
+        }
 
-    if (is_null($asignatura)) {
-        return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
+        // Obtener la distribución de grupos de práctica por grupo de teoría
+        $distribucionGrupos = GrupoTeoriaPractica::where('id_asignatura', $id)
+            ->select('grupo_teoria', DB::raw('count(*) as total_practicas'))
+            ->groupBy('grupo_teoria')
+            ->orderBy('grupo_teoria')
+            ->get();
+
+        // Devolvemos la vista con los datos
+        return view('asignaturas.show', compact('asignatura', 'distribucionGrupos'));
     }
-
-    // Devolvemos la vista con los datos de la asignatura y su titulacion
-    return view('asignaturas.show', compact('asignatura'));
-}
-
 
     public function create()
+    {
+        $titulaciones = Titulacion::all(); 
+        return view('asignaturas.create', compact('titulaciones'));
+    }
+
+    public function store(Request $request)
 {
-    $titulaciones = Titulacion::all(); // Obtener todas las titulaciones
-    return view('asignaturas.create', compact('titulaciones'));
-}
+    try {
+        // Validación de datos con mensajes personalizados
+        $validated = $request->validate([
+            'id_asignatura' => 'required|string|max:8|unique:asignatura',
+            'id_titulacion' => 'required|exists:titulacion,id_titulacion',
+            'nombre_asignatura' => 'required|string|max:128',
+            'siglas_asignatura' => 'required|string|max:8',
+            'grupos_teoria' => 'required|integer|min:1',
+            'grupos_practicas' => 'required|integer|min:0',
+            'curso' => 'nullable|integer',
+            'cuatrimestre' => 'nullable|in:Primero,Segundo,Anual',
+            'creditos_teoria' => 'nullable|numeric|min:0',
+            'creditos_practicas' => 'nullable|numeric|min:0',
+            'ects_teoria' => 'nullable|numeric|min:0',
+            'ects_practicas' => 'nullable|numeric|min:0',
+        ], [
+            'id_titulacion.exists' => 'La titulación seleccionada no existe en la base de datos',
+            'id_asignatura.unique' => 'El ID de asignatura ya está en uso',
+            'grupos_teoria.min' => 'Debe especificar al menos un grupo de teoría'
+        ]);
 
+        // Crear la asignatura con datos validados
+        $asignatura = new Asignatura();
+        $asignatura->id_asignatura = $request->id_asignatura;
+        $asignatura->id_titulacion = $request->id_titulacion;
+        $asignatura->nombre_asignatura = $request->nombre_asignatura;
+        $asignatura->siglas_asignatura = $request->siglas_asignatura;
+        $asignatura->especialidad = $request->especialidad;
+        $asignatura->id_coordinador = $request->id_coordinador;
+        $asignatura->curso = $request->curso;
+        $asignatura->cuatrimestre = $request->cuatrimestre;
+        $asignatura->creditos_teoria = $request->creditos_teoria;
+        $asignatura->creditos_practicas = $request->creditos_practicas;
+        $asignatura->ects_teoria = $request->ects_teoria;
+        $asignatura->ects_practicas = $request->ects_practicas;
+        $asignatura->grupos_teoria = $request->grupos_teoria;
+        $asignatura->grupos_practicas = $request->grupos_practicas;
+        $asignatura->web_asignatura = $request->web_asignatura;
+        $asignatura->tipo = $request->tipo ?: 'Asignatura';
+        $asignatura->fraccionable = $request->has('fraccionable') ? 1 : 0;
+        $asignatura->estado = $request->estado ?: 'Activa';
+        
+        // Guardar asignatura
+        $asignatura->save();
 
-public function store(Request $request)
-{
-    // Validamos los datos del formulario para la asignatura
-    // $validated = $request->validate([
-    //     'nombre_asignatura' => 'required|string|max:255',
-    //     'id_titulacion' => 'required|exists:titulaciones,id_titulacion',
-    //     'grupos_teoria' => 'nullable|array',
-    //     'grupos_practicas' => 'nullable|array',
-    //     'fraccionable' => 'nullable|boolean',
-    //     // Otros campos que sean necesarios
-    // ]);
+        // Distribuir automáticamente los grupos de práctica entre los grupos de teoría
+        $this->distribuirGruposPractica($asignatura);
 
-    // Creamos la asignatura
-    $asignatura = Asignatura::create($request->all());
+        // Flash message y redirección
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Asignatura creada',
+            'text' => 'La asignatura ha sido creada exitosamente',
+        ]);
 
-    // Si se han enviado los grupos de teoría
-    if ($request->has('grupos_teoria')) {
-        foreach ($request->grupos_teoria as $grupo_teoria) {
-            // Creamos un grupo de teoría asociado a la asignatura
-            $asignatura->grupos()->create([
-                'grupo_teoria' => $grupo_teoria,
-                'grupo_practica' => null, // No es un grupo de práctica
-            ]);
+        return redirect()->route('asignaturas.index')
+                         ->with('success', 'Asignatura creada correctamente');
+                         
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        // Captura errores de validación y los devuelve al formulario
+        return redirect()->back()->withErrors($e->validator)->withInput();
+        
+    } catch (\Illuminate\Database\QueryException $e) {
+        // Errores de base de datos (claves foráneas, restricciones, etc.)
+        $errorCode = $e->errorInfo[1] ?? 0;
+        $errorInfo = $e->getMessage();
+        
+        // Error específico para foreign key
+        if ($errorCode == 1452) { // Error de clave foránea de MySQL
+            return redirect()->back()
+                ->with('error', 'Error de relación: Asegúrate de que la titulación exista en la base de datos.')
+                ->withInput();
         }
-    }
-
-    // Si se han enviado los grupos de prácticas
-    if ($request->has('grupos_practicas')) {
-        foreach ($request->grupos_practicas as $grupo_practica) {
-            // Creamos un grupo de práctica asociado a la asignatura
-            $asignatura->grupos()->create([
-                'grupo_teoria' => null, // No es un grupo de teoría
-                'grupo_practica' => $grupo_practica,
-            ]);
+        
+        // Error para clave duplicada
+        if ($errorCode == 1062) { // Error de duplicidad
+            return redirect()->back()
+                ->with('error', 'Ya existe una asignatura con ese ID.')
+                ->withInput();
         }
+        
+        // Cualquier otro error de base de datos
+        return redirect()->back()
+            ->with('error', "Error de base de datos: $errorInfo")
+            ->withInput();
+            
+    } catch (\Exception $e) {
+        // Cualquier otra excepción
+        return redirect()->back()
+            ->with('error', 'Error inesperado: ' . $e->getMessage())
+            ->withInput();
     }
-
-    // Flash message y redirección
-    session()->flash('swal', [
-        'icon' => 'success',
-        'title' => 'Asignatura creada',
-        'text' => 'La asignatura ha sido creada exitosamente',
-    ]);
-
-    return redirect()->route('asignaturas.index')->with('success', 'Asignatura created successfully');
 }
 
+    public function edit($id)
+    {
+        $titulaciones = Titulacion::all();
+        $asignatura = Asignatura::find($id);
+        
+        if (is_null($asignatura)) {
+            return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
+        }
 
-public function edit($id)
-{
-    $titulaciones = Titulacion::all(); // Obtener todas las titulaciones
-    $asignatura = Asignatura::with(['grupos', 'titulacion'])->find($id);
+        // Obtener la distribución actual de grupos de práctica por grupo de teoría
+        $distribucionGrupos = GrupoTeoriaPractica::where('id_asignatura', $id)
+            ->select('grupo_teoria', DB::raw('GROUP_CONCAT(grupo_practica ORDER BY grupo_practica) as practicas'))
+            ->groupBy('grupo_teoria')
+            ->orderBy('grupo_teoria')
+            ->get()
+            ->keyBy('grupo_teoria');
 
-    if (is_null($asignatura)) {
-        return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
+        return view('asignaturas.edit', compact('asignatura', 'titulaciones', 'distribucionGrupos'));
     }
-
-    // Devolvemos la vista con la asignatura, titulaciones y los grupos asociados
-    return view('asignaturas.edit', compact('asignatura', 'titulaciones'));
-}
-
 
     public function update(Request $request, $id)
-{
-    $asignatura = Asignatura::find($id);
-    if (is_null($asignatura)) {
-        return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
-    }
-
-    // Validamos los datos
-    $validated = $request->validate([
-        'nombre_asignatura' => 'required|string|max:255',
-        'id_titulacion' => 'required|exists:titulaciones,id_titulacion',
-        'grupos_teoria' => 'nullable|array',
-        'grupos_practicas' => 'nullable|array',
-        // Otros campos que sean necesarios
-    ]);
-
-    // Actualizamos los datos de la asignatura
-    $asignatura->update($request->all());
-
-    // Eliminar los grupos existentes para la asignatura (si es necesario)
-    $asignatura->grupos()->delete();
-
-    // Guardar los nuevos grupos de teoría
-    if ($request->has('grupos_teoria')) {
-        foreach ($request->grupos_teoria as $grupo_teoria) {
-            $asignatura->grupos()->create([
-                'grupo_teoria' => $grupo_teoria,
-                'grupo_practica' => null,
-            ]);
+    {
+        $asignatura = Asignatura::find($id);
+        if (is_null($asignatura)) {
+            return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
         }
-    }
 
-    // Guardar los nuevos grupos de práctica
-    if ($request->has('grupos_practicas')) {
-        foreach ($request->grupos_practicas as $grupo_practica) {
-            $asignatura->grupos()->create([
-                'grupo_teoria' => null,
-                'grupo_practica' => $grupo_practica,
-            ]);
+        // Validamos los datos
+        $validated = $request->validate([
+            'id_titulacion' => 'required|exists:titulacion,id_titulacion',
+            'nombre_asignatura' => 'required|string|max:128',
+            'siglas_asignatura' => 'required|string|max:8',
+            'grupos_teoria' => 'required|integer|min:1',
+            'grupos_practicas' => 'required|integer|min:0',
+            // Otros campos según sea necesario
+        ]);
+
+        // Guardamos grupos actuales para comparar después
+        $gruposTeoriaAnterior = $asignatura->grupos_teoria;
+        $gruposPracticaAnterior = $asignatura->grupos_practicas;
+
+        // Actualizamos los datos de la asignatura
+        $asignatura->update($request->all());
+
+        // Si cambiaron los grupos, necesitamos reorganizar
+        if ($gruposTeoriaAnterior != $asignatura->grupos_teoria || 
+            $gruposPracticaAnterior != $asignatura->grupos_practicas) {
+            
+            // Ajustar los grupos según los nuevos valores
+            $this->ajustarGruposAsignatura($asignatura, $gruposTeoriaAnterior, $gruposPracticaAnterior);
         }
+
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Asignatura actualizada',
+            'text' => 'La asignatura ha sido actualizada correctamente',
+        ]);
+
+        return redirect()->route('asignaturas.index')->with('success', 'Asignatura updated successfully');
     }
-
-    session()->flash('swal', [
-        'icon' => 'success',
-        'title' => 'Asignatura actualizada',
-        'text' => 'La asignatura ha sido actualizada correctamente',
-    ]);
-
-    return redirect()->route('asignaturas.index')->with('success', 'Asignatura updated successfully');
-}
-
 
     public function destroy($id)
     {
@@ -185,198 +217,444 @@ public function edit($id)
         if (is_null($asignatura)) {
             return redirect()->route('asignaturas.index')->with('error', 'Asignatura not found');
         }
+
+        // Eliminar primero los registros de grupo_teoria_practica
+        GrupoTeoriaPractica::where('id_asignatura', $id)->delete();
+        
+        // Ahora eliminar la asignatura
         $asignatura->delete();
+
         session()->flash('swal', [
             'icon' => 'success',
             'title' => 'Asignatura eliminada',
             'text' => 'La asignatura ha sido eliminada exitosamente' 
         ]);
+
         return redirect()->route('asignaturas.index')->with('success', 'Asignatura deleted successfully');
     }
 
     public function grupos(Request $request)
-{
-    $search = $request->input('search');
-
-    $asignaturas = Asignatura::with(['titulacion', 'grupos'])
-        ->when($search, function ($query, $search) {
-            return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
-        })
-        ->get();
-
-    return view('asignaturas.grupos', compact('asignaturas'));
-}
-
-public function updateGrupos(Request $request, $asignatura_id)
-{
-    $asignatura = Asignatura::findOrFail($asignatura_id);
-
-    // Actualizar fraccionable
-    if ($request->has('fraccionable')) {
-        $asignatura->fraccionable = $request->boolean('fraccionable');
-        $asignatura->save();
-        return redirect()->route('asignaturas.grupos')
-            ->with('success', 'Estado fraccionable actualizado correctamente');
-    }
-
-    // Eliminar grupo de teoría y sus prácticas asociadas
-    if ($request->has('eliminar_grupo_teoria')) {
-        $numeroGrupoTeoria = $request->eliminar_grupo_teoria;
-        $asignatura->grupos()
-            ->where('grupo_teoria', $numeroGrupoTeoria)
-            ->delete();
-        return redirect()->route('asignaturas.grupos')
-            ->with('success', 'Grupo de teoría y sus prácticas eliminados correctamente');
-    }
-
-    // Eliminar grupo de práctica específico
-    if ($request->has('eliminar_grupo_practica')) {
-        $grupoId = $request->eliminar_grupo_practica;
-        $grupo = GrupoTeoriaPractica::find($grupoId);
-        if ($grupo && $grupo->id_asignatura == $asignatura_id) {
-            $grupo->delete();
-            return redirect()->route('asignaturas.grupos')
-                ->with('success', 'Grupo de práctica eliminado correctamente');
-        }
-    }
-
-    // Crear nuevo grupo de teoría
-    if ($request->has('nuevo_grupo_teoria')) {
-        // Encontrar el último número de grupo de teoría
-        $ultimoGrupo = $asignatura->grupos()
-            ->whereNotNull('grupo_teoria')
-            ->max('grupo_teoria');
-        
-        $nuevoNumeroGrupo = ($ultimoGrupo ?? 0) + 1;
-        
-        // Crear el grupo de teoría con un grupo de práctica inicial
-        $asignatura->grupos()->create([
-            'grupo_teoria' => $nuevoNumeroGrupo,
-            'grupo_practica' => 1, // Primer grupo de práctica
-        ]);
-
-        return redirect()->route('asignaturas.grupos')
-            ->with('success', 'Nuevo grupo de teoría añadido correctamente');
-    }
-
-    // Añadir nuevo grupo de práctica a un grupo de teoría existente
-    if ($request->has('nuevo_grupo_practica')) {
-        $grupoTeoria = $request->nuevo_grupo_practica;
-        
-        // Encontrar el último número de grupo de práctica para este grupo de teoría
-        $ultimoGrupoPractica = $asignatura->grupos()
-            ->where('grupo_teoria', $grupoTeoria)
-            ->max('grupo_practica');
-        
-        $asignatura->grupos()->create([
-            'grupo_teoria' => $grupoTeoria,
-            'grupo_practica' => ($ultimoGrupoPractica ?? 0) + 1,
-        ]);
-
-        return redirect()->route('asignaturas.grupos')
-            ->with('success', 'Nuevo grupo de práctica añadido correctamente');
-    }
-
-    // Actualizar grupos existentes
-    if ($request->has('grupos_teoria')) {
-        foreach ($request->grupos_teoria as $numGrupoTeoria => $datos) {
-            // Actualizar número de grupo de teoría si ha cambiado
-            if (isset($datos['numero']) && $datos['numero'] != $numGrupoTeoria) {
-                $asignatura->grupos()
-                    ->where('grupo_teoria', $numGrupoTeoria)
-                    ->update(['grupo_teoria' => $datos['numero']]);
-            }
-
-            // Actualizar grupos de práctica
-            if (isset($datos['practicas'])) {
-                $gruposPractica = $asignatura->grupos()
-                    ->where('grupo_teoria', $datos['numero'] ?? $numGrupoTeoria)
-                    ->whereNotNull('grupo_practica')
-                    ->orderBy('grupo_practica')
-                    ->get();
-
-                foreach ($gruposPractica as $index => $grupo) {
-                    if (isset($datos['practicas'][$index])) {
-                        $grupo->update([
-                            'grupo_practica' => $datos['practicas'][$index]
-                        ]);
-                    }
-                }
-            }
-        }
-
-        return redirect()->route('asignaturas.grupos')
-            ->with('success', 'Grupos actualizados correctamente');
-    }
-
-    return redirect()->route('asignaturas.grupos')
-        ->with('error', 'No se recibieron datos para actualizar');
-}
-
-/**
-     * Establecer una equivalencia entre dos asignaturas
-     */
-    public function establecerEquivalencia(Request $request)
     {
-        $request->validate([
+        $search = $request->input('search');
+        $asignaturas = Asignatura::with(['titulacion'])
+            ->when($search, function ($query, $search) {
+                return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
+            })
+            ->where('estado', 'Activa')
+            ->get();
+
+        // Para cada asignatura, obtener la distribución de grupos
+        foreach ($asignaturas as $asignatura) {
+            $asignatura->distribucion_grupos = GrupoTeoriaPractica::where('id_asignatura', $asignatura->id_asignatura)
+                ->select('grupo_teoria', DB::raw('count(*) as total_practicas'))
+                ->groupBy('grupo_teoria')
+                ->orderBy('grupo_teoria')
+                ->get();
+        }
+
+        return view('asignaturas.grupos', compact('asignaturas'));
+    }
+
+    public function reasignarGrupos(Request $request, $id)
+    {
+        $asignatura = Asignatura::findOrFail($id);
+        
+        // Validar la distribución propuesta
+        $validated = $request->validate([
+            'distribucion' => 'required|array',
+            'distribucion.*' => 'required|integer|min:0'
+        ]);
+
+        // Verificar que la suma de la distribución coincida con el total de grupos de práctica
+        $totalPracticasAsignadas = array_sum($request->distribucion);
+        if ($totalPracticasAsignadas != $asignatura->grupos_practicas) {
+            return redirect()->back()->with('error', 'El total de grupos de práctica asignados no coincide con el total definido para la asignatura');
+        }
+
+        // Eliminar todas las asignaciones actuales
+        GrupoTeoriaPractica::where('id_asignatura', $id)->delete();
+
+        // Crear las nuevas asignaciones según la distribución
+        foreach ($request->distribucion as $grupoTeoria => $numPracticas) {
+            for ($i = 1; $i <= $numPracticas; $i++) {
+                GrupoTeoriaPractica::create([
+                    'id_asignatura' => $id,
+                    'grupo_teoria' => $grupoTeoria,
+                    'grupo_practica' => $i
+                ]);
+            }
+        }
+
+        return redirect()->route('asignaturas.grupos')
+            ->with('success', 'Distribución de grupos actualizada correctamente');
+    }
+
+    /**
+     * Métodos de utilidad para gestionar grupos
+     */
+
+    /**
+     * Distribuye automáticamente los grupos de práctica entre los grupos de teoría
+     * al crear una nueva asignatura.
+     */
+    private function distribuirGruposPractica(Asignatura $asignatura)
+    {
+        $gruposTeoria = $asignatura->grupos_teoria;
+        $gruposPractica = $asignatura->grupos_practicas;
+        
+        if ($gruposTeoria <= 0 || $gruposPractica <= 0) {
+            return;
+        }
+
+        // Calcular distribución base y cuántos grupos tienen una práctica adicional
+        $practicasPorGrupo = intdiv($gruposPractica, $gruposTeoria);
+        $gruposConPracticaExtra = $gruposPractica % $gruposTeoria;
+
+        // Crear las asignaciones en la tabla grupo_teoria_practica
+        for ($i = 1; $i <= $gruposTeoria; $i++) {
+            $practicasParaEsteGrupo = $practicasPorGrupo;
+            
+            // Si este grupo debe tener una práctica adicional
+            if ($i <= $gruposConPracticaExtra) {
+                $practicasParaEsteGrupo++;
+            }
+
+            // Crear las asignaciones para este grupo de teoría
+            for ($j = 1; $j <= $practicasParaEsteGrupo; $j++) {
+                GrupoTeoriaPractica::create([
+                    'id_asignatura' => $asignatura->id_asignatura,
+                    'grupo_teoria' => $i,
+                    'grupo_practica' => $j
+                ]);
+            }
+        }
+    }
+
+    /**
+ * Cambia el estado de fraccionable de una asignatura.
+ * 
+ * @param  \Illuminate\Http\Request  $request
+ * @param  string  $id ID de la asignatura
+ * @return \Illuminate\Http\Response
+ */
+public function toggleFraccionable(Request $request, $id)
+{
+    $asignatura = Asignatura::findOrFail($id);
+    
+    // Cambiar el estado de fraccionable
+    $asignatura->fraccionable = !$asignatura->fraccionable;
+    $asignatura->save();
+    
+    return redirect()->back()
+        ->with('success', 'El estado de fraccionable ha sido actualizado correctamente');
+}
+
+    /**
+     * Ajusta los grupos cuando se actualiza una asignatura y cambian
+     * el número de grupos de teoría o práctica.
+     */
+    private function ajustarGruposAsignatura(Asignatura $asignatura, $gruposTeoriaAnterior, $gruposPracticaAnterior)
+    {
+        // Eliminar todas las asignaciones actuales
+        GrupoTeoriaPractica::where('id_asignatura', $asignatura->id_asignatura)->delete();
+        
+        // Redistribuir los grupos desde cero
+        $this->distribuirGruposPractica($asignatura);
+    }
+
+    /**
+ * Establece una equivalencia entre dos asignaturas
+ * Modificado para soportar IDs alfanuméricos correctamente
+ */
+public function establecerEquivalencia(Request $request)
+{
+    try {
+        // Validar datos
+        $validated = $request->validate([
             'asignatura_id' => 'required|exists:asignatura,id_asignatura',
             'equivalente_id' => 'required|exists:asignatura,id_asignatura|different:asignatura_id',
         ]);
         
-        $asignatura = Asignatura::findOrFail($request->asignatura_id);
         
-        // Verificar si la equivalencia ya existe
-        if (!$asignatura->equivalencias()->where('id_asignatura', $request->equivalente_id)->exists()) {
-            $asignatura->equivalencias()->attach($request->equivalente_id);
+        
+        $asignatura = Asignatura::where('id_asignatura', $request->asignatura_id)->first();
+        if (!$asignatura) {
+            return redirect()->back()->with('error', 'Asignatura no encontrada');
         }
         
-        return redirect()->back()->with('success', 'Equivalencia establecida correctamente');
+        $equivalente = Asignatura::where('id_asignatura', $request->equivalente_id)->first();
+        if (!$equivalente) {
+            return redirect()->back()->with('error', 'Asignatura equivalente no encontrada');
+        }
+        
+        // Verificar si la equivalencia ya existe
+        $existeEquivalencia = DB::table('asignaturas_equivalentes')
+            ->where('asignatura_id', $asignatura->id_asignatura)
+            ->where('equivalente_id', $equivalente->id_asignatura)
+            ->exists();
+        
+        if (!$existeEquivalencia) {
+            // Insertar equivalencia directamente en la tabla pivot para evitar problemas de conversión de tipos
+            DB::table('asignaturas_equivalentes')->insert([
+                'asignatura_id' => $asignatura->id_asignatura,
+                'equivalente_id' => $equivalente->id_asignatura
+            ]);
+            
+            // Añadir también la relación inversa para facilitar consultas
+            $existeInversa = DB::table('asignaturas_equivalentes')
+                ->where('asignatura_id', $equivalente->id_asignatura)
+                ->where('equivalente_id', $asignatura->id_asignatura)
+                ->exists();
+                
+            if (!$existeInversa) {
+                DB::table('asignaturas_equivalentes')->insert([
+                    'asignatura_id' => $equivalente->id_asignatura,
+                    'equivalente_id' => $asignatura->id_asignatura
+                ]);
+            }
+            
+            return redirect()->back()->with('success', 'Equivalencia establecida correctamente entre ' . 
+                $asignatura->siglas_asignatura . ' y ' . $equivalente->siglas_asignatura);
+        }
+        
+        return redirect()->back()->with('info', 'La equivalencia ya existía previamente');
+    } 
+    catch (\Exception $e) {
+        
+        
+        return redirect()->back()->with('error', 'Error al establecer la equivalencia: ' . $e->getMessage());
     }
+}
     
     /**
-     * Eliminar una equivalencia entre dos asignaturas
-     */
-    public function eliminarEquivalencia(Request $request)
-    {
+ * Elimina una equivalencia entre dos asignaturas
+ * Modificado para soportar IDs alfanuméricos correctamente
+ */
+public function eliminarEquivalencia(Request $request)
+{
+    try {
         $request->validate([
             'asignatura_id' => 'required|exists:asignatura,id_asignatura',
             'equivalente_id' => 'required|exists:asignatura,id_asignatura',
         ]);
         
-        $asignatura = Asignatura::findOrFail($request->asignatura_id);
-        $asignatura->equivalencias()->detach($request->equivalente_id);
+        // Eliminar directamente de la tabla pivot para evitar problemas de conversión
+        DB::table('asignaturas_equivalentes')
+            ->where('asignatura_id', $request->asignatura_id)
+            ->where('equivalente_id', $request->equivalente_id)
+            ->delete();
         
+        // Eliminar también la relación inversa
+        DB::table('asignaturas_equivalentes')
+            ->where('asignatura_id', $request->equivalente_id)
+            ->where('equivalente_id', $request->asignatura_id)
+            ->delete();
+            
         return redirect()->back()->with('success', 'Equivalencia eliminada correctamente');
+    } 
+    catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Error al eliminar la equivalencia: ' . $e->getMessage());
+    }
+}
+    public function mostrarFormularioEquivalencias($id)
+    {
+        $asignatura = Asignatura::findOrFail($id);
+        $asignaturas = Asignatura::where('id_asignatura', '!=', $id)
+                        ->orderBy('nombre_asignatura')
+                        ->get();
+        $equivalenciasActuales = $asignatura->todasLasEquivalencias();
+        
+        return view('asignaturas.equivalencias', compact('asignatura', 'asignaturas', 'equivalenciasActuales'));
+    }
+
+    public function listarEquivalencias()
+    {
+        // Consulta para obtener todas las equivalencias únicas
+        $equivalencias = DB::table('asignaturas_equivalentes')
+            ->join('asignatura as a1', 'asignatura_id', '=', 'a1.id_asignatura')
+            ->join('asignatura as a2', 'equivalente_id', '=', 'a2.id_asignatura')
+            ->select('a1.id_asignatura', 'a1.nombre_asignatura as asignatura1', 
+                    'a2.id_asignatura as id_equivalente', 'a2.nombre_asignatura as asignatura2')
+            ->orderBy('a1.nombre_asignatura')
+            ->get();
+        
+        return view('asignaturas.lista-equivalencias', compact('equivalencias'));
     }
 
     /**
- * Mostrar el formulario para establecer equivalencias
+ * Inicializa la tabla grupo_teoria_practica con los datos existentes en asignatura.
+ * Este método debe ejecutarse una sola vez después de crear la tabla.
  */
-public function mostrarFormularioEquivalencias($id)
+public function inicializarGruposTeoriaPractica()
 {
-    $asignatura = Asignatura::findOrFail($id);
-    $asignaturas = Asignatura::where('id_asignatura', '!=', $id)
-                    ->orderBy('nombre_asignatura')
+    // Obtener todas las asignaturas activas con un enfoque más directo
+    $asignaturas = DB::table('asignatura')
+                    ->where('estado', '!=', 'Extinta')
                     ->get();
-    $equivalenciasActuales = $asignatura->todasLasEquivalencias();
-    
-    return view('asignaturas.equivalencias', compact('asignatura', 'asignaturas', 'equivalenciasActuales'));
+                    
+    $totalAsignaturas = $asignaturas->count();
+    $asignaturasActualizadas = 0;
+    $errores = [];
+    $asignaturasConError = [];
+
+    // Iniciar transacción
+    DB::beginTransaction();
+    try {
+        foreach ($asignaturas as $asignatura) {
+            $idAsignatura = $asignatura->id_asignatura;
+            
+            // Verificar si ya tiene entradas en grupo_teoria_practica - usando consulta directa
+            $existenGrupos = DB::table('grupo_teoria_practica')
+                                ->where('id_asignatura', $idAsignatura)
+                                ->exists();
+            
+            // Si ya tiene grupos asignados, no hacer nada con esta asignatura
+            if ($existenGrupos) {
+                continue;
+            }
+            
+            $gruposTeoria = (int)$asignatura->grupos_teoria;
+            $gruposPractica = (int)$asignatura->grupos_practicas;
+            
+            // Saltar asignaturas sin grupos de teoría o práctica
+            if ($gruposTeoria <= 0 || $gruposPractica <= 0) {
+                continue;
+            }
+            
+            try {
+                // Calcular distribución base y cuántos grupos tienen una práctica adicional
+                $practicasPorGrupo = intdiv($gruposPractica, $gruposTeoria);
+                $gruposConPracticaExtra = $gruposPractica % $gruposTeoria;
+                
+                // Crear las asignaciones en la tabla grupo_teoria_practica
+                for ($i = 1; $i <= $gruposTeoria; $i++) {
+                    $practicasParaEsteGrupo = $practicasPorGrupo;
+                    
+                    // Si este grupo debe tener una práctica adicional
+                    if ($i <= $gruposConPracticaExtra) {
+                        $practicasParaEsteGrupo++;
+                    }
+                    
+                    // Crear las asignaciones para este grupo de teoría
+                    for ($j = 1; $j <= $practicasParaEsteGrupo; $j++) {
+                        try {
+                            // Insertar directamente sin el modelo para evitar problemas de tipo
+                            DB::table('grupo_teoria_practica')->insert([
+                                'id_asignatura' => $idAsignatura,
+                                'grupo_teoria' => $i,
+                                'grupo_practica' => $j
+                            ]);
+                        } catch (\Exception $e) {
+                            $errores[] = "Error al insertar grupo para asignatura '{$idAsignatura}': " . $e->getMessage();
+                            throw $e; // Relanzar para que se maneje en el bloque catch principal
+                        }
+                    }
+                }
+                
+                $asignaturasActualizadas++;
+            } catch (\Exception $e) {
+                $errores[] = "Error procesando la asignatura '{$idAsignatura}': " . $e->getMessage();
+                $asignaturasConError[] = $idAsignatura;
+            }
+        }
+        
+        if (count($errores) > 0) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => "Migración fallida. Se encontraron errores.",
+                'asignaturas_con_error' => $asignaturasConError,
+                'errores' => $errores
+            ], 500);
+        }
+        
+        DB::commit();
+        
+        return response()->json([
+            'success' => true,
+            'message' => "Migración completada. Se han actualizado $asignaturasActualizadas de $totalAsignaturas asignaturas.",
+            'errores' => $errores
+        ]);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error durante la migración: ' . $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
 }
 
 /**
- * Listar todas las equivalencias registradas
+ * Verifica que las asignaturas en la tabla principal existan y sean válidas para migración.
+ * Útil para identificar problemas antes de intentar la migración real.
  */
-public function listarEquivalencias()
+public function verificarAsignaturasMigracion()
 {
-    // Consulta para obtener todas las equivalencias únicas
-    $equivalencias = DB::table('asignaturas_equivalentes')
-        ->join('asignatura as a1', 'asignatura_id', '=', 'a1.id_asignatura')
-        ->join('asignatura as a2', 'equivalente_id', '=', 'a2.id_asignatura')
-        ->select('a1.id_asignatura', 'a1.nombre_asignatura as asignatura1', 
-                'a2.id_asignatura as id_equivalente', 'a2.nombre_asignatura as asignatura2')
-        ->orderBy('a1.nombre_asignatura')
-        ->get();
+    // Obtenemos las asignaturas directamente de la base de datos
+    $asignaturas = DB::table('asignatura')->get();
+    $totalAsignaturas = $asignaturas->count();
+    $asignaturasValidas = 0;
+    $problemas = [];
     
-    return view('asignaturas.lista-equivalencias', compact('equivalencias'));
+    foreach ($asignaturas as $asignatura) {
+        $id = $asignatura->id_asignatura;
+        $problemaAsignatura = false;
+        
+        // Debug adicional para ver realmente qué tipo de dato y valor tenemos
+        $tipo = gettype($id);
+        $representacionHex = bin2hex($id);
+        
+        // Verificar si tiene grupos de teoría y práctica válidos
+        if ((int)$asignatura->grupos_teoria <= 0) {
+            $problemas[] = [
+                'id' => $id,
+                'error' => 'No tiene grupos de teoría definidos',
+                'grupos_teoria' => $asignatura->grupos_teoria,
+                'tipo_dato' => $tipo,
+                'hex' => $representacionHex
+            ];
+            $problemaAsignatura = true;
+        }
+        
+        if ((int)$asignatura->grupos_practicas <= 0) {
+            $problemas[] = [
+                'id' => $id,
+                'error' => 'No tiene grupos de práctica definidos',
+                'grupos_practicas' => $asignatura->grupos_practicas,
+                'tipo_dato' => $tipo,
+                'hex' => $representacionHex
+            ];
+            $problemaAsignatura = true;
+        }
+        
+        // Verificar si ya tiene entradas en grupo_teoria_practica
+        $existenGrupos = DB::table('grupo_teoria_practica')
+                            ->where('id_asignatura', $id)
+                            ->exists();
+                            
+        if ($existenGrupos) {
+            $problemas[] = [
+                'id' => $id,
+                'error' => 'Ya tiene grupos asignados en grupo_teoria_practica',
+                'tipo_dato' => $tipo,
+                'hex' => $representacionHex
+            ];
+            $problemaAsignatura = true;
+        }
+        
+        if (!$problemaAsignatura) {
+            $asignaturasValidas++;
+        }
+    }
+    
+    return response()->json([
+        'total_asignaturas' => $totalAsignaturas,
+        'asignaturas_validas' => $asignaturasValidas,
+        'problemas' => $problemas,
+        'porcentaje_validas' => $totalAsignaturas > 0 ? ($asignaturasValidas / $totalAsignaturas) * 100 : 0
+    ]);
 }
 }

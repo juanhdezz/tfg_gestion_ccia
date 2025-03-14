@@ -9,6 +9,8 @@ class Asignatura extends Model
     use Notifiable;
     protected $table = 'asignatura';
     protected $primaryKey = 'id_asignatura';
+    protected $keyType = 'string';  // Esto es crucial para IDs alfanuméricos
+    public $incrementing = false;   // Desactivar autoincremento
     public $timestamps = false;
 
     protected $fillable = [
@@ -23,15 +25,10 @@ class Asignatura extends Model
         'creditos_teoria', 
         'creditos_practicas', 
         'ects_teoria', 
-        'ects_practicas',  
-        'web_decsai', 
+        'ects_practicas',
+        'grupos_teoria',
+        'grupos_practicas',  
         'web_asignatura', 
-        'enlace_temario', 
-        'temario_teoria', 
-        'temario_practicas', 
-        'bibliografia', 
-        'evaluacion', 
-        'recomendaciones', 
         'tipo',
         'fraccionable',
         'estado'  
@@ -52,14 +49,43 @@ class Asignatura extends Model
  * Las asignaturas equivalentes a esta asignatura
  */
 public function equivalencias()
-{
-    return $this->belongsToMany(
-        Asignatura::class,
-        'asignaturas_equivalentes',
-        'asignatura_id',
-        'equivalente_id'
-    );
-}
+    {
+        return $this->belongsToMany(
+            Asignatura::class,
+            'asignaturas_equivalentes',
+            'asignatura_id',
+            'equivalente_id'
+        )->withPivot([]);
+    }
+    
+    /**
+     * Obtiene todas las equivalencias para una asignatura,
+     * incluyendo las directas y las inversas
+     */
+    public function todasLasEquivalencias()
+    {
+        // Obtener IDs de todas las equivalencias directas
+        $directas = $this->equivalencias()->pluck('id_asignatura')->toArray();
+        
+        // Obtener IDs de todas las equivalencias inversas
+        $inversas = Asignatura::whereHas('equivalencias', function($query) {
+            $query->where('equivalente_id', $this->id_asignatura);
+        })->pluck('id_asignatura')->toArray();
+        
+        // Combinar y eliminar duplicados
+        $idsEquivalencias = array_unique(array_merge($directas, $inversas));
+        
+        // Excluir la propia asignatura si está en la lista
+        $idsEquivalencias = array_diff($idsEquivalencias, [$this->id_asignatura]);
+        
+        // Si no hay equivalencias, devolver colección vacía
+        if (empty($idsEquivalencias)) {
+            return collect();
+        }
+        
+        // Devolver colección de asignaturas equivalentes
+        return Asignatura::whereIn('id_asignatura', $idsEquivalencias)->get();
+    }
 
 /**
  * Las asignaturas que tienen esta asignatura como equivalente
@@ -77,9 +103,6 @@ public function equivalenteDe()
     /**
      * Obtener todas las asignaturas equivalentes (en ambas direcciones)
      */
-    public function todasLasEquivalencias()
-    {
-        return $this->equivalencias->merge($this->equivalenteDe);
-    }
+    
 
 }

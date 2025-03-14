@@ -106,11 +106,11 @@
                     @endforeach
                 </div>
 
-                <!-- Web DECSAI -->
+                {{-- <!-- Web DECSAI -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Web DECSAI</h3>
                     <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->web_decsai }}</p>
-                </div>
+                </div> --}}
 
                 <!-- Web Asignatura -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
@@ -118,7 +118,7 @@
                     <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->web_asignatura }}</p>
                 </div>
 
-                <!-- Enlace Temario -->
+                {{-- <!-- Enlace Temario -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Enlace Temario</h3>
                     <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->enlace_temario }}</p>
@@ -152,7 +152,7 @@
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Recomendaciones</h3>
                     <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->recomendaciones }}</p>
-                </div>
+                </div> --}}
 
                 <!-- Tipo -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">

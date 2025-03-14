@@ -74,10 +74,10 @@
                                 {{ $asignatura->id_coordinador }}
                             </td>
                             <td class="px-6 py-4">
-                                {{ $asignatura->total_grupos_teoria }}
+                                {{ $asignatura->grupos_teoria }}
                             </td>
                             <td class="px-6 py-4">
-                                {{ $asignatura->total_grupos_practica }}
+                                {{ $asignatura->grupos_practicas }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex space-x-2">
@@ -157,10 +157,10 @@
                                 {{ $asignatura->id_coordinador }}
                             </td>
                             <td class="px-6 py-4">
-                                {{ $asignatura->total_grupos_teoria }}
+                                {{ $asignatura->grupos_teoria }}
                             </td>
                             <td class="px-6 py-4">
-                                {{ $asignatura->total_grupos_practica }}
+                                {{ $asignatura->grupos_practicas }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex space-x-2">

@@ -69,11 +69,7 @@
                         </select>
                     </div>
 
-                    <!-- Créditos -->
-                    <div class="mb-4">
-                        <label for="creditos" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Créditos:</label>
-                        <input type="number" step="0.1" min="0" id="creditos" name="creditos" value="{{ old('creditos') }}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
-                    </div>
+                    
 
                     <!-- Antigüedad -->
                     <div class="mb-4">

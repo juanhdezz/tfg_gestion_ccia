@@ -1,10 +1,11 @@
 <?php
 namespace App\Models;
 
+use Faker\Provider\Base;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 
-class Asignatura extends Model 
+class Asignatura extends BaseModel 
 {
     use Notifiable;
     protected $table = 'asignatura';

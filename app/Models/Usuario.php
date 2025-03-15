@@ -5,6 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Support\Facades\Config;
 
 class Usuario extends Authenticatable
 {
@@ -58,4 +59,9 @@ class Usuario extends Authenticatable
 {
     return $this->belongsTo(Despacho::class, 'id_despacho');
 }
+
+public function getConnectionName()
+    {
+        return Config::get('database.default');
+    }
 }

@@ -1,3 +1,4 @@
+app.php
 <?php
 
 use Illuminate\Foundation\Application;
@@ -11,9 +12,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Alias para middleware personalizado
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
+        
+        // Añadir DatabaseSwitcher al middleware web
+        $middleware->web([\App\Http\Middleware\DatabaseSwitcher::class]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

@@ -7,6 +7,8 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AsignaturaController;
 use App\Http\Controllers\UsuarioAsignaturaController;
 use App\Http\Controllers\TutoriaController;
+use App\Http\Controllers\DatabaseController;
+
 
 
 Route::get('/', function () {
@@ -119,6 +121,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/tutorias/actualizar', [TutoriaController::class, 'actualizar'])->name('tutorias.actualizar');
     // Añadir esta ruta
     Route::get('/tutorias/ver', [TutoriaController::class, 'verTutorias'])->name('tutorias.ver');
+    // routes/web.php
+
+Route::post('/cambiar-base-datos', [DatabaseController::class, 'cambiarBaseDatos'])->name('cambiar.base.datos');
 });
 
 // Ruta para reasignar grupos de práctica entre grupos de teoría

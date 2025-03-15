@@ -1,4 +1,6 @@
 <!-- filepath: c:\xampp\htdocs\laravel\tfg_gestion_ccia\resources\views\plazos\index.blade.php -->
+
+@if ($mostrarVista)
 <x-app-layout>
     <div class="container mx-auto px-4 py-6">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
@@ -275,3 +277,33 @@
     </script>
     @endpush
 </x-app-layout>
+@else
+<x-app-layout>
+    <div class="container mx-auto px-4 py-16">
+        <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden max-w-lg mx-auto">
+            <div class="p-8 text-center">
+                <div class="flex justify-center mb-6">
+                    <svg class="h-16 w-16 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Gestión no disponible</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">
+                    La gestión de plazos solo está disponible durante el período establecido: del 1 de Enero al 1 de Marzo de 2025.
+                </p>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        Si necesitas acceder fuera de este período, contacta con el administrador del sistema.
+                    </p>
+                    <div class="mt-6">
+                        <a href="{{ route('dashboard') }}" class="btn-primary">
+                            Volver al inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
+@endif
+

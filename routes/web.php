@@ -8,6 +8,7 @@ use App\Http\Controllers\AsignaturaController;
 use App\Http\Controllers\UsuarioAsignaturaController;
 use App\Http\Controllers\TutoriaController;
 use App\Http\Controllers\DatabaseController;
+use App\Http\Controllers\DespachoController;
 
 
 
@@ -110,6 +111,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
 
 Route::middleware(['auth'])->group(function () {
+    // Rutas para despachos
+    Route::resource('despachos', DespachoController::class);
+    
+    // Ruta opcional para ver usuarios asignados a un despacho
+    Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
+        ->name('despachos.usuarios');
+    
+    // Ruta opcional para exportar despachos
+    Route::get('despachos-exportar', [DespachoController::class, 'exportar'])
+        ->name('despachos.exportar');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/departamento', function () {

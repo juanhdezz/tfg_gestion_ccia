@@ -9,6 +9,7 @@ use App\Http\Controllers\UsuarioAsignaturaController;
 use App\Http\Controllers\TutoriaController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\DespachoController;
+use App\Http\Controllers\ReservaSalaController;
 
 
 
@@ -106,7 +107,40 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/plazos/{id}', [App\Http\Controllers\PlazoController::class, 'update'])->name('plazos.update');
     Route::delete('/plazos/{id}', [App\Http\Controllers\PlazoController::class, 'destroy'])->name('plazos.destroy');
     
-});
+    // Ruta para reservas de sala
+    Route::get('reserva-salas/create', [ReservaSalaController::class, 'create'])
+         ->name('reserva_salas.create');
+
+    Route::post('reserva-salas', [ReservaSalaController::class, 'store'])
+            ->name('reserva_salas.store');
+
+    Route::get('reserva-salas', [ReservaSalaController::class, 'index'])
+         ->name('reserva_salas.index');
+
+    Route::get('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'show'])
+         ->name('reserva_salas.show');
+    
+    Route::get('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}/edit', [ReservaSalaController::class, 'edit'])
+         ->name('reserva_salas.edit');
+    
+    Route::patch('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'update'])
+         ->name('reserva_salas.update');
+    
+    Route::delete('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'destroy'])
+         ->name('reserva_salas.destroy');
+    
+    Route::patch('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}/cambiar-estado', [ReservaSalaController::class, 'cambiarEstado'])
+         ->name('reserva_salas.cambiar-estado');
+     //Ruta para el calendsriorio de reservas
+    Route::get('/calendario-reservas', [App\Http\Controllers\ReservaSalaController::class, 'calendario'])->name('reserva_salas.calendario');
+
+// Ruta para obtener los eventos del calendario en formato JSON
+Route::get('reserva-salas/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
+     ->name('reserva_salas.obtener-eventos-calendario');
+
+     Route::post('reserva-salas/verificar-disponibilidad', [ReservaSalaController::class, 'verificarDisponibilidad'])
+     ->name('reserva_salas.verificar-disponibilidad');
+    });
 
 
 

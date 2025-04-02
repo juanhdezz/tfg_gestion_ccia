@@ -89,9 +89,15 @@
                         @foreach($despachos as $despacho)
                             <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                                 <td class="px-6 py-4">
-                                    <span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded">
-                                        {{ $despacho->centro->nombre_centro }}
-                                    </span>
+                                    @if($despacho->centro && $despacho->centro->nombre_centro)
+                                        <span class="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs font-medium px-2.5 py-0.5 rounded">
+                                            {{ $despacho->centro->nombre_centro }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-400 dark:text-gray-500 text-xs italic">
+                                            Sin asignar
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">
                                     {{ $despacho->nombre_despacho }}

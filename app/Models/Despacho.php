@@ -27,4 +27,10 @@ class Despacho extends BaseModel
     {
         return $this->belongsTo(Centro::class, 'id_centro');
     }
+
+    // Relación con la tabla Usuario (un despacho puede tener muchos usuarios)
+    public function usuarios()
+    {
+        return $this->hasMany(Usuario::class, 'id_despacho', 'id_despacho');
+    }
 }

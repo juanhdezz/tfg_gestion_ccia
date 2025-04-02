@@ -6,6 +6,7 @@ use App\Models\Despacho;
 use App\Models\Centro;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class DespachoController extends Controller
 {
@@ -143,51 +144,53 @@ class DespachoController extends Controller
     }
 
     /**
-     * Elimina un despacho específico de la base de datos
-     */
-    public function destroy($id)
-    {
-        $despacho = Despacho::findOrFail($id);
-        $nombre = $despacho->nombre_despacho;
+ * Elimina un despacho específico de la base de datos
+ */
+public function destroy($id)
+{
+    $despacho = Despacho::findOrFail($id);
+    $nombre = $despacho->nombre_despacho;
 
-        try {
-            // Verificar si el despacho tiene usuarios asignados
-            // (Ajusta esto según la relación exacta en tu sistema)
-            if ($despacho->usuarios()->exists()) {
-                session()->flash('swal', [
-                    'icon' => 'error',
-                    'title' => 'No se puede eliminar',
-                    'text' => "El despacho {$nombre} tiene usuarios asignados y no puede ser eliminado"
-                ]);
-                
-                return redirect()->route('despachos.index')
-                    ->with('error', 'El despacho tiene usuarios asignados y no puede ser eliminado');
-            }
-
-            // Eliminar el despacho
-            $despacho->delete();
-            
-            // Preparar mensaje para SweetAlert
-            session()->flash('swal', [
-                'icon' => 'success',
-                'title' => 'Despacho eliminado',
-                'text' => "El despacho {$nombre} ha sido eliminado exitosamente"
-            ]);
-            
-            return redirect()->route('despachos.index')
-                ->with('success', 'Despacho eliminado exitosamente');
-                
-        } catch (\Exception $e) {
+    try {
+        // Verificar si el despacho tiene usuarios asignados
+        if ($despacho->usuarios()->exists()) {
             session()->flash('swal', [
                 'icon' => 'error',
-                'title' => 'Error',
-                'text' => 'No se pudo eliminar el despacho: ' . $e->getMessage()
+                'title' => 'No se puede eliminar',
+                'text' => "El despacho {$nombre} tiene usuarios asignados y no puede ser eliminado"
             ]);
             
             return redirect()->route('despachos.index')
-                ->with('error', 'No se pudo eliminar el despacho');
+                ->with('error', 'El despacho tiene usuarios asignados y no puede ser eliminado');
         }
+
+        // Eliminar el despacho
+        $despacho->delete();
+        
+        // Preparar mensaje para SweetAlert
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Despacho eliminado',
+            'text' => "El despacho {$nombre} ha sido eliminado exitosamente"
+        ]);
+        
+        return redirect()->route('despachos.index')
+            ->with('success', 'Despacho eliminado exitosamente');
+            
+    } catch (\Exception $e) {
+        // Log del error para debugging
+        Log::error('Error al eliminar despacho: ' . $e->getMessage());
+        
+        session()->flash('swal', [
+            'icon' => 'error',
+            'title' => 'Error',
+            'text' => 'No se pudo eliminar el despacho: ' . $e->getMessage()
+        ]);
+        
+        return redirect()->route('despachos.index')
+            ->with('error', 'No se pudo eliminar el despacho');
     }
+}
 
     /**
      * Muestra un listado de los usuarios asignados a un despacho específico

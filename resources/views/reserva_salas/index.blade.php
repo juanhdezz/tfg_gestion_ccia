@@ -4,24 +4,6 @@
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Gestión de
             Reservas de Salas</h1>
 
-        @if (auth()->user()->hasRole('admin') && isset($reservasPendientesCount) && $reservasPendientesCount > 0)
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-circle"></i>
-                Hay {{ $reservasPendientesCount }} reservas pendientes de validación.
-                <a href="{{ route('reserva_salas.pendientes') }}" class="alert-link">Ver ahora</a>
-            </div>
-        @endif
-        @if (auth()->check() && auth()->user()->hasRole('admin'))
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('reserva_salas.pendientes') }}">
-                    <i class="fas fa-clock"></i> Reservas Pendientes
-                    <span class="badge badge-warning">
-                        {{ \App\Models\ReservaSala::where('estado', 'Pendiente Validación')->count() }}
-                    </span>
-                </a>
-            </li>
-        @endif
-
         <!-- Formulario de filtrado -->
         <form method="GET" action="{{ route('reserva_salas.index') }}"
             class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -86,15 +68,44 @@
             </div>
         </form>
 
-        <div class="flex justify-end mb-4">
-            <a href="{{ route('reserva_salas.calendario') }}"
-                class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded ml-2">
-                Ver Calendario
-            </a>
-            <a href="{{ route('reserva_salas.create') }}"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
-                Realizar Reserva
-            </a>
+        <div class="flex flex-wrap justify-between items-center mb-4">
+            <div class="flex items-center">
+                @if (auth()->user()->hasRole('admin'))
+                    @php 
+                        $pendientesCount = \App\Models\ReservaSala::where('estado', 'Pendiente Validación')->count();
+                    @endphp
+                    @if ($pendientesCount > 0)
+                        <div class="mr-2 text-yellow-600 dark:text-yellow-400">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span class="font-medium">{{ $pendientesCount }} reserva(s) pendiente(s)</span>
+                        </div>
+                    @endif
+                @endif
+            </div>
+            
+            <div class="flex flex-wrap mt-2 sm:mt-0">
+                @if (auth()->user()->hasRole('admin'))
+                    <a href="{{ route('reserva_salas.pendientes') }}"
+                        class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
+                        <i class="fas fa-clock mr-1"></i> Reservas Pendientes
+                        @if ($pendientesCount > 0)
+                            <span class="bg-white text-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ml-1">
+                                {{ $pendientesCount }}
+                            </span>
+                        @endif
+                    </a>
+                @endif
+                
+                <a href="{{ route('reserva_salas.calendario') }}"
+                    class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
+                    <i class="fas fa-calendar-alt mr-1"></i> Ver Calendario
+                </a>
+                
+                <a href="{{ route('reserva_salas.create') }}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center">
+                    <i class="fas fa-plus mr-1"></i> Realizar Reserva
+                </a>
+            </div>
         </div>
 
         <div class="relative overflow-x-auto shadow-md sm:rounded-lg">

@@ -78,7 +78,20 @@
                 <h5 class="mt-4 text-xl font-bold text-gray-900 dark:text-white">Gestión de despachos</h5>
                 <p class="text-gray-700 dark:text-gray-400 text-center">Administración de despachos.</p>
             </a>
+
+            <!-- Gestión de reservas de salas -->
+
+            <a href="{{ route('reserva_salas.index') }}" class="module-card flex flex-col items-center p-6 bg-white border border-gray-200 rounded-lg shadow-md hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700" data-title="Gestión de reservas de salas" data-keywords="reservas, salas, gestión, administración, disponibilidad">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 text-teal-500 dark:text-teal-400">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5V21h18V7.5m0 0L12 3m6 4.5L12 3m6 4.5v9m0 0H6m6 0v9" />
+                </svg>
+                <h5 class="mt-4 text-xl font-bold text-gray-900 dark:text-white">Gestión de reservas de salas</h5>
+                <p class="text-gray-700 dark:text-gray-400 text-center">Administración de reservas de salas.</p>
+            </a>
+
         </div>
+
+
 
         <!-- Mensaje cuando no hay resultados -->
         <div id="no-results" class="hidden bg-gray-50 dark:bg-gray-800 rounded-lg p-10 text-center">

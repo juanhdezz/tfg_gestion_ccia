@@ -23,7 +23,7 @@ class UsuarioController extends Controller
         })
         ->get();
 
-    return view('usuarios.index', compact('usuarios'));
+    return view('usuarios.index', compact('usuarios', 'search'));
 }
 
     public function show($id)
@@ -40,9 +40,11 @@ class UsuarioController extends Controller
         // Obtener todos los despachos
     $despachos = Despacho::all();
     $roles = Role::all(); // Obtener todos los roles
+    // Obtener todas las titulaciones para el desplegable
+    $titulaciones = \App\Models\Titulacion::orderBy('nombre_titulacion')->get();
 
     // Pasar los despachos a la vista
-    return view('usuarios.create', compact('despachos'),compact('roles'));
+    return view('usuarios.create', compact('despachos','titulaciones','roles'),compact('roles'));
     }
 
     public function store(Request $request)

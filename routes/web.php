@@ -10,6 +10,9 @@ use App\Http\Controllers\TutoriaController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\DespachoController;
 use App\Http\Controllers\ReservaSalaController;
+use App\Http\Controllers\PlazoController;
+use App\Mail\Notification;
+use Illuminate\Support\Facades\Mail;
 
 
 
@@ -106,52 +109,57 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/plazos/{id}', [App\Http\Controllers\PlazoController::class, 'show'])->name('plazos.show');
     Route::put('/plazos/{id}', [App\Http\Controllers\PlazoController::class, 'update'])->name('plazos.update');
     Route::delete('/plazos/{id}', [App\Http\Controllers\PlazoController::class, 'destroy'])->name('plazos.destroy');
-    
+
     // Ruta para reservas de sala
     Route::get('reserva-salas/create', [ReservaSalaController::class, 'create'])
-         ->name('reserva_salas.create');
+        ->name('reserva_salas.create');
 
     Route::post('reserva-salas', [ReservaSalaController::class, 'store'])
-            ->name('reserva_salas.store');
+        ->name('reserva_salas.store');
 
     Route::get('reserva-salas', [ReservaSalaController::class, 'index'])
-         ->name('reserva_salas.index');
+        ->name('reserva_salas.index');
 
     Route::get('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'show'])
-         ->name('reserva_salas.show');
-    
+        ->name('reserva_salas.show');
+
     Route::get('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}/edit', [ReservaSalaController::class, 'edit'])
-         ->name('reserva_salas.edit');
-    
+        ->name('reserva_salas.edit');
+
     Route::patch('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'update'])
-         ->name('reserva_salas.update');
-    
+        ->name('reserva_salas.update');
+
     Route::delete('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'destroy'])
-         ->name('reserva_salas.destroy');
-    
+        ->name('reserva_salas.destroy');
+
     Route::patch('reserva-salas/{id_sala}/{fecha}/{hora_inicio}/{estado}/cambiar-estado', [ReservaSalaController::class, 'cambiarEstado'])
-         ->name('reserva_salas.cambiar-estado');
-     //Ruta para el calendsriorio de reservas
+        ->name('reserva_salas.cambiar-estado');
+    //Ruta para el calendsriorio de reservas
     Route::get('/calendario-reservas', [App\Http\Controllers\ReservaSalaController::class, 'calendario'])->name('reserva_salas.calendario');
 
-// Ruta para obtener los eventos del calendario en formato JSON
-Route::get('reserva-salas/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
-     ->name('reserva_salas.obtener-eventos-calendario');
+    // Ruta para obtener los eventos del calendario en formato JSON
+    Route::get('reserva-salas/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
+        ->name('reserva_salas.obtener-eventos-calendario');
 
-     Route::post('reserva-salas/verificar-disponibilidad', [ReservaSalaController::class, 'verificarDisponibilidad'])
-     ->name('reserva_salas.verificar-disponibilidad');
-    });
+    Route::post('reserva-salas/verificar-disponibilidad', [ReservaSalaController::class, 'verificarDisponibilidad'])
+        ->name('reserva_salas.verificar-disponibilidad');
+
+    Route::get('reserva_salas/pendientes', [ReservaSalaController::class, 'reservasPendientes'])
+        ->name('reserva_salas.pendientes');
+    Route::post('reserva_salas/procesar/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'procesarValidacion'])
+        ->name('reserva_salas.procesar');
+});
 
 
 
 Route::middleware(['auth'])->group(function () {
     // Rutas para despachos
     Route::resource('despachos', DespachoController::class);
-    
+
     // Ruta opcional para ver usuarios asignados a un despacho
     Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
         ->name('despachos.usuarios');
-    
+
     // Ruta opcional para exportar despachos
     Route::get('despachos-exportar', [DespachoController::class, 'exportar'])
         ->name('despachos.exportar');
@@ -168,7 +176,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/tutorias/ver', [TutoriaController::class, 'verTutorias'])->name('tutorias.ver');
     // routes/web.php
 
-Route::post('/cambiar-base-datos', [DatabaseController::class, 'cambiarBaseDatos'])->name('cambiar.base.datos');
+    Route::post('/cambiar-base-datos', [DatabaseController::class, 'cambiarBaseDatos'])->name('cambiar.base.datos');
 });
 
 // Ruta para reasignar grupos de práctica entre grupos de teoría

@@ -129,6 +129,7 @@ class ComposerStaticInit626b9e7ddd47fb7eff9aaa53cce0c9ad
             'ParaTest\\' => 9,
             'PHPUnit\\Architecture\\' => 21,
             'PHPStan\\PhpDocParser\\' => 21,
+            'PHPMailer\\PHPMailer\\' => 20,
         ),
         'N' => 
         array (
@@ -449,6 +450,10 @@ class ComposerStaticInit626b9e7ddd47fb7eff9aaa53cce0c9ad
         array (
             0 => __DIR__ . '/..' . '/phpstan/phpdoc-parser/src',
         ),
+        'PHPMailer\\PHPMailer\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
+        ),
         'NunoMaduro\\Collision\\' => 
         array (
             0 => __DIR__ . '/..' . '/nunomaduro/collision/src',
@@ -648,6 +653,8 @@ class ComposerStaticInit626b9e7ddd47fb7eff9aaa53cce0c9ad
     );
 
     public static $classMap = array (
+        'App\\Exports\\ListaUsuariosExport' => __DIR__ . '/../..' . '/app/Exports/ListaUsuariosExport.php',
+        'App\\Http\\Controllers\\AsignaturaController' => __DIR__ . '/../..' . '/app/Http/Controllers/AsignaturaController.php',
         'App\\Http\\Controllers\\Auth\\AuthenticatedSessionController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/AuthenticatedSessionController.php',
         'App\\Http\\Controllers\\Auth\\ConfirmablePasswordController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/ConfirmablePasswordController.php',
         'App\\Http\\Controllers\\Auth\\EmailVerificationNotificationController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/EmailVerificationNotificationController.php',
@@ -658,15 +665,36 @@ class ComposerStaticInit626b9e7ddd47fb7eff9aaa53cce0c9ad
         'App\\Http\\Controllers\\Auth\\RegisteredUserController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/RegisteredUserController.php',
         'App\\Http\\Controllers\\Auth\\VerifyEmailController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/VerifyEmailController.php',
         'App\\Http\\Controllers\\Controller' => __DIR__ . '/../..' . '/app/Http/Controllers/Controller.php',
+        'App\\Http\\Controllers\\DatabaseController' => __DIR__ . '/../..' . '/app/Http/Controllers/DatabaseController.php',
+        'App\\Http\\Controllers\\DespachoController' => __DIR__ . '/../..' . '/app/Http/Controllers/DespachoController.php',
+        'App\\Http\\Controllers\\PlazoController' => __DIR__ . '/../..' . '/app/Http/Controllers/PlazoController.php',
         'App\\Http\\Controllers\\ProfileController' => __DIR__ . '/../..' . '/app/Http/Controllers/ProfileController.php',
+        'App\\Http\\Controllers\\ReservaSalaController' => __DIR__ . '/../..' . '/app/Http/Controllers/ReservaSalaController.php',
+        'App\\Http\\Controllers\\TutoriaController' => __DIR__ . '/../..' . '/app/Http/Controllers/TutoriaController.php',
+        'App\\Http\\Controllers\\UsuarioAsignaturaController' => __DIR__ . '/../..' . '/app/Http/Controllers/UsuarioAsignaturaController.php',
         'App\\Http\\Controllers\\UsuarioController' => __DIR__ . '/../..' . '/app/Http/Controllers/UsuarioController.php',
+        'App\\Http\\Middleware\\DatabaseSwitcher' => __DIR__ . '/../..' . '/app/Http/Middleware/DatabaseSwitcher.php',
         'App\\Http\\Middleware\\EnsureUserIsAdmin' => __DIR__ . '/../..' . '/app/Http/Middleware/EnsureUserIsAdmin.php',
         'App\\Http\\Requests\\Auth\\LoginRequest' => __DIR__ . '/../..' . '/app/Http/Requests/Auth/LoginRequest.php',
         'App\\Http\\Requests\\ProfileUpdateRequest' => __DIR__ . '/../..' . '/app/Http/Requests/ProfileUpdateRequest.php',
+        'App\\Models\\Asignatura' => __DIR__ . '/../..' . '/app/Models/Asignatura.php',
+        'App\\Models\\AsignaturaEquivalente' => __DIR__ . '/../..' . '/app/Models/AsignaturaEquivalente.php',
+        'App\\Models\\BaseModel' => __DIR__ . '/../..' . '/app/Models/BaseModel.php',
+        'App\\Models\\Centro' => __DIR__ . '/../..' . '/app/Models/Centro.php',
+        'App\\Models\\Despacho' => __DIR__ . '/../..' . '/app/Models/Despacho.php',
+        'App\\Models\\GrupoTeoriaPractica' => __DIR__ . '/../..' . '/app/Models/GrupoTeoriaPractica.php',
+        'App\\Models\\Motivo' => __DIR__ . '/../..' . '/app/Models/Motivo.php',
+        'App\\Models\\Plazo' => __DIR__ . '/../..' . '/app/Models/Plazo.php',
+        'App\\Models\\ReservaSala' => __DIR__ . '/../..' . '/app/Models/ReservaSala.php',
+        'App\\Models\\Sala' => __DIR__ . '/../..' . '/app/Models/Sala.php',
+        'App\\Models\\Titulacion' => __DIR__ . '/../..' . '/app/Models/Titulacion.php',
+        'App\\Models\\Tutoria' => __DIR__ . '/../..' . '/app/Models/Tutoria.php',
         'App\\Models\\User' => __DIR__ . '/../..' . '/app/Models/User.php',
         'App\\Models\\Usuario' => __DIR__ . '/../..' . '/app/Models/Usuario.php',
+        'App\\Models\\UsuarioAsignatura' => __DIR__ . '/../..' . '/app/Models/UsuarioAsignatura.php',
         'App\\Providers\\AppServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AppServiceProvider.php',
         'App\\View\\Components\\AppLayout' => __DIR__ . '/../..' . '/app/View/Components/AppLayout.php',
+        'App\\View\\Components\\DatabaseSelector' => __DIR__ . '/../..' . '/app/View/Components/DatabaseSelector.php',
         'App\\View\\Components\\GuestLayout' => __DIR__ . '/../..' . '/app/View/Components/GuestLayout.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
         'Brick\\Math\\BigDecimal' => __DIR__ . '/..' . '/brick/math/src/BigDecimal.php',
@@ -4302,6 +4330,13 @@ class ComposerStaticInit626b9e7ddd47fb7eff9aaa53cce0c9ad
         'NunoMaduro\\Collision\\SolutionsRepositories\\NullSolutionsRepository' => __DIR__ . '/..' . '/nunomaduro/collision/src/SolutionsRepositories/NullSolutionsRepository.php',
         'NunoMaduro\\Collision\\Writer' => __DIR__ . '/..' . '/nunomaduro/collision/src/Writer.php',
         'Override' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/Override.php',
+        'PHPMailer\\PHPMailer\\DSNConfigurator' => __DIR__ . '/..' . '/phpmailer/phpmailer/src/DSNConfigurator.php',
+        'PHPMailer\\PHPMailer\\Exception' => __DIR__ . '/..' . '/phpmailer/phpmailer/src/Exception.php',
+        'PHPMailer\\PHPMailer\\OAuth' => __DIR__ . '/..' . '/phpmailer/phpmailer/src/OAuth.php',
+        'PHPMailer\\PHPMailer\\OAuthTokenProvider' => __DIR__ . '/..' . '/phpmailer/phpmailer/src/OAuthTokenProvider.php',
+        'PHPMailer\\PHPMailer\\PHPMailer' => __DIR__ . '/..' . '/phpmailer/phpmailer/src/PHPMailer.php',
+        'PHPMailer\\PHPMailer\\POP3' => __DIR__ . '/..' . '/phpmailer/phpmailer/src/POP3.php',
+        'PHPMailer\\PHPMailer\\SMTP' => __DIR__ . '/..' . '/phpmailer/phpmailer/src/SMTP.php',
         'PHPStan\\PhpDocParser\\Ast\\AbstractNodeVisitor' => __DIR__ . '/..' . '/phpstan/phpdoc-parser/src/Ast/AbstractNodeVisitor.php',
         'PHPStan\\PhpDocParser\\Ast\\Attribute' => __DIR__ . '/..' . '/phpstan/phpdoc-parser/src/Ast/Attribute.php',
         'PHPStan\\PhpDocParser\\Ast\\ConstExpr\\ConstExprArrayItemNode' => __DIR__ . '/..' . '/phpstan/phpdoc-parser/src/Ast/ConstExpr/ConstExprArrayItemNode.php',

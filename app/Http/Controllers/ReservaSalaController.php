@@ -13,6 +13,11 @@ use App\Models\Motivo;
 use App\Models\Usuario;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Mail\Notification;
+use Illuminate\Support\Facades\Mail;
+//use App\Services\MailService;
+
+
 
 
 class ReservaSalaController extends Controller
@@ -52,6 +57,21 @@ class ReservaSalaController extends Controller
         $reservas = $query->paginate(10);
         $salas = Sala::orderBy('nombre')->get();
         $usuarios = Usuario::orderBy('apellidos')->get();
+
+        if (Auth::user()->rol === 'admin') {
+            $reservasPendientesCount = ReservaSala::where('estado', 'Pendiente Validación')->count();
+            
+            return view('reserva_salas.index', compact(
+                'reservas', 'salas', 'usuarios', 
+                'filtroFecha', 'filtroSala', 'filtroUsuario', 'filtroEstado',
+                'reservasPendientesCount'
+            ));
+        }
+        
+        return view('reserva_salas.index', compact(
+            'reservas', 'salas', 'usuarios', 
+            'filtroFecha', 'filtroSala', 'filtroUsuario', 'filtroEstado'
+        ));
         
         return view('reserva_salas.index', compact('reservas', 'salas', 'usuarios', 
             'filtroFecha', 'filtroSala', 'filtroUsuario', 'filtroEstado'));
@@ -719,5 +739,125 @@ public function verificarDisponibilidad(Request $request)
     
     // Si no hay reservas que se solapen, la sala está disponible
     return response()->json(['disponible' => true]);
+}
+
+/**
+ * Muestra la lista de reservas pendientes de validación
+ */
+public function reservasPendientes()
+{
+    $reservasPendientes = ReservaSala::with(['sala', 'usuario', 'motivo'])
+        ->where('estado', 'Pendiente Validación')
+        ->orderBy('fecha', 'desc')
+        ->orderBy('hora_inicio', 'asc')
+        ->paginate(10);
+    
+    return view('reserva_salas.pendientes', compact('reservasPendientes'));
+}
+
+/**
+ * Procesa la validación o rechazo de una reserva
+ */
+/**
+ * Procesa la validación o rechazo de una reserva
+ */
+public function procesarValidacion(Request $request, $id_sala, $fecha, $hora_inicio, $estado)
+{
+    // Verificar que el usuario tenga rol de administrador
+    // if (Auth::user()->rol === 'admin') {
+    //     session()->flash('swal', [
+    //         'icon' => 'error',
+    //         'title' => 'Acceso denegado',
+    //         'text' => 'No tiene permisos para realizar esta acción'
+    //     ]);
+        
+    //     return redirect()->route('reserva_salas.index');
+    // }
+    
+    // Validar datos
+    $request->validate([
+        'decision' => 'required|in:validar,rechazar',
+        'observaciones' => 'nullable|string'
+    ]);
+    
+    try {
+        // Obtener la reserva
+        $reserva = ReservaSala::with(['usuario', 'sala', 'motivo'])
+            ->where('id_sala', $id_sala)
+            ->where('fecha', $fecha)
+            ->where('hora_inicio', $hora_inicio)
+            ->where('estado', $estado)
+            ->firstOrFail();
+        
+        // Obtener el usuario que realizó la reserva
+        $usuario = $reserva->usuario;
+        
+        // Cambiar el estado según la decisión
+        $nuevoEstado = $request->decision === 'validar' ? 'Validada' : 'Rechazada';
+        
+        // IMPORTANTE: Para claves primarias compuestas que incluyen el estado
+        DB::beginTransaction();
+        
+        // Preparar los datos para el nuevo registro
+        $datosReserva = [
+            'id_sala' => $reserva->id_sala,
+            'id_usuario' => $reserva->id_usuario,
+            'id_motivo' => $reserva->id_motivo,
+            'fecha' => $reserva->fecha,
+            'hora_inicio' => $reserva->hora_inicio,
+            'hora_fin' => $reserva->hora_fin,
+            'observaciones' => $request->filled('observaciones') ? $request->observaciones : $reserva->observaciones,
+            'fecha_realizada' => $reserva->fecha_realizada,
+            'estado' => $nuevoEstado
+        ];
+        
+        // Eliminar el registro anterior
+        $deleted = ReservaSala::where('id_sala', $id_sala)
+            ->where('fecha', $fecha)
+            ->where('hora_inicio', $hora_inicio)
+            ->where('estado', $estado)
+            ->delete();
+            
+        if (!$deleted) {
+            throw new \Exception('No se pudo eliminar la reserva anterior');
+        }
+        
+        // Crear un nuevo registro con el nuevo estado
+        $nuevaReserva = ReservaSala::create($datosReserva);
+        
+        DB::commit();
+         // Preparar mensaje para SweetAlert
+         session()->flash('swal', [
+             'icon' => 'success',
+             'title' => 'Reserva procesada',
+             'text' => 'La reserva ha sido ' . ($nuevoEstado === 'Validada' ? 'validada' : 'rechazada') . ' exitosamente' . 
+             ($nuevoEstado === 'Rechazada' ? ' - ' . $request->observaciones : '')
+         ]);
+         //Temporalmente uso mi correo para pruebas
+        $response = Mail::to('jhernandezsanchezagesta@gmail.com')->send(new Notification($usuario, $nuevaReserva, $nuevoEstado));
+        if ($response) {
+            Log::info('Correo enviado exitosamente a ' . $usuario->email);
+        } else {
+            Log::error('Error al enviar correo a ' . $usuario->email);
+        }
+        
+        return redirect()->route('reserva_salas.pendientes')
+            ->with('success', 'Reserva ' . ($nuevoEstado === 'Validada' ? 'validada' : 'rechazada') . ' exitosamente');
+            
+    } catch (\Exception $e) {
+        DB::rollback();
+        
+        // Log del error para debugging
+        Log::error('Error al procesar validación de reserva: ' . $e->getMessage());
+        
+        session()->flash('swal', [
+            'icon' => 'error',
+            'title' => 'Error',
+            'text' => 'No se pudo procesar la reserva: ' . $e->getMessage()
+        ]);
+        
+        return redirect()->route('reserva_salas.pendientes')
+            ->with('error', 'No se pudo procesar la reserva');
+    }
 }
 }

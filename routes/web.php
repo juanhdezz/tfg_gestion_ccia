@@ -13,6 +13,9 @@ use App\Http\Controllers\ReservaSalaController;
 use App\Http\Controllers\PlazoController;
 use App\Mail\Notification;
 use Illuminate\Support\Facades\Mail;
+use App\Models\ReservaSala;
+use App\Http\Controllers\LibroController;
+use App\Http\Controllers\ProyectoController;
 
 
 
@@ -158,8 +161,22 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::delete('libros/{id}', [App\Http\Controllers\LibroController::class, 'destroy'])->name('libros.destroy');
     Route::get('libros/solicitar/{id}', [App\Http\Controllers\LibroController::class, 'solicitarForm'])->name('libros.solicitarForm');
     Route::post('libros/solicitar', [App\Http\Controllers\LibroController::class, 'solicitar'])->name('libros.solicitar');
-    
-    
+
+    // Route::get('proyectos', [App\Http\Controllers\ProyectoController::class, 'index'])->name('proyectos.index');
+    // Route::get('proyectos/create', [App\Http\Controllers\ProyectoController::class, 'create'])->name('proyectos.create');
+    // Route::post('proyectos', [App\Http\Controllers\ProyectoController::class, 'store'])->name('proyectos.store');
+    // Route::get('proyectos/{id}', [App\Http\Controllers\ProyectoController::class, 'show'])->name('proyectos.show');
+    // Route::get('proyectos/{id}/edit', [App\Http\Controllers\ProyectoController::class, 'edit'])->name('proyectos.edit');
+    // Route::put('proyectos/{id}', [App\Http\Controllers\ProyectoController::class, 'update'])->name('proyectos.update');
+    // Route::delete('proyectos/{id}', [App\Http\Controllers\ProyectoController::class, 'destroy'])->name('proyectos.destroy');
+    // Route::patch('proyectos/{proyecto}/cambiar-estado', [ProyectoController::class, 'cambiarEstado'])->name('proyectos.cambiarEstado');
+
+    // Rutas de proyectos CRUD
+Route::resource('proyectos', ProyectoController::class);
+
+// Rutas adicionales para proyectos
+Route::patch('proyectos/{proyecto}/cambiar-estado', [ProyectoController::class, 'cambiarEstado'])->name('proyectos.cambiarEstado');
+Route::get('proyectos/{proyecto}/miembros', [ProyectoController::class, 'miembros'])->name('proyectos.miembros');
 });
 
 

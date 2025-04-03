@@ -148,6 +148,18 @@ Route::middleware(['auth', 'admin'])->group(function () {
         ->name('reserva_salas.pendientes');
     Route::post('reserva_salas/procesar/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'procesarValidacion'])
         ->name('reserva_salas.procesar');
+
+    Route::get('libros', [App\Http\Controllers\LibroController::class, 'index'])->name('libros.index');
+    Route::get('libros/create', [App\Http\Controllers\LibroController::class, 'create'])->name('libros.create');
+    Route::post('libros', [App\Http\Controllers\LibroController::class, 'store'])->name('libros.store');
+    Route::get('libros/{id}', [App\Http\Controllers\LibroController::class, 'show'])->name('libros.show');
+    Route::get('libros/{id}/edit', [App\Http\Controllers\LibroController::class, 'edit'])->name('libros.edit');
+    Route::put('libros/{id}', [App\Http\Controllers\LibroController::class, 'update'])->name('libros.update');
+    Route::delete('libros/{id}', [App\Http\Controllers\LibroController::class, 'destroy'])->name('libros.destroy');
+    Route::get('libros/solicitar/{id}', [App\Http\Controllers\LibroController::class, 'solicitarForm'])->name('libros.solicitarForm');
+    Route::post('libros/solicitar', [App\Http\Controllers\LibroController::class, 'solicitar'])->name('libros.solicitar');
+    
+    
 });
 
 

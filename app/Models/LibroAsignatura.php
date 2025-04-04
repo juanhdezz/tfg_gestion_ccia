@@ -11,7 +11,8 @@ class LibroAsignatura extends Model
     
     protected $table = 'libro_asignatura';
     // Clave primaria compuesta que incluye fecha_solicitud
-    protected $primaryKey = ['id_libro', 'id_usuario', 'fecha_solicitud'];
+    //protected $primaryKey = ['id_libro', 'id_usuario', 'fecha_solicitud'];
+    protected $primaryKey = null; // Cambia esto si es necesario
     public $incrementing = false;
     public $timestamps = false;
 
@@ -69,12 +70,7 @@ class LibroAsignatura extends Model
     /**
      * Verifica si el usuario puede aprobar esta solicitud
      */
-    public function puedeSerAprobadaPor($idUsuario)
-    {
-        // Verificar si el usuario es miembro de la dirección del departamento
-        $usuario = Usuario::find($idUsuario);
-        return $usuario && $usuario->esDirectorDepartamento();
-    }
+    
     
     /**
      * Método para permitir usar múltiples campos como clave primaria en Laravel

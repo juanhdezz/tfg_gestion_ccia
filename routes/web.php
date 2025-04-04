@@ -26,6 +26,11 @@ Route::get('/', function () {
     return view('auth.login');
 });
 
+//Ruta de error
+Route::get('/error', function () {
+    return view('error.error');
+})->name('error.error');
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -152,15 +157,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('reserva_salas/procesar/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'procesarValidacion'])
         ->name('reserva_salas.procesar');
 
-    Route::get('libros', [App\Http\Controllers\LibroController::class, 'index'])->name('libros.index');
-    Route::get('libros/create', [App\Http\Controllers\LibroController::class, 'create'])->name('libros.create');
-    Route::post('libros', [App\Http\Controllers\LibroController::class, 'store'])->name('libros.store');
-    Route::get('libros/{id}', [App\Http\Controllers\LibroController::class, 'show'])->name('libros.show');
-    Route::get('libros/{id}/edit', [App\Http\Controllers\LibroController::class, 'edit'])->name('libros.edit');
-    Route::put('libros/{id}', [App\Http\Controllers\LibroController::class, 'update'])->name('libros.update');
-    Route::delete('libros/{id}', [App\Http\Controllers\LibroController::class, 'destroy'])->name('libros.destroy');
-    Route::get('libros/solicitar/{id}', [App\Http\Controllers\LibroController::class, 'solicitarForm'])->name('libros.solicitarForm');
-    Route::post('libros/solicitar', [App\Http\Controllers\LibroController::class, 'solicitar'])->name('libros.solicitar');
+        Route::get('/libros', 'App\Http\Controllers\LibroAsignaturaController@index')->name('libros.index');
+        Route::get('/libros/crear', 'App\Http\Controllers\LibroAsignaturaController@create')->name('libros.create');
+        Route::post('/libros', 'App\Http\Controllers\LibroAsignaturaController@store')->name('libros.store');
+        Route::post('/libros/{id_libro}/{id_usuario}/{fecha_solicitud}/aprobar', 'App\Http\Controllers\LibroAsignaturaController@aprobar')->name('libros.aprobar');
+        Route::post('/libros/{id_libro}/{id_usuario}/{fecha_solicitud}/denegar', 'App\Http\Controllers\LibroAsignaturaController@denegar')->name('libros.denegar');
+        Route::post('/libros/{id_libro}/{id_usuario}/{fecha_solicitud}/recibir', 'App\Http\Controllers\LibroAsignaturaController@recibir')->name('libros.recibir');
 
     // Route::get('proyectos', [App\Http\Controllers\ProyectoController::class, 'index'])->name('proyectos.index');
     // Route::get('proyectos/create', [App\Http\Controllers\ProyectoController::class, 'create'])->name('proyectos.create');

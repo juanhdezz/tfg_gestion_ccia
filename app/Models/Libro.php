@@ -8,6 +8,7 @@ class Libro extends Model
 {
     protected $table = 'libro';
     protected $primaryKey = 'id_libro';
+    public $incrementing = true;
     public $timestamps = false;
 
     protected $fillable = [

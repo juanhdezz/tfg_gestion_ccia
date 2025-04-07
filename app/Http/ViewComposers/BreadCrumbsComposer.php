@@ -205,6 +205,144 @@ class BreadcrumbsComposer
                     ];
                     break;
 
+                case 'despachos.index':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Despachos', 'url' => route('despachos.index')]
+                    ];
+                    break;
+                
+                case 'despachos.create':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Despachos', 'url' => route('despachos.index')],
+                        ['name' => 'Nuevo despacho', 'url' => route('despachos.create')]
+                    ];
+                    break;
+                
+                case 'despachos.edit':
+                    $id = request()->route('id');
+
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Despachos', 'url' => route('despachos.index')],
+                        ['name' => 'Editar despacho', 'url' => route('despachos.edit', $id)]
+                    ];
+                    break;
+
+                case 'despachos.show':
+                    $id = request()->route('id');
+
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Despachos', 'url' => route('despachos.index')],
+                        ['name' => 'Ver despacho', 'url' => route('despachos.show', $id)]
+                    ];
+                    break;
+                
+                case 'reserva_salas.index':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')]
+                    ];
+                    break;
+                
+                case 'reserva_salas.create':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Nueva reserva', 'url' => route('reserva_salas.create')]
+                    ];
+                    break;
+
+                case 'reserva_salas.edit':
+                    $id = request()->route('id');
+
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Editar reserva', 'url' => route('reserva_salas.edit', $id)]
+                    ];
+                    break;
+
+                // case 'reserva_salas.show':
+                //     $id = request()->route('id');
+
+                //     $breadcrumbs = [
+                //         ['name' => 'Departamento', 'url' => route('departamento')],
+                //         ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                //         ['name' => 'Ver reserva', 'url' => route('reserva_salas.show', $id)]
+                //     ];
+                //     break;
+
+                case 'reserva_salas.pendientes':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Reservas pendientes', 'url' => route('reserva_salas.pendientes')]
+                    ];
+                    break;
+
+                case 'reserva_salas.calendario':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Calendario', 'url' => route('reserva_salas.calendario')]
+                    ];
+                    break;
+
+                case 'libros.index':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Libros', 'url' => route('libros.index')]
+                    ];
+                    break;
+                
+                case 'libros.create':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Libros', 'url' => route('libros.index')],
+                        ['name' => 'Nuevo libro', 'url' => route('libros.create')]
+                    ];
+                    break;
+
+                case 'proyectos.index':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Proyectos', 'url' => route('proyectos.index')]
+                    ];
+                    break;
+
+                case 'proyectos.create':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Proyectos', 'url' => route('proyectos.index')],
+                        ['name' => 'Nuevo proyecto', 'url' => route('proyectos.create')]
+                    ];
+                    break;
+
+                case 'proyectos.edit':
+                    $id = request()->route('id');
+
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Proyectos', 'url' => route('proyectos.index')],
+                        ['name' => 'Editar proyecto', 'url' => route('proyectos.edit', $id)]
+                    ];
+                    break;
+
+                case 'proyectos.show':
+                    $id = request()->route('id');
+
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Proyectos', 'url' => route('proyectos.index')],
+                        ['name' => 'Ver proyecto', 'url' => route('proyectos.show', $id)]
+                    ];
+                    break;
+
+                
+
 
 
 

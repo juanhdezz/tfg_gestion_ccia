@@ -232,14 +232,14 @@ Route::middleware(['auth', 'admin'])->group(function () {
      * GESTIÓN DE LIBROS
      */
     Route::prefix('libros')->name('libros.')->group(function () {
-        Route::get('/', [LibroAsignaturaController::class, 'index'])->name('index');
-        Route::get('/crear', [LibroAsignaturaController::class, 'create'])->name('create');
-        Route::post('/', [LibroAsignaturaController::class, 'store'])->name('store');
-        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/aprobar', [LibroAsignaturaController::class, 'aprobar'])
+        Route::get('/', [LibroController::class, 'index'])->name('index');
+        Route::get('/crear', [LibroController::class, 'create'])->name('create');
+        Route::post('/', [LibroController::class, 'store'])->name('store');
+        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/aprobar', [LibroController::class, 'aprobar'])
             ->name('aprobar');
-        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/denegar', [LibroAsignaturaController::class, 'denegar'])
+        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/denegar', [LibroController::class, 'denegar'])
             ->name('denegar');
-        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/recibir', [LibroAsignaturaController::class, 'recibir'])
+        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/recibir', [LibroController::class, 'recibir'])
             ->name('recibir');
     });
     

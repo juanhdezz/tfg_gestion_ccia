@@ -10,7 +10,8 @@ class LibroProyecto extends Model
     use SolicitudLibroTrait;
     
     protected $table = 'libro_proyecto';
-    protected $primaryKey = ['id_libro', 'id_usuario', 'fecha_solicitud'];
+    //protected $primaryKey = ['id_libro', 'id_usuario', 'fecha_solicitud'];
+    protected $primaryKey = null; // Cambia esto si es necesario
     public $incrementing = false;
     public $timestamps = false;
 
@@ -55,10 +56,10 @@ class LibroProyecto extends Model
     /**
      * Obtiene el proyecto para el que se solicitó el libro
      */
-    // public function proyecto()
-    // {
-    //     return $this->belongsTo(Proyecto::class, 'id_proyecto');
-    // }
+     public function proyecto()
+     {
+         return $this->belongsTo(Proyecto::class, 'id_proyecto');
+     }
 
     /**
      * Verifica si el usuario puede aprobar esta solicitud

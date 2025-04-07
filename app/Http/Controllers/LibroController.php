@@ -2,634 +2,667 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Libro;
-use App\Models\LibroAsignatura;
-use App\Models\Usuario;
-use App\Models\Asignatura;
-use App\Models\UsuarioAsignatura;
 use Illuminate\Http\Request;
+use App\Models\LibroAsignatura;
+use App\Models\Libro;
+use App\Models\Asignatura;
+use App\Models\LibroProyecto;
+use App\Models\LibroOtro; // Añadido modelo LibroOtro
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use App\Models\Proyecto;
 
 class LibroController extends Controller
 {
     /**
-     * Muestra un listado de los libros.
+     * Muestra un listado de los libros solicitados
+     *
+     * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
-        $query = Libro::query();
+        // Consulta existente para LibroAsignatura
+        $query = LibroAsignatura::with(['libro', 'usuario', 'asignatura']);
         
-        // Filtrado por título
-        if ($request->has('titulo') && !empty($request->titulo)) {
-            $query->where('titulo', 'like', '%' . $request->titulo . '%');
+        // Filtrar por término de búsqueda
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->whereHas('libro', function($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%")
+                  ->orWhere('autor', 'like', "%{$search}%")
+                  ->orWhere('isbn', 'like', "%{$search}%");
+            })->orWhereHas('asignatura', function($q) use ($search) {
+                $q->where('nombre_asignatura', 'like', "%{$search}%");
+            })->orWhereHas('usuario', function($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('apellidos', 'like', "%{$search}%");
+            });
         }
         
-        // Filtrado por autor
-        if ($request->has('autor') && !empty($request->autor)) {
-            $query->where('autor', 'like', '%' . $request->autor . '%');
+        // Filtrar por estado
+        if ($request->has('estado') && !empty($request->estado)) {
+            $query->where('estado', $request->estado);
         }
         
-        // Filtrado por ISBN
-        if ($request->has('isbn') && !empty($request->isbn)) {
-            $query->where('isbn', 'like', '%' . $request->isbn . '%');
+        // Ordenar por fecha de solicitud, de más reciente a más antigua
+        $query->orderBy('fecha_solicitud', 'desc');
+        
+        // Paginar los resultados (10 por página)
+        $librosAsignatura = $query->paginate(10)->appends(request()->query());
+        
+        // Consulta para LibroProyecto
+        $queryProyecto = LibroProyecto::with(['libro', 'proyecto', 'usuario']);
+        
+        // Filtrar por término de búsqueda para LibroProyecto
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $queryProyecto->whereHas('libro', function($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%")
+                  ->orWhere('autor', 'like', "%{$search}%")
+                  ->orWhere('isbn', 'like', "%{$search}%");
+            })->orWhereHas('proyecto', function($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%");
+            })->orWhereHas('usuario', function($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('apellidos', 'like', "%{$search}%");
+            });
         }
+        
+        // Filtrar por estado para LibroProyecto
+        if ($request->has('estado') && !empty($request->estado)) {
+            $queryProyecto->where('estado', $request->estado);
+        }
+        
+        // Ordenar y paginar
+        $queryProyecto->orderBy('fecha_solicitud', 'desc');
+        $librosProyecto = $queryProyecto->paginate(10)->appends(request()->query());
+        
+        // NUEVO: Consulta para LibroOtro
+        $queryOtro = LibroOtro::with(['libro', 'usuario']);
+        
+        // Filtrar por término de búsqueda para LibroOtro
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $queryOtro->whereHas('libro', function($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%")
+                  ->orWhere('autor', 'like', "%{$search}%")
+                  ->orWhere('isbn', 'like', "%{$search}%");
+            })->orWhereHas('usuario', function($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('apellidos', 'like', "%{$search}%");
+            });
+        }
+        
+        // Filtrar por estado para LibroOtro
+        if ($request->has('estado') && !empty($request->estado)) {
+            $queryOtro->where('estado', $request->estado);
+        }
+        
+        // Ordenar y paginar
+        $queryOtro->orderBy('fecha_solicitud', 'desc');
+        $librosOtros = $queryOtro->paginate(10)->appends(request()->query());
+        
+        // Obtener todos los estados posibles para el filtro
+        $estados = [
+            'Pendiente Aceptación',
+            'Aceptado',
+            'Denegado',
+            'Recibido'
+        ];
 
-        // Filtrado por año
-        if ($request->has('year') && !empty($request->year)) {
-            $query->where('year', $request->year);
-        }
-        
-        // Ordenamiento
-        $orderBy = $request->input('order_by', 'titulo');
-        $orderDirection = $request->input('order_direction', 'asc');
-        
-        $libros = $query->orderBy($orderBy, $orderDirection)
-                        ->paginate(10)
-                        ->withQueryString();
-        
-        return view('libros.index', compact('libros'));
+        // Verificar si el usuario actual es de dirección
+        $esDirector = true; //Auth::user()->esDirectorDepartamento();
+
+        return view('libros.index', compact('librosAsignatura', 'librosProyecto', 'librosOtros', 'estados', 'esDirector'));
     }
 
     /**
-     * Muestra el formulario para crear un nuevo libro.
+     * Muestra el formulario para crear una nueva solicitud de libro
+     *
+     * @return \Illuminate\Http\Response
      */
     public function create()
     {
-        return view('libros.create');
+        // Obtener todas las asignaturas para el formulario
+        $asignaturas = Asignatura::orderBy('nombre_asignatura')->get();
+        
+        // Para el formulario de solicitud completo
+        $proyectos = Proyecto::orderBy('titulo')->get();
+        
+        return view('libros.create', compact('asignaturas', 'proyectos'));
     }
 
     /**
-     * Almacena un nuevo libro en la base de datos.
+     * Almacena una nueva solicitud de libro en la base de datos
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'titulo' => 'required|max:200',
-            'isbn' => 'nullable|max:30',
-            'num_paginas' => 'nullable|integer|min:1',
-            'autor' => 'required|max:200',
-            'editorial' => 'nullable|max:50',
-            'edicion' => 'nullable|max:16',
-            'year' => 'required|digits:4|integer|min:1900|max:' . (date('Y') + 1),
-            'portada' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'website' => 'nullable|url|max:256',
+        // Validación básica de libro (común para todos los tipos)
+        $validatedLibro = $request->validate([
+            'titulo' => 'required|string|max:255',
+            'autor' => 'required|string|max:255',
+            'editorial' => 'required|string|max:255',
+            'isbn' => 'required|string|max:20',
+            'precio' => 'required|numeric|min:0',
+            'num_ejemplares' => 'required|integer|min:1',
+            'tipo_solicitud' => 'required|in:asignatura,proyecto,investigacion,posgrado,otros',
+            'justificacion' => 'required|string',
         ]);
-
+        
         try {
-            DB::beginTransaction();
-            
-            $data = $request->except('portada');
-            
-            // Manejar subida de imagen de portada
-            if ($request->hasFile('portada')) {
-                $portadaPath = $request->file('portada')->store('portadas', 'public');
-                $data['portada'] = $portadaPath;
+            // Crear el libro (común para todos los tipos)
+            $libro = Libro::firstOrCreate(
+                ['isbn' => $request->isbn],
+                [
+                    'titulo' => $request->titulo,
+                    'autor' => $request->autor,
+                    'editorial' => $request->editorial,
+                    'year' => $request->year ?? date('Y'),
+                ]
+            );
+
+            // Procesar según el tipo de solicitud
+            switch ($request->tipo_solicitud) {
+                case 'asignatura':
+                    // Validación adicional para asignatura
+                    $request->validate([
+                        'id_asignatura' => 'required|exists:asignatura,id_asignatura',
+                        'curso_academico' => 'required|string',
+                    ]);
+                    
+                    // Crear solicitud para asignatura
+                    $solicitud = new LibroAsignatura();
+                    $solicitud->id_libro = $libro->id_libro;
+                    $solicitud->id_usuario = Auth::id();
+                    $solicitud->id_asignatura = $request->id_asignatura;
+                    $solicitud->precio = $request->precio;
+                    $solicitud->num_ejemplares = $request->num_ejemplares;
+                    $solicitud->estado = 'Pendiente Aceptación';
+                    $solicitud->justificacion = $request->justificacion;
+                    $solicitud->observaciones = $request->observaciones;
+                    $solicitud->fecha_solicitud = Carbon::now();
+                    $solicitud->curso_academico = $request->curso_academico;
+                    $solicitud->save();
+                    
+                    $tipo = 'asignatura';
+                    break;
+                    
+                case 'proyecto':
+                    // Validación adicional para proyecto
+                    $request->validate([
+                        'id_proyecto' => 'required|exists:proyecto,id_proyecto',
+                    ]);
+                    
+                    // Crear solicitud para proyecto
+                    $solicitud = new LibroProyecto();
+                    $solicitud->id_libro = $libro->id_libro;
+                    $solicitud->id_usuario = Auth::id();
+                    $solicitud->id_proyecto = $request->id_proyecto;
+                    $solicitud->precio = $request->precio;
+                    $solicitud->num_ejemplares = $request->num_ejemplares;
+                    $solicitud->estado = 'Pendiente Aceptación';
+                    $solicitud->justificacion = $request->justificacion;
+                    $solicitud->observaciones = $request->observaciones;
+                    $solicitud->fecha_solicitud = Carbon::now();
+                    $solicitud->save();
+                    
+                    $tipo = 'proyecto';
+                    break;
+                
+                case 'otros':
+                    // Validación adicional para otros
+                    $request->validate([
+                        'descripcion_otros' => 'required|string',
+                    ]);
+                    
+                    // Crear solicitud para otros
+                    $solicitud = new LibroOtro();
+                    $solicitud->id_libro = $libro->id_libro;
+                    $solicitud->id_usuario = Auth::id();
+                    //$solicitud->descripcion = $request->descripcion_otros;
+                    $solicitud->precio = $request->precio;
+                    $solicitud->num_ejemplares = $request->num_ejemplares;
+                    $solicitud->estado = 'Pendiente Aceptación';
+                    $solicitud->justificacion = $request->justificacion;
+                    $solicitud->observaciones = $request->observaciones;
+                    $solicitud->fecha_solicitud = Carbon::now();
+                    $solicitud->save();
+                    
+                    $tipo = 'otros fondos';
+                    break;
+                    
+                default:
+                    return back()->withInput()->withErrors(['error' => 'Tipo de solicitud no válido']);
             }
-            
-            $libro = Libro::create($data);
-            
-            DB::commit();
-            
-            return redirect()->route('libros.show', $libro->id_libro)
-                             ->with('success', 'Libro creado correctamente.');
+
+            return redirect()->route('libros.index')
+                ->with('success', "Solicitud de libro con cargo a {$tipo} creada correctamente. Estado: Pendiente Aceptación");
+
         } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()
-                         ->with('error', 'Error al crear el libro: ' . $e->getMessage());
+            // Registra el error para poder depurarlo
+            Log::error('Error al guardar la solicitud de libro: ' . $e->getMessage());
+            return back()->withInput()->withErrors(['error' => 'Ha ocurrido un error al guardar la solicitud: ' . $e->getMessage()]);
         }
     }
 
     /**
-     * Muestra la información detallada de un libro.
+     * Aprobar una solicitud de libro
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id_libro
+     * @param  int  $id_usuario
+     * @param  string  $fecha_solicitud
+     * @return \Illuminate\Http\Response
      */
-    public function show(Libro $libro)
+    public function aprobar(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
     {
-        // Obtener solo las solicitudes de libros para asignaturas asociadas a este libro
-        $solicitudesAsignatura = $libro->solicitudesAsignatura;
-        
-        // Verificar si el usuario actual tiene permisos para ver las solicitudes
-        $puedeVerSolicitudes = true;
-        
-        return view('libros.show', compact(
-            'libro', 
-            'solicitudesAsignatura',
-            'puedeVerSolicitudes'
-        ));
-    }
-
-    /**
-     * Muestra el formulario para editar un libro.
-     */
-    public function edit(Libro $libro)
-    {
-        return view('libros.edit', compact('libro'));
-    }
-
-    /**
-     * Actualiza un libro específico.
-     */
-    public function update(Request $request, Libro $libro)
-    {
-        $request->validate([
-            'titulo' => 'required|max:200',
-            'isbn' => 'nullable|max:30',
-            'num_paginas' => 'nullable|integer|min:1',
-            'autor' => 'required|max:200',
-            'editorial' => 'nullable|max:50',
-            'edicion' => 'nullable|max:16',
-            'year' => 'required|digits:4|integer|min:1900|max:' . (date('Y') + 1),
-            'portada' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'website' => 'nullable|url|max:256',
-        ]);
-
         try {
-            DB::beginTransaction();
+            // Convertir la fecha a un formato adecuado para la consulta
+            $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
+
+            // Convertir a tipos adecuados
+            $id_libro = (int) $id_libro;
+            $id_usuario = (int) $id_usuario;
             
-            $data = $request->except('portada');
+            // Debug log para verificar los valores
+            Log::debug('Intentando aprobar solicitud', [
+                'id_libro' => $id_libro,
+                'id_usuario' => $id_usuario,
+                'fecha' => $fecha,
+                'tipo' => $tipo
+            ]);
             
-            // Manejar actualización de imagen de portada
-            if ($request->hasFile('portada')) {
-                // Eliminar la portada anterior si existe
-                if ($libro->portada && Storage::disk('public')->exists($libro->portada)) {
-                    Storage::disk('public')->delete($libro->portada);
+            // Intentar actualizar según el tipo
+            $actualizado = 0;
+            $tipoSolicitud = '';
+
+            // Si se especifica el tipo, intentar actualizar ese tipo primero
+            if ($tipo === 'proyecto' || ($request->has('tipo') && $request->tipo === 'proyecto')) {
+                $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Aceptado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'fecha_pedido' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'proyecto';
+            } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
+                $actualizado = LibroOtro::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Aceptado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'fecha_pedido' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'otros fondos';
+            } else {
+                // Si no se especifica tipo o es 'asignatura', intentar primero con asignatura
+                $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Aceptado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'fecha_pedido' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'asignatura';
+            }
+
+            // Si no se actualizó ningún registro, intentar con los otros tipos
+            if ($actualizado === 0) {
+                // Probar con todos los tipos restantes en un orden específico
+                if ($tipoSolicitud !== 'proyecto') {
+                    $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Aceptado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'fecha_pedido' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'proyecto';
+                    }
                 }
                 
-                $portadaPath = $request->file('portada')->store('portadas', 'public');
-                $data['portada'] = $portadaPath;
+                if ($actualizado === 0 && $tipoSolicitud !== 'otros fondos') {
+                    $actualizado = LibroOtro::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Aceptado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'fecha_pedido' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'otros fondos';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'asignatura') {
+                    $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Aceptado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'fecha_pedido' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'asignatura';
+                    }
+                }
+                
+                if ($actualizado === 0) {
+                    Log::warning('Intento de aprobar una solicitud inexistente', [
+                        'id_libro' => $id_libro,
+                        'id_usuario' => $id_usuario,
+                        'fecha_solicitud' => $fecha_solicitud
+                    ]);
+                    
+                    return redirect()->route('libros.index')
+                        ->with('error', 'No se encontró la solicitud para aprobar');
+                }
             }
-            
-            $libro->update($data);
-            
-            DB::commit();
-            
-            return redirect()->route('libros.show', $libro->id_libro)
-                             ->with('success', 'Libro actualizado correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()
-                         ->with('error', 'Error al actualizar el libro: ' . $e->getMessage());
-        }
-    }
 
-    /**
-     * Elimina un libro específico.
-     */
-    public function destroy(Libro $libro)
-    {
-        try {
-            DB::beginTransaction();
-            
-            // Verificar si hay solicitudes asociadas a este libro
-            $tieneSolicitudes = $libro->solicitudesAsignatura()->exists();
-            
-            if ($tieneSolicitudes) {
-                return back()->with('error', 'No se puede eliminar el libro porque tiene solicitudes asociadas.');
-            }
-            
-            // Eliminar la portada si existe
-            if ($libro->portada && Storage::disk('public')->exists($libro->portada)) {
-                Storage::disk('public')->delete($libro->portada);
-            }
-            
-            $libro->delete();
-            
-            DB::commit();
-            
             return redirect()->route('libros.index')
-                             ->with('success', 'Libro eliminado correctamente.');
+                ->with('success', "Solicitud de libro con cargo a {$tipoSolicitud} aprobada correctamente");
+                
         } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al eliminar el libro: ' . $e->getMessage());
+            Log::error('Error al aprobar la solicitud: ' . $e->getMessage());
+            
+            return view('error.error', [
+                'errorMessage' => 'No se pudo aprobar la solicitud de libro.',
+            ]);
         }
     }
 
     /**
-     * Muestra el formulario para solicitar un libro para asignatura.
+     * Denegar una solicitud de libro
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id_libro
+     * @param  int  $id_usuario
+     * @param  string  $fecha_solicitud
+     * @param  string  $tipo
+     * @return \Illuminate\Http\Response
      */
-    public function solicitarForm(Libro $libro)
+    public function denegar(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
     {
-        $usuario = Auth::user();
-        
-        // Obtener las asignaturas que imparte el usuario actual
-        // Usando el modelo UsuarioAsignatura para verificar la relación
-        $asignaturas = Asignatura::join('usuario_asignatura', 'asignatura.id_asignatura', '=', 'usuario_asignatura.id_asignatura')
-            ->where('usuario_asignatura.id_usuario', $usuario->id_usuario)
-            ->select('asignatura.*', 'usuario_asignatura.tipo', 'usuario_asignatura.grupo', 'usuario_asignatura.creditos')
-            ->get();
-        
-        // Si el usuario no imparte ninguna asignatura, mostrar un mensaje de error
-        if ($asignaturas->isEmpty()) {
-            return back()->with('error', 'No puedes solicitar libros para asignaturas porque no impartes ninguna asignatura en el departamento.');
-        }
-        
-        return view('libros.solicitar_asignatura', compact('libro', 'usuario', 'asignaturas'));
-    }
-
-    /**
-     * Almacena una nueva solicitud de libro para asignatura.
-     */
-    public function solicitarStore(Request $request)
-    {
-        $request->validate([
-            'id_libro' => 'required|exists:libro,id_libro',
-            'id_asignatura' => 'required|exists:asignatura,id_asignatura',
-            'precio' => 'nullable|regex:/^\d+(\.\d{1,2})?$/',
-            'num_ejemplares' => 'required|integer|min:1',
-            'justificacion' => 'required|string|max:1000',
-            'observaciones' => 'nullable|string|max:1000',
-        ]);
-
         try {
-            DB::beginTransaction();
+            // Convertir la fecha a un formato adecuado para la consulta
+            $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
             
-            $usuario = Auth::user();
+            // Convertir a tipos adecuados
+            $id_libro = (int) $id_libro;
+            $id_usuario = (int) $id_usuario;
             
-            // Verificar que el usuario imparte la asignatura seleccionada
-            $imparteAsignatura = UsuarioAsignatura::where('id_usuario', $usuario->id_usuario)
-                ->where('id_asignatura', $request->id_asignatura)
-                ->exists();
+            // Debug log para verificar los valores
+            Log::debug('Intentando denegar solicitud', [
+                'id_libro' => $id_libro,
+                'id_usuario' => $id_usuario,
+                'fecha' => $fecha,
+                'tipo' => $tipo
+            ]);
             
-            if (!$imparteAsignatura) {
-                return back()->withInput()->with('error', 'No puedes solicitar libros para una asignatura que no impartes.');
-            }
-            
-            // Obtener información de la asignatura
-            $asignatura = Asignatura::find($request->id_asignatura);
-            
-            // Crear la solicitud de libro para asignatura
-            $solicitud = new LibroAsignatura();
-            $solicitud->id_libro = $request->id_libro;
-            $solicitud->id_usuario = $usuario->id_usuario;
-            $solicitud->id_asignatura = $request->id_asignatura;
-            $solicitud->precio = $request->precio;
-            $solicitud->num_ejemplares = $request->num_ejemplares;
-            $solicitud->estado = 'Pendiente Aceptación';
-            $solicitud->observaciones = $request->observaciones;
-            $solicitud->fecha_solicitud = now();
-            $solicitud->justificacion = $request->justificacion;
-            $solicitud->save();
-            
-            // Enviar notificación al director del departamento
-            // Aquí irá el código para notificar al director cuando implementes las notificaciones
-            
-            DB::commit();
-            
-            return redirect()->route('libros.show', $request->id_libro)
-                ->with('success', 'Solicitud de libro para la asignatura "' . $asignatura->nombre_asignatura . '" registrada correctamente. Pendiente de aprobación por la dirección del departamento.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()
-                ->with('error', 'Error al registrar la solicitud: ' . $e->getMessage());
-        }
-    }
+            // Intentar actualizar según el tipo
+            $actualizado = 0;
+            $tipoSolicitud = '';
 
-    /**
-     * Lista todas las solicitudes de libros para asignaturas del usuario actual.
-     */
-    public function misSolicitudesAsignatura()
-    {
-        $usuario = Auth::user();
-        
-        $solicitudes = LibroAsignatura::where('id_usuario', $usuario->id_usuario)
-            ->join('libro', 'libro_asignatura.id_libro', '=', 'libro.id_libro')
-            ->join('asignatura', 'libro_asignatura.id_asignatura', '=', 'asignatura.id_asignatura')
-            ->select(
-                'libro_asignatura.*', 
-                'libro.titulo', 
-                'libro.autor', 
-                'asignatura.nombre_asignatura',
-                'asignatura.titulacion'
-            )
-            ->orderBy('libro_asignatura.fecha_solicitud', 'desc')
-            ->paginate(10);
-        
-        return view('libros.mis_solicitudes_asignatura', compact('solicitudes'));
-    }
-
-    /**
-     * Lista todas las solicitudes de libros para asignaturas pendientes de aprobación
-     * (Solo para directores de departamento)
-     */
-    public function solicitudesPendientesAsignatura()
-    {
-        // Verificar que el usuario actual es director de departamento
-        $usuario = Auth::user();
-        
-        
-        $solicitudes = LibroAsignatura::where('estado', 'Pendiente Aceptación')
-            ->join('libro', 'libro_asignatura.id_libro', '=', 'libro.id_libro')
-            ->join('usuario', 'libro_asignatura.id_usuario', '=', 'usuario.id_usuario')
-            ->join('asignatura', 'libro_asignatura.id_asignatura', '=', 'asignatura.id_asignatura')
-            ->select(
-                'libro_asignatura.*', 
-                'libro.titulo', 
-                'libro.autor', 
-                'usuario.nombre', 
-                'usuario.apellidos',
-                'asignatura.nombre_asignatura',
-                'asignatura.titulacion'
-            )
-            ->orderBy('libro_asignatura.fecha_solicitud', 'asc')
-            ->paginate(10);
-        
-        return view('libros.solicitudes_pendientes_asignatura', compact('solicitudes'));
-    }
-
-    /**
-     * Aprueba una solicitud de libro para asignatura.
-     */
-    public function aprobarSolicitudAsignatura($idLibro, $idUsuario, $fechaSolicitud)
-    {
-        // Verificar que el usuario actual es director de departamento
-        $usuario = Auth::user();
-        
-        
-        try {
-            DB::beginTransaction();
-            
-            // Buscar la solicitud
-            $solicitud = LibroAsignatura::where('id_libro', $idLibro)
-                ->where('id_usuario', $idUsuario)
-                ->where('fecha_solicitud', $fechaSolicitud)
-                ->firstOrFail();
-            
-            // Verificar que la solicitud está pendiente
-            if ($solicitud->estado !== 'Pendiente Aceptación') {
-                return back()->with('error', 'La solicitud no está en estado pendiente de aceptación.');
-            }
-            
-            // Actualizar estado de la solicitud
-            $solicitud->estado = 'Aceptado';
-            $solicitud->fecha_aceptacion = now();
-            $solicitud->id_aceptador = $usuario->id_usuario;
-            
-            // Agregar observación de aprobación si se proporciona
-            if (request()->has('observaciones') && !empty(request()->observaciones)) {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Aprobada: ' . request()->observaciones);
+            // Si se especifica el tipo, intentar actualizar ese tipo primero
+            if ($tipo === 'proyecto' || ($request->has('tipo') && $request->tipo === 'proyecto')) {
+                $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Denegado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                    
+                $tipoSolicitud = 'proyecto';
+            } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
+                $actualizado = LibroOtro::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Denegado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                    
+                $tipoSolicitud = 'otros fondos';
             } else {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Solicitud aprobada por la dirección del departamento.');
+                // Si no se especifica tipo o es 'asignatura', intentar primero con asignatura
+                $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Denegado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                    
+                $tipoSolicitud = 'asignatura';
             }
-            
-            $solicitud->save();
-            
-            // Enviar notificación al solicitante
-            // Aquí irá el código para notificar al solicitante cuando implementes las notificaciones
-            
-            DB::commit();
-            
-            return back()->with('success', 'Solicitud aprobada correctamente.');
+
+            // Si no se actualizó ningún registro, intentar con los otros tipos
+            if ($actualizado === 0) {
+                // Probar con todos los tipos restantes en un orden específico
+                if ($tipoSolicitud !== 'proyecto') {
+                    $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Denegado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'proyecto';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'otros fondos') {
+                    $actualizado = LibroOtro::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Denegado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'otros fondos';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'asignatura') {
+                    $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Denegado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'asignatura';
+                    }
+                }
+                
+                if ($actualizado === 0) {
+                    Log::warning('Intento de denegar una solicitud inexistente', [
+                        'id_libro' => $id_libro,
+                        'id_usuario' => $id_usuario,
+                        'fecha_solicitud' => $fecha_solicitud
+                    ]);
+                    
+                    return redirect()->route('libros.index')
+                        ->with('error', 'No se encontró la solicitud para denegar');
+                }
+            }
+
+            return redirect()->route('libros.index')
+                ->with('success', "Solicitud de libro con cargo a {$tipoSolicitud} denegada correctamente");
+                
         } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al aprobar la solicitud: ' . $e->getMessage());
+            Log::error('Error al denegar la solicitud: ' . $e->getMessage());
+            
+            return view('error.error', [
+                'errorMessage' => 'No se pudo denegar la solicitud de libro.'
+            ]);
         }
     }
 
     /**
-     * Rechaza una solicitud de libro para asignatura.
+     * Marcar un libro como recibido
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id_libro
+     * @param  int  $id_usuario
+     * @param  string  $fecha_solicitud
+     * @param  string  $tipo
+     * @return \Illuminate\Http\Response
      */
-    public function rechazarSolicitudAsignatura($idLibro, $idUsuario, $fechaSolicitud)
+    public function recibir(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
     {
-        // Verificar que el usuario actual es director de departamento
-        $usuario = Auth::user();
-        
-        
         try {
-            DB::beginTransaction();
+            // Convertir la fecha a un formato adecuado para la consulta
+            $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
             
-            // Buscar la solicitud
-            $solicitud = LibroAsignatura::where('id_libro', $idLibro)
-                ->where('id_usuario', $idUsuario)
-                ->where('fecha_solicitud', $fechaSolicitud)
-                ->firstOrFail();
+            // Convertir a tipos adecuados
+            $id_libro = (int) $id_libro;
+            $id_usuario = (int) $id_usuario;
             
-            // Verificar que la solicitud está pendiente
-            if ($solicitud->estado !== 'Pendiente Aceptación') {
-                return back()->with('error', 'La solicitud no está en estado pendiente de aceptación.');
-            }
+            // Debug log para verificar los valores
+            Log::debug('Intentando marcar como recibido', [
+                'id_libro' => $id_libro,
+                'id_usuario' => $id_usuario,
+                'fecha' => $fecha,
+                'tipo' => $tipo
+            ]);
             
-            // Actualizar estado de la solicitud
-            $solicitud->estado = 'Denegado';
-            $solicitud->fecha_rechazo = now();
-            $solicitud->id_rechazador = $usuario->id_usuario;
-            
-            // Agregar motivo de rechazo
-            if (request()->has('motivo_rechazo') && !empty(request()->motivo_rechazo)) {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Denegada: ' . request()->motivo_rechazo);
-            } else {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Solicitud denegada por la dirección del departamento.');
-            }
-            
-            $solicitud->save();
-            
-            // Enviar notificación al solicitante
-            // Aquí irá el código para notificar al solicitante cuando implementes las notificaciones
-            
-            DB::commit();
-            
-            return back()->with('success', 'Solicitud rechazada correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al rechazar la solicitud: ' . $e->getMessage());
-        }
-    }
+            // Intentar actualizar según el tipo
+            $actualizado = 0;
+            $tipoSolicitud = '';
 
-    /**
-     * Marca una solicitud como pedida.
-     */
-    public function marcarPedidaSolicitudAsignatura($idLibro, $idUsuario, $fechaSolicitud)
-    {
-        // Verificar que el usuario tiene permisos para marcar como pedida
-        $usuario = Auth::user();
-        
-        
-        try {
-            DB::beginTransaction();
-            
-            // Buscar la solicitud
-            $solicitud = LibroAsignatura::where('id_libro', $idLibro)
-                ->where('id_usuario', $idUsuario)
-                ->where('fecha_solicitud', $fechaSolicitud)
-                ->firstOrFail();
-            
-            // Verificar que la solicitud está aceptada
-            if ($solicitud->estado !== 'Aceptado') {
-                return back()->with('error', 'La solicitud debe estar aceptada para marcarla como pedida.');
-            }
-            
-            // Actualizar estado de la solicitud
-            $solicitud->estado = 'Pedido';
-            $solicitud->fecha_pedido = now();
-            $solicitud->id_pedidor = $usuario->id_usuario;
-            
-            // Agregar observación
-            if (request()->has('observaciones') && !empty(request()->observaciones)) {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Pedido: ' . request()->observaciones);
+            // Si se especifica el tipo, intentar actualizar ese tipo primero
+            if ($tipo === 'proyecto' || ($request->has('tipo') && $request->tipo === 'proyecto')) {
+                $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Recibido',
+                        'fecha_recepcion' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'proyecto';
+            } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
+                $actualizado = LibroOtro::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Recibido',
+                        'fecha_recepcion' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'otros fondos';
             } else {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Libro pedido.');
+                // Si no se especifica tipo o es 'asignatura', intentar primero con asignatura
+                $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Recibido',
+                        'fecha_recepcion' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'asignatura';
             }
-            
-            $solicitud->save();
-            
-            // Enviar notificación al solicitante
-            // Aquí irá el código para notificar al solicitante cuando implementes las notificaciones
-            
-            DB::commit();
-            
-            return back()->with('success', 'Solicitud marcada como pedida correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al marcar la solicitud como pedida: ' . $e->getMessage());
-        }
-    }
 
-    /**
-     * Marca una solicitud como recibida.
-     */
-    public function marcarRecibidaSolicitudAsignatura($idLibro, $idUsuario, $fechaSolicitud)
-    {
-        // Verificar que el usuario tiene permisos para marcar como recibida
-        $usuario = Auth::user();
-        
-        
-        try {
-            DB::beginTransaction();
-            
-            // Buscar la solicitud
-            $solicitud = LibroAsignatura::where('id_libro', $idLibro)
-                ->where('id_usuario', $idUsuario)
-                ->where('fecha_solicitud', $fechaSolicitud)
-                ->firstOrFail();
-            
-            // Verificar que la solicitud está pedida
-            if ($solicitud->estado !== 'Pedido') {
-                return back()->with('error', 'La solicitud debe estar en estado "Pedido" para marcarla como recibida.');
+            // Si no se actualizó ningún registro, intentar con los otros tipos
+            if ($actualizado === 0) {
+                // Probar con todos los tipos restantes en un orden específico
+                if ($tipoSolicitud !== 'proyecto') {
+                    $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Recibido',
+                            'fecha_recepcion' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'proyecto';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'otros fondos') {
+                    $actualizado = LibroOtro::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Recibido',
+                            'fecha_recepcion' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'otros fondos';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'asignatura') {
+                    $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Recibido',
+                            'fecha_recepcion' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'asignatura';
+                    }
+                }
+                
+                if ($actualizado === 0) {
+                    Log::warning('Intento de marcar como recibida una solicitud inexistente', [
+                        'id_libro' => $id_libro,
+                        'id_usuario' => $id_usuario,
+                        'fecha_solicitud' => $fecha_solicitud
+                    ]);
+                    
+                    return redirect()->route('libros.index')
+                        ->with('error', 'No se encontró la solicitud para marcar como recibida');
+                }
             }
-            
-            // Actualizar estado de la solicitud
-            $solicitud->estado = 'Recibido';
-            $solicitud->fecha_recepcion = now();
-            $solicitud->id_receptor = $usuario->id_usuario;
-            
-            // Agregar observación
-            if (request()->has('observaciones') && !empty(request()->observaciones)) {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Recibido: ' . request()->observaciones);
-            } else {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Libro recibido en el departamento.');
-            }
-            
-            $solicitud->save();
-            
-            // Enviar notificación al solicitante
-            // Aquí irá el código para notificar al solicitante cuando implementes las notificaciones
-            
-            DB::commit();
-            
-            return back()->with('success', 'Solicitud marcada como recibida correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al marcar la solicitud como recibida: ' . $e->getMessage());
-        }
-    }
 
-    /**
-     * Marca una solicitud como enviada a biblioteca.
-     */
-    public function marcarBibliotecaSolicitudAsignatura($idLibro, $idUsuario, $fechaSolicitud)
-    {
-        // Verificar que el usuario tiene permisos para marcar como enviada a biblioteca
-        $usuario = Auth::user();
-        
-        
-        try {
-            DB::beginTransaction();
-            
-            // Buscar la solicitud
-            $solicitud = LibroAsignatura::where('id_libro', $idLibro)
-                ->where('id_usuario', $idUsuario)
-                ->where('fecha_solicitud', $fechaSolicitud)
-                ->firstOrFail();
-            
-            // Verificar que la solicitud está recibida
-            if ($solicitud->estado !== 'Recibido') {
-                return back()->with('error', 'La solicitud debe estar en estado "Recibido" para marcarla como enviada a biblioteca.');
-            }
-            
-            // Actualizar estado de la solicitud
-            $solicitud->estado = 'Biblioteca';
-            $solicitud->fecha_biblioteca = now();
-            $solicitud->id_bibliotecario = $usuario->id_usuario;
-            
-            // Agregar observación
-            if (request()->has('observaciones') && !empty(request()->observaciones)) {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Biblioteca: ' . request()->observaciones);
-            } else {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Libro enviado a biblioteca para catalogación.');
-            }
-            
-            $solicitud->save();
-            
-            // Enviar notificación al solicitante
-            // Aquí irá el código para notificar al solicitante cuando implementes las notificaciones
-            
-            DB::commit();
-            
-            return back()->with('success', 'Solicitud marcada como enviada a biblioteca correctamente.');
+            return redirect()->route('libros.index')
+                ->with('success', "Libro con cargo a {$tipoSolicitud} marcado como recibido correctamente");
+                
         } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al marcar la solicitud como enviada a biblioteca: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Marca una solicitud como agotada/descatalogada.
-     */
-    public function marcarAgotadaSolicitudAsignatura($idLibro, $idUsuario, $fechaSolicitud)
-    {
-        // Verificar que el usuario tiene permisos para marcar como agotada
-        $usuario = Auth::user();
-        
-        
-        try {
-            DB::beginTransaction();
+            Log::error('Error al marcar libro como recibido: ' . $e->getMessage());
             
-            // Buscar la solicitud
-            $solicitud = LibroAsignatura::where('id_libro', $idLibro)
-                ->where('id_usuario', $idUsuario)
-                ->where('fecha_solicitud', $fechaSolicitud)
-                ->firstOrFail();
-            
-            // Verificar que la solicitud está en un estado válido para marcarla como agotada
-            if ($solicitud->estado !== 'Aceptado' && $solicitud->estado !== 'Pedido') {
-                return back()->with('error', 'La solicitud debe estar en estado "Aceptado" o "Pedido" para marcarla como agotada/descatalogada.');
-            }
-            
-            // Actualizar estado de la solicitud
-            $solicitud->estado = 'Agotado/Descatalogado';
-            $solicitud->fecha_agotado = now();
-            $solicitud->id_agotador = $usuario->id_usuario;
-            
-            // Agregar observación
-            if (request()->has('observaciones') && !empty(request()->observaciones)) {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Agotado/Descatalogado: ' . request()->observaciones);
-            } else {
-                $solicitud->observaciones = trim($solicitud->observaciones . "\n\n" . now()->format('d/m/Y H:i') . ' - Libro agotado o descatalogado.');
-            }
-            
-            $solicitud->save();
-            
-            // Enviar notificación al solicitante
-            // Aquí irá el código para notificar al solicitante cuando implementes las notificaciones
-            
-            DB::commit();
-            
-            return back()->with('success', 'Solicitud marcada como agotada/descatalogada correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al marcar la solicitud como agotada/descatalogada: ' . $e->getMessage());
+            return view('error.error', [
+                'errorMessage' => 'No se pudo marcar el libro como recibido.'
+            ]);
         }
     }
 }

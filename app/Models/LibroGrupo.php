@@ -55,10 +55,10 @@ class LibroGrupo extends Model
     /**
      * Obtiene el grupo de investigación para el que se solicitó el libro
      */
-    // public function grupo()
-    // {
-    //     return $this->belongsTo(Grupo::class, 'id_grupo');
-    // }
+     public function grupo()
+     {
+         return $this->belongsTo(Grupo::class, 'id_grupo');
+     }
 
     /**
      * Verifica si el usuario puede aprobar esta solicitud

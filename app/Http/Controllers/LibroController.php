@@ -7,7 +7,9 @@ use App\Models\LibroAsignatura;
 use App\Models\Libro;
 use App\Models\Asignatura;
 use App\Models\LibroProyecto;
-use App\Models\LibroOtro; // Añadido modelo LibroOtro
+use App\Models\LibroOtro;
+use App\Models\LibroGrupo; // Modelo para libros con cargo a grupo de investigación
+use App\Models\LibroPosgrado; // Modelo para libros con cargo a posgrado
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -79,7 +81,7 @@ class LibroController extends Controller
         $queryProyecto->orderBy('fecha_solicitud', 'desc');
         $librosProyecto = $queryProyecto->paginate(10)->appends(request()->query());
         
-        // NUEVO: Consulta para LibroOtro
+        // Consulta para LibroOtro
         $queryOtro = LibroOtro::with(['libro', 'usuario']);
         
         // Filtrar por término de búsqueda para LibroOtro
@@ -104,6 +106,56 @@ class LibroController extends Controller
         $queryOtro->orderBy('fecha_solicitud', 'desc');
         $librosOtros = $queryOtro->paginate(10)->appends(request()->query());
         
+        // NUEVO: Consulta para LibroGrupo (Grupo de Investigación)
+        $queryGrupo = LibroGrupo::with(['libro', 'usuario', 'grupo']);
+        
+        // Filtrar por término de búsqueda para LibroGrupo
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $queryGrupo->whereHas('libro', function($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%")
+                  ->orWhere('autor', 'like', "%{$search}%")
+                  ->orWhere('isbn', 'like', "%{$search}%");
+            })->orWhereHas('usuario', function($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('apellidos', 'like', "%{$search}%");
+            });
+        }
+        
+        // Filtrar por estado para LibroGrupo
+        if ($request->has('estado') && !empty($request->estado)) {
+            $queryGrupo->where('estado', $request->estado);
+        }
+        
+        // Ordenar y paginar
+        $queryGrupo->orderBy('fecha_solicitud', 'desc');
+        $librosGrupo = $queryGrupo->paginate(10)->appends(request()->query());
+        
+        // NUEVO: Consulta para LibroPosgrado
+        $queryPosgrado = LibroPosgrado::with(['libro', 'usuario']);
+        
+        // Filtrar por término de búsqueda para LibroPosgrado
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $queryPosgrado->whereHas('libro', function($q) use ($search) {
+                $q->where('titulo', 'like', "%{$search}%")
+                  ->orWhere('autor', 'like', "%{$search}%")
+                  ->orWhere('isbn', 'like', "%{$search}%");
+            })->orWhereHas('usuario', function($q) use ($search) {
+                $q->where('nombre', 'like', "%{$search}%")
+                  ->orWhere('apellidos', 'like', "%{$search}%");
+            });
+        }
+        
+        // Filtrar por estado para LibroPosgrado
+        if ($request->has('estado') && !empty($request->estado)) {
+            $queryPosgrado->where('estado', $request->estado);
+        }
+        
+        // Ordenar y paginar
+        $queryPosgrado->orderBy('fecha_solicitud', 'desc');
+        $librosPosgrado = $queryPosgrado->paginate(10)->appends(request()->query());
+        
         // Obtener todos los estados posibles para el filtro
         $estados = [
             'Pendiente Aceptación',
@@ -115,7 +167,15 @@ class LibroController extends Controller
         // Verificar si el usuario actual es de dirección
         $esDirector = true; //Auth::user()->esDirectorDepartamento();
 
-        return view('libros.index', compact('librosAsignatura', 'librosProyecto', 'librosOtros', 'estados', 'esDirector'));
+        return view('libros.index', compact(
+            'librosAsignatura', 
+            'librosProyecto', 
+            'librosOtros', 
+            'librosGrupo', 
+            'librosPosgrado', 
+            'estados', 
+            'esDirector'
+        ));
     }
 
     /**
@@ -130,6 +190,10 @@ class LibroController extends Controller
         
         // Para el formulario de solicitud completo
         $proyectos = Proyecto::orderBy('titulo')->get();
+        
+        // Aquí se podrían añadir los grupos de investigación y posgrados si fueran necesarios
+        // $grupos = Grupo::orderBy('nombre')->get();
+        // $posgrados = Posgrado::orderBy('nombre')->get();
         
         return view('libros.create', compact('asignaturas', 'proyectos'));
     }
@@ -214,6 +278,50 @@ class LibroController extends Controller
                     $tipo = 'proyecto';
                     break;
                 
+                case 'grupo':
+                    // Validación adicional para grupo de investigación
+                    $request->validate([
+                        'id_grupo' => 'required',
+                    ]);
+                    
+                    // Crear solicitud para grupo de investigación
+                    $solicitud = new LibroGrupo();
+                    $solicitud->id_libro = $libro->id_libro;
+                    $solicitud->id_usuario = Auth::id();
+                    $solicitud->id_grupo = $request->id_grupo;
+                    $solicitud->precio = $request->precio;
+                    $solicitud->num_ejemplares = $request->num_ejemplares;
+                    $solicitud->estado = 'Pendiente Aceptación';
+                    $solicitud->justificacion = $request->justificacion;
+                    $solicitud->observaciones = $request->observaciones;
+                    $solicitud->fecha_solicitud = Carbon::now();
+                    $solicitud->save();
+                    
+                    $tipo = 'grupo';
+                    break;
+                
+                case 'posgrado':
+                    // Validación adicional para posgrado
+                    $request->validate([
+                        'id_posgrado' => 'required',
+                    ]);
+                    
+                    // Crear solicitud para posgrado
+                    $solicitud = new LibroPosgrado();
+                    $solicitud->id_libro = $libro->id_libro;
+                    $solicitud->id_usuario = Auth::id();
+                    $solicitud->id_posgrado = $request->id_posgrado;
+                    $solicitud->precio = $request->precio;
+                    $solicitud->num_ejemplares = $request->num_ejemplares;
+                    $solicitud->estado = 'Pendiente Aceptación';
+                    $solicitud->justificacion = $request->justificacion;
+                    $solicitud->observaciones = $request->observaciones;
+                    $solicitud->fecha_solicitud = Carbon::now();
+                    $solicitud->save();
+                    
+                    $tipo = 'posgrado';
+                    break;
+                
                 case 'otros':
                     // Validación adicional para otros
                     $request->validate([
@@ -224,7 +332,7 @@ class LibroController extends Controller
                     $solicitud = new LibroOtro();
                     $solicitud->id_libro = $libro->id_libro;
                     $solicitud->id_usuario = Auth::id();
-                    //$solicitud->descripcion = $request->descripcion_otros;
+                    // $solicitud->descripcion = $request->descripcion_otros; // Este campo no existe en el modelo actual
                     $solicitud->precio = $request->precio;
                     $solicitud->num_ejemplares = $request->num_ejemplares;
                     $solicitud->estado = 'Pendiente Aceptación';
@@ -293,6 +401,28 @@ class LibroController extends Controller
                     ]);
                     
                 $tipoSolicitud = 'proyecto';
+            } elseif ($tipo === 'grupo' || ($request->has('tipo') && $request->tipo === 'grupo')) {
+                $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Aceptado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'fecha_pedido' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'grupo';
+            } elseif ($tipo === 'posgrado' || ($request->has('tipo') && $request->tipo === 'posgrado')) {
+                $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Aceptado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'fecha_pedido' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'posgrado';
             } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
                 $actualizado = LibroOtro::where('id_libro', $id_libro)
                     ->where('id_usuario', $id_usuario)
@@ -336,7 +466,37 @@ class LibroController extends Controller
                     }
                 }
                 
-                if ($actualizado === 0 && $tipoSolicitud !== 'otros fondos') {
+                if ($actualizado === 0 && $tipoSolicitud !== 'grupo') {
+                    $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Aceptado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'fecha_pedido' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'grupo';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'posgrado') {
+                    $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Aceptado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'fecha_pedido' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'posgrado';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'otros') {
                     $actualizado = LibroOtro::where('id_libro', $id_libro)
                         ->where('id_usuario', $id_usuario)
                         ->whereDate('fecha_solicitud', $fecha)
@@ -347,7 +507,7 @@ class LibroController extends Controller
                         ]);
                         
                     if ($actualizado > 0) {
-                        $tipoSolicitud = 'otros fondos';
+                        $tipoSolicitud = 'otros';
                     }
                 }
                 
@@ -434,6 +594,28 @@ class LibroController extends Controller
                     ]);
                     
                 $tipoSolicitud = 'proyecto';
+            } elseif ($tipo === 'grupo' || ($request->has('tipo') && $request->tipo === 'grupo')) {
+                $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Denegado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                    
+                $tipoSolicitud = 'grupo';
+            } elseif ($tipo === 'posgrado' || ($request->has('tipo') && $request->tipo === 'posgrado')) {
+                $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Denegado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                    
+                $tipoSolicitud = 'posgrado';
             } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
                 $actualizado = LibroOtro::where('id_libro', $id_libro)
                     ->where('id_usuario', $id_usuario)
@@ -474,6 +656,36 @@ class LibroController extends Controller
                         
                     if ($actualizado > 0) {
                         $tipoSolicitud = 'proyecto';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'grupo') {
+                    $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Denegado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'grupo de investigación';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'posgrado') {
+                    $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Denegado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'posgrado';
                     }
                 }
                 
@@ -574,6 +786,26 @@ class LibroController extends Controller
                     ]);
                     
                 $tipoSolicitud = 'proyecto';
+            } elseif ($tipo === 'grupo' || ($request->has('tipo') && $request->tipo === 'grupo')) {
+                $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Recibido',
+                        'fecha_recepcion' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'grupo';
+            } elseif ($tipo === 'posgrado' || ($request->has('tipo') && $request->tipo === 'posgrado')) {
+                $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Recibido',
+                        'fecha_recepcion' => Carbon::now()
+                    ]);
+                    
+                $tipoSolicitud = 'posgrado';
             } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
                 $actualizado = LibroOtro::where('id_libro', $id_libro)
                     ->where('id_usuario', $id_usuario)
@@ -611,6 +843,34 @@ class LibroController extends Controller
                         
                     if ($actualizado > 0) {
                         $tipoSolicitud = 'proyecto';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'grupo') {
+                    $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Recibido',
+                            'fecha_recepcion' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'grupo de investigación';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'posgrado') {
+                    $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Recibido',
+                            'fecha_recepcion' => Carbon::now()
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'posgrado';
                     }
                 }
                 

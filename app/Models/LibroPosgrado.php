@@ -55,10 +55,10 @@ class LibroPosgrado extends Model
     /**
      * Obtiene el posgrado para el que se solicitó el libro
      */
-    // public function posgrado()
-    // {
-    //     return $this->belongsTo(Posgrado::class, 'id_posgrado');
-    // }
+     public function posgrado()
+     {
+         return $this->belongsTo(Posgrado::class, 'id_posgrado');
+     }
 
     /**
      * Verifica si el usuario puede aprobar esta solicitud

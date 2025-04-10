@@ -121,10 +121,10 @@
                             </div>
 
                             <div class="flex items-center">
-                                <input id="tipo_investigacion" name="tipo_solicitud" type="radio"
-                                    value="investigacion"
+                                <input id="tipo_grupo" name="tipo_solicitud" type="radio"
+                                    value="grupo"
                                     class="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
-                                <label for="tipo_investigacion"
+                                <label for="tipo_grupo"
                                     class="ml-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Grupo de Investigación
                                 </label>
@@ -207,51 +207,60 @@
 
                     <!-- Ajustar de forma similar para las otras secciones -->
                     <!-- Sección para Grupo de Investigación (oculta por defecto) -->
-                    <div id="seccion_investigacion" class="border-t pt-4 mt-4 hidden">
-                        <div class="mb-4">
-                            <label for="codigo_grupo"
-                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Código del
-                                grupo de investigación <span class="text-red-600">*</span></label>
-                            <input type="text" name="codigo_grupo" id="codigo_grupo"
-                                value="{{ old('codigo_grupo') }}"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                placeholder="Código identificativo del grupo">
-                        </div>
+<div id="seccion_grupo" class="border-t pt-4 mt-4 hidden">
+    <div class="mb-4">
+        <label for="id_grupo"
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seleccione el grupo de investigación
+            <span class="text-red-600">*</span></label>
+        <select name="id_grupo" id="id_grupo"
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            data-required>
+            <option value="">-- Seleccione un grupo de investigación --</option>
+            @isset($grupos)
+                @foreach ($grupos as $grupo)
+                    <option value="{{ $grupo->id_grupo }}"
+                        {{ old('id_grupo') == $grupo->id_grupo ? 'selected' : '' }}>
+                        {{ $grupo->nombre_grupo }} ({{ $grupo->siglas_grupo }})
+                    </option>
+                @endforeach
+            @endisset
+        </select>
+    </div>
+    
+    <div class="mb-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            La solicitud será asociada al grupo de investigación seleccionado y deberá ser aprobada por el responsable del mismo.
+        </p>
+    </div>
+</div>
 
-                        <div class="mb-4">
-                            <label for="nombre_grupo"
-                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre del
-                                grupo de investigación <span class="text-red-600">*</span></label>
-                            <input type="text" name="nombre_grupo" id="nombre_grupo"
-                                value="{{ old('nombre_grupo') }}"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                placeholder="Nombre completo del grupo de investigación">
-                        </div>
-                    </div>
-
-                    <!-- Sección para Posgrado (oculta por defecto) -->
-                    <div id="seccion_posgrado" class="border-t pt-4 mt-4 hidden">
-                        <div class="mb-4">
-                            <label for="codigo_posgrado"
-                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Código del
-                                programa de posgrado <span class="text-red-600">*</span></label>
-                            <input type="text" name="codigo_posgrado" id="codigo_posgrado"
-                                value="{{ old('codigo_posgrado') }}"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                placeholder="Código identificativo del programa">
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="nombre_posgrado"
-                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre del
-                                programa de posgrado <span class="text-red-600">*</span></label>
-                            <input type="text" name="nombre_posgrado" id="nombre_posgrado"
-                                value="{{ old('nombre_posgrado') }}"
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                placeholder="Nombre completo del programa de posgrado">
-                        </div>
-                    </div>
-
+<!-- Sección para Posgrado (oculta por defecto) -->
+<div id="seccion_posgrado" class="border-t pt-4 mt-4 hidden">
+    <div class="mb-4">
+        <label for="id_posgrado"
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seleccione el programa de posgrado
+            <span class="text-red-600">*</span></label>
+        <select name="id_posgrado" id="id_posgrado"
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            data-required>
+            <option value="">-- Seleccione un programa de posgrado --</option>
+            @isset($posgrados)
+                @foreach ($posgrados as $posgrado)
+                    <option value="{{ $posgrado->id_posgrado }}"
+                        {{ old('id_posgrado') == $posgrado->id_posgrado ? 'selected' : '' }}>
+                        {{ $posgrado->nombre }} ({{ $posgrado->codigo }})
+                    </option>
+                @endforeach
+            @endisset
+        </select>
+    </div>
+    
+    <div class="mb-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            La solicitud será asociada al programa de posgrado seleccionado y deberá ser aprobada por el coordinador del mismo.
+        </p>
+    </div>
+</div>
                     <!-- Sección para Otros (oculta por defecto) -->
                     <div id="seccion_otros" class="border-t pt-4 mt-4 hidden">
                         <div class="mb-4">
@@ -304,21 +313,21 @@
                 // Referencias a los radio buttons
                 const tipoAsignatura = document.getElementById('tipo_asignatura');
                 const tipoProyecto = document.getElementById('tipo_proyecto');
-                const tipoInvestigacion = document.getElementById('tipo_investigacion');
+                const tipogrupo = document.getElementById('tipo_grupo');
                 const tipoPosgrado = document.getElementById('tipo_posgrado');
                 const tipoOtros = document.getElementById('tipo_otros');
 
                 // Referencias a las secciones
                 const seccionAsignatura = document.getElementById('seccion_asignatura');
                 const seccionProyecto = document.getElementById('seccion_proyecto');
-                const seccionInvestigacion = document.getElementById('seccion_investigacion');
+                const secciongrupo = document.getElementById('seccion_grupo');
                 const seccionPosgrado = document.getElementById('seccion_posgrado');
                 const seccionOtros = document.getElementById('seccion_otros');
 
                 // Referencias a los campos requeridos de cada sección
                 const camposAsignatura = seccionAsignatura.querySelectorAll('[required]');
                 const camposProyecto = seccionProyecto.querySelectorAll('[data-required]');
-                const camposInvestigacion = seccionInvestigacion.querySelectorAll('[data-required]');
+                const camposgrupo = secciongrupo.querySelectorAll('[data-required]');
                 const camposPosgrado = seccionPosgrado.querySelectorAll('[data-required]');
                 const camposOtros = seccionOtros.querySelectorAll('[data-required]');
 
@@ -327,14 +336,14 @@
                     // Ocultar todas las secciones
                     seccionAsignatura.classList.add('hidden');
                     seccionProyecto.classList.add('hidden');
-                    seccionInvestigacion.classList.add('hidden');
+                    secciongrupo.classList.add('hidden');
                     seccionPosgrado.classList.add('hidden');
                     seccionOtros.classList.add('hidden');
 
                     // Desactivar todos los campos required que están ocultos
                     toggleRequired(camposAsignatura, false);
                     toggleRequired(camposProyecto, false);
-                    toggleRequired(camposInvestigacion, false);
+                    toggleRequired(camposgrupo, false);
                     toggleRequired(camposPosgrado, false);
                     toggleRequired(camposOtros, false);
 
@@ -345,9 +354,9 @@
                     } else if (tipoProyecto.checked) {
                         seccionProyecto.classList.remove('hidden');
                         toggleRequired(camposProyecto, true);
-                    } else if (tipoInvestigacion.checked) {
-                        seccionInvestigacion.classList.remove('hidden');
-                        toggleRequired(camposInvestigacion, true);
+                    } else if (tipogrupo.checked) {
+                        secciongrupo.classList.remove('hidden');
+                        toggleRequired(camposgrupo, true);
                     } else if (tipoPosgrado.checked) {
                         seccionPosgrado.classList.remove('hidden');
                         toggleRequired(camposPosgrado, true);
@@ -371,7 +380,7 @@
                 // Asignar eventos de cambio a los radio buttons
                 tipoAsignatura.addEventListener('change', actualizarSecciones);
                 tipoProyecto.addEventListener('change', actualizarSecciones);
-                tipoInvestigacion.addEventListener('change', actualizarSecciones);
+                tipogrupo.addEventListener('change', actualizarSecciones);
                 tipoPosgrado.addEventListener('change', actualizarSecciones);
                 tipoOtros.addEventListener('change', actualizarSecciones);
 

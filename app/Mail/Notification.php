@@ -1,10 +1,10 @@
 <?php
-// filepath: c:\xampp\htdocs\laravel\tfg_gestion_ccia\app\Mail\Notification.php
 
 namespace App\Mail;
 
 use App\Models\ReservaSala;
 use App\Models\Usuario;
+use App\Models\Libro;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -17,30 +17,40 @@ class Notification extends Mailable
     use Queueable, SerializesModels;
 
     /**
-     * Información de la reserva y el usuario
+     * Información del usuario y entidad (reserva o libro)
      */
     public $usuario;
-    public $reserva;
+    public $entidad;
     public $estado;
     public $subject;
+    public $tipoEntidad;
 
     /**
      * Create a new message instance.
      *
-     * @param Usuario $usuario El usuario que realizó la reserva
-     * @param ReservaSala $reserva Los datos de la reserva
-     * @param string $estado Estado de la reserva ('Validada' o 'Rechazada')
+     * @param Usuario $usuario El usuario que realizó la solicitud
+     * @param mixed $entidad La entidad relacionada (ReservaSala o Libro)
+     * @param string $estado Estado de la solicitud ('Validada', 'Rechazada', 'Aceptado', 'Denegado', etc.)
      */
-    public function __construct(Usuario $usuario, ReservaSala $reserva, string $estado)
+    public function __construct(Usuario $usuario, $entidad, string $estado)
     {
         $this->usuario = $usuario;
-        $this->reserva = $reserva;
+        $this->entidad = $entidad;
         $this->estado = $estado;
         
-        // Configurar el asunto según el estado
-        $this->subject = $estado === 'Validada' 
-            ? 'Su reserva de sala ha sido aprobada' 
-            : 'Su reserva de sala ha sido rechazada';
+        // Determinar el tipo de entidad
+        $this->tipoEntidad = $entidad instanceof ReservaSala ? 'reserva' : 'libro';
+        
+        // Configurar el asunto según el tipo de entidad y estado
+        if ($this->tipoEntidad === 'reserva') {
+            $this->subject = $estado === 'Validada' 
+                ? 'Su reserva de sala ha sido aprobada' 
+                : 'Su reserva de sala ha sido rechazada';
+        } else {
+            $this->subject = $estado === 'Aceptado' 
+                ? 'Su solicitud de libro ha sido aprobada' 
+                : 'Su solicitud de libro ha sido denegada';
+        }
     }
 
     /**
@@ -58,11 +68,14 @@ class Notification extends Mailable
      */
     public function content(): Content
     {
+        // Elegir la vista según el tipo de entidad
+        $view = $this->tipoEntidad === 'reserva' ? 'reserva_salas.email' : 'libros.email';
+        
         return new Content(
-            view: 'reserva_salas.email',
+            view: $view,
             with: [
                 'usuario' => $this->usuario,
-                'reserva' => $this->reserva,
+                $this->tipoEntidad => $this->entidad, // Pasa la entidad con el nombre adecuado (reserva o libro)
                 'estado' => $this->estado
             ]
         );

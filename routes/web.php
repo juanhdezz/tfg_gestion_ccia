@@ -70,11 +70,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     /**
      * DESPACHOS
      */
-    Route::resource('despachos', DespachoController::class);
+    Route::get('despachos', [DespachoController::class, 'index'])->name('despachos.index');
+    Route::get('despachos/create', [DespachoController::class, 'create'])->name('despachos.create');
+    Route::post('despachos', [DespachoController::class, 'store'])->name('despachos.store');
+    Route::get('despachos/{id}', [DespachoController::class, 'show'])->name('despachos.show');
+    Route::get('despachos/{id}/edit', [DespachoController::class, 'edit'])->name('despachos.edit');
+    Route::put('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
+    Route::patch('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
+    Route::delete('despachos/{id}', [DespachoController::class, 'destroy'])->name('despachos.destroy');
     Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
         ->name('despachos.usuarios');
     Route::get('despachos-exportar', [DespachoController::class, 'exportar'])
         ->name('despachos.exportar');
+    Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
+        ->name('despachos.usuariosAsignados');
     
     /**
      * TUTORÍAS
@@ -129,17 +138,19 @@ Route::middleware(['auth', 'admin'])->group(function () {
      * GESTIÓN DE ASIGNATURAS
      */
     Route::prefix('gestion-asignaturas')->name('asignaturas.')->group(function () {
+        
         // CRUD principal
         Route::get('/', [AsignaturaController::class, 'index'])->name('index');
         Route::get('/create', [AsignaturaController::class, 'create'])->name('create');
         Route::post('/', [AsignaturaController::class, 'store'])->name('store');
+        Route::get('/grupos', [AsignaturaController::class, 'grupos'])->name('grupos');
         Route::get('/{id}', [AsignaturaController::class, 'show'])->name('show');
         Route::get('/{id}/edit', [AsignaturaController::class, 'edit'])->name('edit');
         Route::put('/{id}', [AsignaturaController::class, 'update'])->name('update');
         Route::delete('/{id}', [AsignaturaController::class, 'destroy'])->name('destroy');
         
         // Gestión de grupos
-        Route::get('/grupos', [AsignaturaController::class, 'grupos'])->name('grupos');
+        
         Route::patch('/grupos/{asignatura}', [AsignaturaController::class, 'updateGrupos'])->name('updateGrupos');
         Route::patch('/{id}/reasignar-grupos', [AsignaturaController::class, 'reasignarGrupos'])->name('reasignarGrupos');
         
@@ -247,7 +258,13 @@ Route::middleware(['auth', 'admin'])->group(function () {
      * GESTIÓN DE PROYECTOS
      */
     // Rutas de recurso para CRUD completo
-    Route::resource('proyectos', ProyectoController::class);
+    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
+    Route::get('proyectos/create', [ProyectoController::class, 'create'])->name('proyectos.create');
+    Route::post('proyectos', [ProyectoController::class, 'store'])->name('proyectos.store');
+    Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
+    Route::get('proyectos/{proyecto}/edit', [ProyectoController::class, 'edit'])->name('proyectos.edit');
+    Route::put('proyectos/{proyecto}', [ProyectoController::class, 'update'])->name('proyectos.update');
+    Route::delete('proyectos/{proyecto}', [ProyectoController::class, 'destroy'])->name('proyectos.destroy');
     
     // Rutas adicionales de proyectos
     Route::patch('proyectos/{proyecto}/cambiar-estado', [ProyectoController::class, 'cambiarEstado'])

@@ -322,22 +322,22 @@ class BreadcrumbsComposer
                     break;
 
                 case 'proyectos.edit':
-                    $id = request()->route('id');
+                    $proyecto = request()->route('proyecto');
 
                     $breadcrumbs = [
                         ['name' => 'Departamento', 'url' => route('departamento')],
                         ['name' => 'Gestión de Proyectos', 'url' => route('proyectos.index')],
-                        ['name' => 'Editar proyecto', 'url' => route('proyectos.edit', $id)]
+                        ['name' => 'Editar proyecto', 'url' => route('proyectos.edit', $proyecto)]
                     ];
                     break;
 
                 case 'proyectos.show':
-                    $id = request()->route('id');
+                    $proyecto = request()->route('proyecto');
 
                     $breadcrumbs = [
                         ['name' => 'Departamento', 'url' => route('departamento')],
                         ['name' => 'Gestión de Proyectos', 'url' => route('proyectos.index')],
-                        ['name' => 'Ver proyecto', 'url' => route('proyectos.show', $id)]
+                        ['name' => 'Ver proyecto', 'url' => route('proyectos.show', $proyecto)]
                     ];
                     break;
 

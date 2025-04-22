@@ -243,8 +243,8 @@ public function create()
                 case 'asignatura':
                     // Validación adicional para asignatura
                     $request->validate([
-                        'id_asignatura' => 'required|exists:asignatura,id_asignatura',
-                        'curso_academico' => 'required|string',
+                        'id_asignatura' => 'required|exists:asignatura,id_asignatura'
+                        
                     ]);
                     
                     // Crear solicitud para asignatura
@@ -258,7 +258,7 @@ public function create()
                     $solicitud->justificacion = $request->justificacion;
                     $solicitud->observaciones = $request->observaciones;
                     $solicitud->fecha_solicitud = Carbon::now();
-                    $solicitud->curso_academico = $request->curso_academico;
+                    //$solicitud->curso_academico = $request->curso_academico;
                     $solicitud->save();
                     
                     $tipo = 'asignatura';

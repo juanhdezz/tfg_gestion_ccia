@@ -22,7 +22,7 @@
                                         <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                                         <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                                     </svg>
-                                    {{ Auth::user()->email }}
+                                    {{ Auth::user()->correo }}
                                 </p>
                             </div>
                         </div>
@@ -44,7 +44,7 @@
                             <div class="bg-gray-50 p-4 rounded-lg">
                                 <h4 class="text-sm font-semibold text-gray-700 mb-2">Datos adicionales</h4>
                                 <p class="text-xs text-gray-600">
-                                    <span class="font-medium">Categoría:</span> {{ Auth::user()->categoria ?? 'No especificado' }}
+                                    <span class="font-medium">Categoría:</span> {{ Auth::user()->tipo_usuario ?? 'No especificado' }}
                                 </p>
                                 <p class="text-xs text-gray-600 mt-1">
                                     <span class="font-medium">Teléfono:</span> {{ Auth::user()->telefono ?? 'No especificado' }}
@@ -59,7 +59,7 @@
                                 </svg>
                                 Editar perfil
                             </a>
-                            <a href="#" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <a href="{{ route('profile.edit') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>

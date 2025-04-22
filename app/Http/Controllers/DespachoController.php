@@ -199,7 +199,7 @@ public function destroy($id)
     {
         $despacho = Despacho::with('usuarios')->findOrFail($id);
         
-        return view('despachos.usuarios', compact('despacho'));
+        return view('despachos.usuariosAsignados', compact('despacho'));
     }
 
     /**

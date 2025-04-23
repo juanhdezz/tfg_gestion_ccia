@@ -70,7 +70,7 @@
 
         <div class="flex flex-wrap justify-between items-center mb-4">
             <div class="flex items-center">
-                @if (auth()->user()->hasRole('admin'))
+                @if (auth()->user()->hasRole('admin|secretario'))
                     @php 
                         $pendientesCount = \App\Models\ReservaSala::where('estado', 'Pendiente Validación')->count();
                     @endphp
@@ -84,7 +84,7 @@
             </div>
             
             <div class="flex flex-wrap mt-2 sm:mt-0">
-                @if (auth()->user()->hasRole('admin'))
+                @if (auth()->user()->hasRole('admin|secretario'))
                     <a href="{{ route('reserva_salas.pendientes') }}"
                         class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
                         <i class="fas fa-clock mr-1"></i> Reservas Pendientes
@@ -171,18 +171,39 @@
                                         class="font-medium text-green-600 dark:text-green-500 hover:underline">
                                         Ver &#128270;
                                     </a>
-                                    <a href="{{ route('reserva_salas.edit', [
-                                        'id_sala' => $reserva->id_sala,
-                                        'fecha' => $reserva->fecha->format('Y-m-d'),
-                                        'hora_inicio' => $reserva->hora_inicio->format('H:i:s'),
-                                        'estado' => $reserva->estado,
-                                    ]) }}"
-                                        class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                        Editar &#9999;
-                                    </a>
-                                    @if ($reserva->estado != 'Cancelada' && $reserva->estado != 'Rechazada')
-                                        <form class="change-status-form"
-                                            action="{{ route('reserva_salas.cambiar-estado', [
+                            
+                                    @role('admin|secretario')
+                                        <a href="{{ route('reserva_salas.edit', [
+                                            'id_sala' => $reserva->id_sala,
+                                            'fecha' => $reserva->fecha->format('Y-m-d'),
+                                            'hora_inicio' => $reserva->hora_inicio->format('H:i:s'),
+                                            'estado' => $reserva->estado,
+                                        ]) }}"
+                                            class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
+                                            Editar &#9999;
+                                        </a>
+                                        
+                                        @if ($reserva->estado != 'Cancelada' && $reserva->estado != 'Rechazada')
+                                            <form class="change-status-form"
+                                                action="{{ route('reserva_salas.cambiar-estado', [
+                                                    'id_sala' => $reserva->id_sala,
+                                                    'fecha' => $reserva->fecha->format('Y-m-d'),
+                                                    'hora_inicio' => $reserva->hora_inicio->format('H:i:s'),
+                                                    'estado' => $reserva->estado,
+                                                ]) }}"
+                                                method="POST" class="inline">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="nuevo_estado" value="Cancelada">
+                                                <button type="submit"
+                                                    class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline">
+                                                    Cancelar &#9888;
+                                                </button>
+                                            </form>
+                                        @endif
+                                        
+                                        <form class="delete-form"
+                                            action="{{ route('reserva_salas.destroy', [
                                                 'id_sala' => $reserva->id_sala,
                                                 'fecha' => $reserva->fecha->format('Y-m-d'),
                                                 'hora_inicio' => $reserva->hora_inicio->format('H:i:s'),
@@ -190,29 +211,33 @@
                                             ]) }}"
                                             method="POST" class="inline">
                                             @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="nuevo_estado" value="Cancelada">
+                                            @method('DELETE')
                                             <button type="submit"
-                                                class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline">
-                                                Cancelar &#9888;
+                                                class="font-medium text-red-600 dark:text-red-500 hover:underline">
+                                                Eliminar &#10060;
                                             </button>
                                         </form>
-                                    @endif
-                                    <form class="delete-form"
-                                        action="{{ route('reserva_salas.destroy', [
-                                            'id_sala' => $reserva->id_sala,
-                                            'fecha' => $reserva->fecha->format('Y-m-d'),
-                                            'hora_inicio' => $reserva->hora_inicio->format('H:i:s'),
-                                            'estado' => $reserva->estado,
-                                        ]) }}"
-                                        method="POST" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="font-medium text-red-600 dark:text-red-500 hover:underline">
-                                            Eliminar &#10060;
-                                        </button>
-                                    </form>
+                                    @else
+                                        {{-- Si el usuario es el propietario de la reserva, permitir cancelar su propia reserva --}}
+                                        @if ($reserva->id_usuario == auth()->id() && $reserva->estado != 'Cancelada' && $reserva->estado != 'Rechazada')
+                                            <form class="change-status-form"
+                                                action="{{ route('reserva_salas.cambiar-estado', [
+                                                    'id_sala' => $reserva->id_sala,
+                                                    'fecha' => $reserva->fecha->format('Y-m-d'),
+                                                    'hora_inicio' => $reserva->hora_inicio->format('H:i:s'),
+                                                    'estado' => $reserva->estado,
+                                                ]) }}"
+                                                method="POST" class="inline">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="nuevo_estado" value="Cancelada">
+                                                <button type="submit"
+                                                    class="font-medium text-yellow-600 dark:text-yellow-500 hover:underline">
+                                                    Cancelar &#9888;
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @endrole
                                 </div>
                             </td>
                         </tr>

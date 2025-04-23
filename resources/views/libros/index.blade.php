@@ -277,52 +277,56 @@
                                                 </svg>
                                                 Ver
                                             </button>
-
-                                            @if ($esDirector && $solicitud->estado == 'Pendiente Aceptación')
-                                                <form
-                                                    action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline aprobar-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                        
+                                            @role('admin|secretario')
+                                                @if ($solicitud->estado == 'Pendiente Aceptación')
+                                                    <form
+                                                        action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline aprobar-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            Aprobar
+                                                        </button>
+                                                    </form>
+                                        
+                                                    <button type="button"
+                                                        data-modal-target="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        data-modal-toggle="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
                                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                         </svg>
-                                                        Aprobar
+                                                        Denegar
                                                     </button>
-                                                </form>
-
-                                                <button type="button"
-                                                    data-modal-target="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    data-modal-toggle="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                    Denegar
-                                                </button>
-                                            @endif
-
+                                                @endif
+                                            @endrole
+                                        
                                             @if ($solicitud->estado == 'Aceptado')
-                                                <form
-                                                    action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline recibir-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                                        </svg>
-                                                        Recibido
-                                                    </button>
-                                                </form>
+                                                @role('admin|secretario')
+                                                    <form
+                                                        action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline recibir-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                            </svg>
+                                                            Recibido
+                                                        </button>
+                                                    </form>
+                                                @endrole
                                             @endif
                                         </td>
                                     </tr>
@@ -479,52 +483,56 @@
                                                 </svg>
                                                 Ver
                                             </button>
-
-                                            @if ($esDirector && $solicitud->estado == 'Pendiente Aceptación')
-                                                <form
-                                                    action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline aprobar-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                        
+                                            @role('admin|secretario')
+                                                @if ($solicitud->estado == 'Pendiente Aceptación')
+                                                    <form
+                                                        action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline aprobar-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            Aprobar
+                                                        </button>
+                                                    </form>
+                                        
+                                                    <button type="button"
+                                                        data-modal-target="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        data-modal-toggle="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
                                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                         </svg>
-                                                        Aprobar
+                                                        Denegar
                                                     </button>
-                                                </form>
-
-                                                <button type="button"
-                                                    data-modal-target="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    data-modal-toggle="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                    Denegar
-                                                </button>
-                                            @endif
-
+                                                @endif
+                                            @endrole
+                                        
                                             @if ($solicitud->estado == 'Aceptado')
-                                                <form
-                                                    action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline recibir-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                                        </svg>
-                                                        Recibido
-                                                    </button>
-                                                </form>
+                                                @role('admin|secretario')
+                                                    <form
+                                                        action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline recibir-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                            </svg>
+                                                            Recibido
+                                                        </button>
+                                                    </form>
+                                                @endrole
                                             @endif
                                         </td>
                                     </tr>
@@ -665,8 +673,8 @@
                                         </td>
                                         <td class="px-6 py-4 flex space-x-2">
                                             <button type="button"
-                                                data-modal-target="detalleModalGrupo-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                data-modal-toggle="detalleModalGrupo-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                data-modal-target="detalleModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                data-modal-toggle="detalleModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
                                                 class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 hover:underline flex items-center">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
                                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -678,52 +686,56 @@
                                                 </svg>
                                                 Ver
                                             </button>
-
-                                            @if ($esDirector && $solicitud->estado == 'Pendiente Aceptación')
-                                                <form
-                                                    action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline aprobar-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                        
+                                            @role('admin|secretario')
+                                                @if ($solicitud->estado == 'Pendiente Aceptación')
+                                                    <form
+                                                        action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline aprobar-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            Aprobar
+                                                        </button>
+                                                    </form>
+                                        
+                                                    <button type="button"
+                                                        data-modal-target="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        data-modal-toggle="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
                                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                         </svg>
-                                                        Aprobar
+                                                        Denegar
                                                     </button>
-                                                </form>
-
-                                                <button type="button"
-                                                    data-modal-target="denegarModalGrupo-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    data-modal-toggle="denegarModalGrupo-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                    Denegar
-                                                </button>
-                                            @endif
-
+                                                @endif
+                                            @endrole
+                                        
                                             @if ($solicitud->estado == 'Aceptado')
-                                                <form
-                                                    action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline recibir-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                                        </svg>
-                                                        Recibido
-                                                    </button>
-                                                </form>
+                                                @role('admin|secretario')
+                                                    <form
+                                                        action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline recibir-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                            </svg>
+                                                            Recibido
+                                                        </button>
+                                                    </form>
+                                                @endrole
                                             @endif
                                         </td>
                                     </tr>
@@ -863,8 +875,8 @@
                                         </td>
                                         <td class="px-6 py-4 flex space-x-2">
                                             <button type="button"
-                                                data-modal-target="detalleModalPosgrado-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                data-modal-toggle="detalleModalPosgrado-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                data-modal-target="detalleModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                data-modal-toggle="detalleModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
                                                 class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 hover:underline flex items-center">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
                                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -876,52 +888,56 @@
                                                 </svg>
                                                 Ver
                                             </button>
-
-                                            @if ($esDirector && $solicitud->estado == 'Pendiente Aceptación')
-                                                <form
-                                                    action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline aprobar-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                        
+                                            @role('admin|secretario')
+                                                @if ($solicitud->estado == 'Pendiente Aceptación')
+                                                    <form
+                                                        action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline aprobar-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            Aprobar
+                                                        </button>
+                                                    </form>
+                                        
+                                                    <button type="button"
+                                                        data-modal-target="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        data-modal-toggle="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
                                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                         </svg>
-                                                        Aprobar
+                                                        Denegar
                                                     </button>
-                                                </form>
-
-                                                <button type="button"
-                                                    data-modal-target="denegarModalPosgrado-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    data-modal-toggle="denegarModalPosgrado-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                    Denegar
-                                                </button>
-                                            @endif
-
+                                                @endif
+                                            @endrole
+                                        
                                             @if ($solicitud->estado == 'Aceptado')
-                                                <form
-                                                    action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline recibir-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                                        </svg>
-                                                        Recibido
-                                                    </button>
-                                                </form>
+                                                @role('admin|secretario')
+                                                    <form
+                                                        action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline recibir-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                            </svg>
+                                                            Recibido
+                                                        </button>
+                                                    </form>
+                                                @endrole
                                             @endif
                                         </td>
                                     </tr>
@@ -1054,8 +1070,8 @@
                                         </td>
                                         <td class="px-6 py-4 flex space-x-2">
                                             <button type="button"
-                                                data-modal-target="detalleModalOtros-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                data-modal-toggle="detalleModalOtros-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                data-modal-target="detalleModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                data-modal-toggle="detalleModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
                                                 class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 hover:underline flex items-center">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
                                                     fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1067,52 +1083,56 @@
                                                 </svg>
                                                 Ver
                                             </button>
-
-                                            @if ($esDirector && $solicitud->estado == 'Pendiente Aceptación')
-                                                <form
-                                                    action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline aprobar-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                        
+                                            @role('admin|secretario')
+                                                @if ($solicitud->estado == 'Pendiente Aceptación')
+                                                    <form
+                                                        action="{{ route('libros.aprobar', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline aprobar-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            Aprobar
+                                                        </button>
+                                                    </form>
+                                        
+                                                    <button type="button"
+                                                        data-modal-target="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        data-modal-toggle="denegarModal-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
+                                                        class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
                                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2" d="M5 13l4 4L19 7" />
+                                                                stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                         </svg>
-                                                        Aprobar
+                                                        Denegar
                                                     </button>
-                                                </form>
-
-                                                <button type="button"
-                                                    data-modal-target="denegarModalOtros-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    data-modal-toggle="denegarModalOtros-{{ $solicitud->id_libro }}-{{ $solicitud->id_usuario }}-{{ $solicitud->fecha_solicitud->format('Y-m-d') }}"
-                                                    class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 hover:underline flex items-center">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                    Denegar
-                                                </button>
-                                            @endif
-
+                                                @endif
+                                            @endrole
+                                        
                                             @if ($solicitud->estado == 'Aceptado')
-                                                <form
-                                                    action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
-                                                    method="POST" class="inline recibir-form">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
-                                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                stroke-width="2"
-                                                                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                                                        </svg>
-                                                        Recibido
-                                                    </button>
-                                                </form>
+                                                @role('admin|secretario')
+                                                    <form
+                                                        action="{{ route('libros.recibir', [$solicitud->id_libro, $solicitud->id_usuario, $solicitud->fecha_solicitud->format('Y-m-d')]) }}"
+                                                        method="POST" class="inline recibir-form">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-300 hover:underline flex items-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1"
+                                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                            </svg>
+                                                            Recibido
+                                                        </button>
+                                                    </form>
+                                                @endrole
                                             @endif
                                         </td>
                                     </tr>

@@ -12,12 +12,14 @@ class EnsureUserIsAdmin
 {
     public function handle(Request $request, Closure $next)
     {
-        // Verifica si el usuario está autenticado y tiene el rol "admin"
-        if (Auth::check() && Auth::user()->hasRole('admin')) {
+        // Verifica si el usuario está autenticado y tiene alguno de los roles permitidos
+        if (Auth::check() && (Auth::user()->hasRole('admin') || 
+                              Auth::user()->hasRole('secretario') || 
+                              Auth::user()->hasRole('subdirectorDocente'))) {
             return $next($request);
         }
 
-        // Si no tiene el rol, redirige a una página de error o al inicio
+        // Si no tiene ninguno de los roles, redirige a una página de error o al inicio
         return redirect('/')->with('error', 'No tienes permiso para acceder a esta página.');
     }
 }

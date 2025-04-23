@@ -67,23 +67,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return view('departamento');
     })->name('departamento');
     
-    /**
-     * DESPACHOS
-     */
-    Route::get('despachos', [DespachoController::class, 'index'])->name('despachos.index');
-    Route::get('despachos/create', [DespachoController::class, 'create'])->name('despachos.create');
-    Route::post('despachos', [DespachoController::class, 'store'])->name('despachos.store');
-    Route::get('despachos/{id}', [DespachoController::class, 'show'])->name('despachos.show');
-    Route::get('despachos/{id}/edit', [DespachoController::class, 'edit'])->name('despachos.edit');
-    Route::put('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
-    Route::patch('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
-    Route::delete('despachos/{id}', [DespachoController::class, 'destroy'])->name('despachos.destroy');
-    Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
-        ->name('despachos.usuarios');
-    Route::get('despachos-exportar', [DespachoController::class, 'exportar'])
-        ->name('despachos.exportar');
-    Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
-        ->name('despachos.usuariosAsignados');
+    
     
     /**
      * TUTORÍAS
@@ -94,6 +78,54 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/{tutoria}', [TutoriaController::class, 'destroy'])->name('destroy');
         Route::post('/actualizar', [TutoriaController::class, 'actualizar'])->name('actualizar');
         Route::get('/ver', [TutoriaController::class, 'verTutorias'])->name('ver');
+    });
+
+     /**
+     * RESERVA DE SALAS
+     */
+    Route::prefix('reserva-salas')->name('reserva_salas.')->group(function () {
+        // CRUD principal
+        Route::get('/', [ReservaSalaController::class, 'index'])->name('index');
+        Route::get('/create', [ReservaSalaController::class, 'create'])->name('create');
+        Route::post('/', [ReservaSalaController::class, 'store'])->name('store');
+        Route::get('/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'show'])
+            ->name('show');
+        Route::get('/{id_sala}/{fecha}/{hora_inicio}/{estado}/edit', [ReservaSalaController::class, 'edit'])
+            ->name('edit');
+        Route::patch('/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'update'])
+            ->name('update');
+        Route::delete('/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'destroy'])
+            ->name('destroy');
+        
+        // Gestión de estados y verificaciones
+        Route::patch('/{id_sala}/{fecha}/{hora_inicio}/{estado}/cambiar-estado', [ReservaSalaController::class, 'cambiarEstado'])
+            ->name('cambiar-estado');
+        Route::post('/verificar-disponibilidad', [ReservaSalaController::class, 'verificarDisponibilidad'])
+            ->name('verificar-disponibilidad');
+        Route::get('/pendientes', [ReservaSalaController::class, 'reservasPendientes'])
+            ->name('pendientes');
+        Route::post('/procesar/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'procesarValidacion'])
+            ->name('procesar');
+        
+        // Calendario de reservas
+        Route::get('/calendario', [ReservaSalaController::class, 'calendario'])->name('calendario');
+        Route::get('/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
+            ->name('obtener-eventos-calendario');
+    });
+    
+    /**
+     * GESTIÓN DE LIBROS
+     */
+    Route::prefix('libros')->name('libros.')->group(function () {
+        Route::get('/', [LibroController::class, 'index'])->name('index');
+        Route::get('/crear', [LibroController::class, 'create'])->name('create');
+        Route::post('/', [LibroController::class, 'store'])->name('store');
+        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/aprobar', [LibroController::class, 'aprobar'])
+            ->name('aprobar');
+        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/denegar', [LibroController::class, 'denegar'])
+            ->name('denegar');
+        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/recibir', [LibroController::class, 'recibir'])
+            ->name('recibir');
     });
     
     /**
@@ -161,6 +193,24 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/verificar-migracion', [AsignaturaController::class, 'verificarAsignaturasMigracion'])
             ->name('verificar-migracion')->prefix('admin/asignaturas');
     });
+
+    /**
+     * DESPACHOS
+     */
+    Route::get('despachos', [DespachoController::class, 'index'])->name('despachos.index');
+    Route::get('despachos/create', [DespachoController::class, 'create'])->name('despachos.create');
+    Route::post('despachos', [DespachoController::class, 'store'])->name('despachos.store');
+    Route::get('despachos/{id}', [DespachoController::class, 'show'])->name('despachos.show');
+    Route::get('despachos/{id}/edit', [DespachoController::class, 'edit'])->name('despachos.edit');
+    Route::put('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
+    Route::patch('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
+    Route::delete('despachos/{id}', [DespachoController::class, 'destroy'])->name('despachos.destroy');
+    Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
+        ->name('despachos.usuarios');
+    Route::get('despachos-exportar', [DespachoController::class, 'exportar'])
+        ->name('despachos.exportar');
+    Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
+        ->name('despachos.usuariosAsignados');
     
     /**
      * EQUIVALENCIAS DE ASIGNATURAS
@@ -207,53 +257,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::delete('/{id}', [PlazoController::class, 'destroy'])->name('destroy');
     });
     
-    /**
-     * RESERVA DE SALAS
-     */
-    Route::prefix('reserva-salas')->name('reserva_salas.')->group(function () {
-        // CRUD principal
-        Route::get('/', [ReservaSalaController::class, 'index'])->name('index');
-        Route::get('/create', [ReservaSalaController::class, 'create'])->name('create');
-        Route::post('/', [ReservaSalaController::class, 'store'])->name('store');
-        Route::get('/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'show'])
-            ->name('show');
-        Route::get('/{id_sala}/{fecha}/{hora_inicio}/{estado}/edit', [ReservaSalaController::class, 'edit'])
-            ->name('edit');
-        Route::patch('/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'update'])
-            ->name('update');
-        Route::delete('/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'destroy'])
-            ->name('destroy');
-        
-        // Gestión de estados y verificaciones
-        Route::patch('/{id_sala}/{fecha}/{hora_inicio}/{estado}/cambiar-estado', [ReservaSalaController::class, 'cambiarEstado'])
-            ->name('cambiar-estado');
-        Route::post('/verificar-disponibilidad', [ReservaSalaController::class, 'verificarDisponibilidad'])
-            ->name('verificar-disponibilidad');
-        Route::get('/pendientes', [ReservaSalaController::class, 'reservasPendientes'])
-            ->name('pendientes');
-        Route::post('/procesar/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'procesarValidacion'])
-            ->name('procesar');
-        
-        // Calendario de reservas
-        Route::get('/calendario', [ReservaSalaController::class, 'calendario'])->name('calendario');
-        Route::get('/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
-            ->name('obtener-eventos-calendario');
-    });
-    
-    /**
-     * GESTIÓN DE LIBROS
-     */
-    Route::prefix('libros')->name('libros.')->group(function () {
-        Route::get('/', [LibroController::class, 'index'])->name('index');
-        Route::get('/crear', [LibroController::class, 'create'])->name('create');
-        Route::post('/', [LibroController::class, 'store'])->name('store');
-        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/aprobar', [LibroController::class, 'aprobar'])
-            ->name('aprobar');
-        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/denegar', [LibroController::class, 'denegar'])
-            ->name('denegar');
-        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/recibir', [LibroController::class, 'recibir'])
-            ->name('recibir');
-    });
+   
     
     /**
      * GESTIÓN DE PROYECTOS

@@ -41,12 +41,12 @@ class PlazoController extends Controller
         $plazos = $query->orderBy('fecha_inicio', 'desc')->get();
         
         // Verificar si se debe mostrar la vista de plazos
-        $fechaInicio = Carbon::create(2025, 1, 1);
-        $fechaFin = Carbon::create(2025, 2, 1);
-        $hoy = Carbon::now();
-        $mostrarVista = $hoy->between($fechaInicio, $fechaFin);
+        // $fechaInicio = Carbon::create(2025, 1, 1);
+        // $fechaFin = Carbon::create(2025, 2, 1);
+        // $hoy = Carbon::now();
+        // $mostrarVista = $hoy->between($fechaInicio, $fechaFin);
         
-        return view('plazos.index', compact('plazos', 'filtro', 'busqueda','mostrarVista'));
+        return view('plazos.index', compact('plazos', 'filtro', 'busqueda'));
     }
 
     /**

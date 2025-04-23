@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Titulacion;
 use App\Models\GrupoTeoriaPractica;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 
 class AsignaturaController extends Controller
 {
@@ -255,39 +257,58 @@ class AsignaturaController extends Controller
         return view('asignaturas.grupos', compact('asignaturas'));
     }
 
-    public function reasignarGrupos(Request $request, $id)
-    {
-        $asignatura = Asignatura::findOrFail($id);
-        
-        // Validar la distribución propuesta
-        $validated = $request->validate([
-            'distribucion' => 'required|array',
-            'distribucion.*' => 'required|integer|min:0'
-        ]);
+public function reasignarGrupos(Request $request, $id)
+{
+    $asignatura = Asignatura::findOrFail($id);
+    
+    // Validar que los grupos vengan en el formato esperado
+    $validated = $request->validate([
+        'grupos' => 'required|array',
+        'grupos.*' => 'array'
+    ]);
 
-        // Verificar que la suma de la distribución coincida con el total de grupos de práctica
-        $totalPracticasAsignadas = array_sum($request->distribucion);
-        if ($totalPracticasAsignadas != $asignatura->grupos_practicas) {
-            return redirect()->back()->with('error', 'El total de grupos de práctica asignados no coincide con el total definido para la asignatura');
-        }
-
-        // Eliminar todas las asignaciones actuales
+    try {
+        // Eliminar todas las asignaciones actuales para esta asignatura
         GrupoTeoriaPractica::where('id_asignatura', $id)->delete();
 
-        // Crear las nuevas asignaciones según la distribución
-        foreach ($request->distribucion as $grupoTeoria => $numPracticas) {
-            for ($i = 1; $i <= $numPracticas; $i++) {
+        // Total de grupos de práctica para verificar
+        $totalGruposPractica = 0;
+
+        // Crear las nuevas asignaciones según los datos recibidos
+        foreach ($request->grupos as $grupoTeoria => $gruposPractica) {
+            foreach ($gruposPractica as $numPractica) {
                 GrupoTeoriaPractica::create([
                     'id_asignatura' => $id,
                     'grupo_teoria' => $grupoTeoria,
-                    'grupo_practica' => $i
+                    'grupo_practica' => $numPractica
                 ]);
+                
+                $totalGruposPractica++;
             }
         }
 
+        // Verificar que la cantidad de grupos coincida con lo definido en la asignatura
+        if ($totalGruposPractica != $asignatura->grupos_practicas) {
+            // Loguear advertencia pero permitir que continúe (opcional)
+            Log::warning("Se asignaron {$totalGruposPractica} grupos de práctica pero la asignatura tiene definidos {$asignatura->grupos_practicas}");
+        }
+
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Distribución actualizada',
+            'text' => 'La distribución de grupos ha sido actualizada correctamente'
+        ]);
+
         return redirect()->route('asignaturas.grupos')
             ->with('success', 'Distribución de grupos actualizada correctamente');
+
+    } catch (\Exception $e) {
+        Log::error("Error al reasignar grupos: " . $e->getMessage());
+        
+        return redirect()->back()
+            ->with('error', 'Error al actualizar la distribución de grupos: ' . $e->getMessage());
     }
+}
 
     /**
      * Métodos de utilidad para gestionar grupos

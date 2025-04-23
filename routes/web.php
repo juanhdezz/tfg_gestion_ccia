@@ -127,11 +127,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/', [UsuarioController::class, 'index'])->name('index');
         Route::get('/create', [UsuarioController::class, 'create'])->name('create');
         Route::post('/', [UsuarioController::class, 'store'])->name('store');
+        Route::get('/exportar-usuarios', [UsuarioController::class, 'export'])->name('export');
         Route::get('/{id}', [UsuarioController::class, 'show'])->name('show');
         Route::get('/{id}/edit', [UsuarioController::class, 'edit'])->name('edit');
         Route::put('/{id}', [UsuarioController::class, 'update'])->name('update');
         Route::delete('/{id}', [UsuarioController::class, 'destroy'])->name('destroy');
-        Route::get('/exportar-usuarios', [UsuarioController::class, 'export'])->name('export');
+        
     });
     
     /**

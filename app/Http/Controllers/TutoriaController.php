@@ -4,12 +4,56 @@ namespace App\Http\Controllers;
 
 use App\Models\Tutoria;
 use App\Models\Despacho;
+use App\Models\Plazo; // Añadimos el modelo Plazo
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 class TutoriaController extends Controller
 {
+    /**
+     * Verifica si estamos dentro del plazo para editar tutorías
+     * 
+     * @param int $cuatrimestre El cuatrimestre (1 o 2)
+     * @param bool $proximoCurso Indica si se refiere al próximo curso o al actual
+     * @return bool
+     */
+    private function dentroDePlazo($cuatrimestre, $proximoCurso = false)
+    {
+        // Determinar la conexión actual (si estamos en el próximo curso)
+        $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
+        
+        // Si estamos en la BD del próximo curso pero queremos validar el plazo del curso actual, o viceversa
+        if ($estaEnProximoCurso !== $proximoCurso) {
+            return false; // No permitimos editar tutorías de un curso diferente al de la BD actual
+        }
+        
+        $fechaActual = Carbon::now();
+        $nombrePlazoBase = "CAMBIAR TUTORIAS " . 
+                          ($cuatrimestre == 1 ? "PRIMER" : "SEGUNDO") . 
+                          " CUATRIMESTRE";
+                          
+        if ($proximoCurso) {
+            $nombrePlazo = $nombrePlazoBase . " CURSO SIGUIENTE";
+        } else {
+            $nombrePlazo = $nombrePlazoBase;
+        }
+        
+        // Buscar el plazo correspondiente
+        $plazo = Plazo::where('nombre_plazo', 'LIKE', "%$nombrePlazo%")->first();
+        
+        if (!$plazo) {
+            return false; // No existe el plazo
+        }
+        
+        $fechaInicio = Carbon::parse($plazo->fecha_inicio);
+        $fechaFin = Carbon::parse($plazo->fecha_fin);
+        
+        // Verificar si la fecha actual está dentro del rango del plazo
+        return $fechaActual->between($fechaInicio, $fechaFin);
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -46,8 +90,20 @@ class TutoriaController extends Controller
         }
 
         // Definir los días de la semana
-        // Definir los días de la semana
         $diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+        // Verificar si estamos en próximo curso según la conexión actual
+        $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
+        
+        // Verificar si estamos dentro del plazo para editar tutorías
+        $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);
+
+        // Si hay un despacho seleccionado, cargar las tutorías existentes
+        if ($despachoSeleccionado) {
+            $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
+                ->where('cuatrimestre', $cuatrimestreSeleccionado)
+                ->get();
+        }
 
         return view('tutorias.index', compact(
             'tutorias',
@@ -56,7 +112,9 @@ class TutoriaController extends Controller
             'diasSemana',
             'cuatrimestreActual',
             'cuatrimestreSeleccionado',
-            'despachoSeleccionado'
+            'despachoSeleccionado',
+            'dentroDePlazo', // Nueva variable para la vista
+            'estaEnProximoCurso' // También enviamos esta información a la vista
         ));
     }
 
@@ -68,6 +126,16 @@ class TutoriaController extends Controller
         $idDespacho = $request->input('id_despacho');
         $cuatrimestre = $request->input('cuatrimestre');
         $tutoriasData = $request->input('tutorias', []);
+
+        // Verificar si estamos en próximo curso según la conexión actual
+        $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
+        
+        // Verificar si estamos dentro del plazo para editar tutorías
+        $dentroDePlazo = $this->dentroDePlazo($cuatrimestre, $estaEnProximoCurso);
+
+        if (!$dentroDePlazo) {
+            return redirect()->back()->with('error', 'No se pueden modificar las tutorías fuera del plazo establecido');
+        }
 
         // Primero, eliminar todas las tutorías existentes para este despacho y cuatrimestre
         Tutoria::where('id_despacho', $idDespacho)
@@ -83,7 +151,7 @@ class TutoriaController extends Controller
                             'id_usuario' => Auth::id(),
                             'id_despacho' => $idDespacho,
                             'cuatrimestre' => $cuatrimestre,
-                            'dia' => $dia, // Aquí $dia ya es "Lunes", "Martes", etc.
+                            'dia' => $dia,
                             'inicio' => $inicio,
                             'fin' => $fin
                         ]);
@@ -113,6 +181,12 @@ class TutoriaController extends Controller
 
         // Obtener el despacho seleccionado (o usar el del usuario actual si existe)
         $despachoSeleccionado = $request->input('despacho', Auth::user()->id_despacho ?? null);
+
+        // Verificar si estamos en próximo curso según la conexión actual
+        $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
+        
+        // Verificar si estamos dentro del plazo para editar tutorías
+        $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);
 
         // Obtener tutorias para el despacho y cuatrimestre seleccionados
         $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
@@ -161,12 +235,33 @@ class TutoriaController extends Controller
             'diasSemana',
             'cuatrimestreActual',
             'cuatrimestreSeleccionado',
-            'despachoSeleccionado'
+            'despachoSeleccionado',
+            'dentroDePlazo', // Nueva variable para la vista
+            'estaEnProximoCurso' // También enviamos esta información a la vista
         ));
     }
 
-
-
-    // Los métodos store y destroy ya no son necesarios con este nuevo enfoque,
-    // pero puedes mantenerlos por si acaso o para compatibilidad
+    /**
+     * Información sobre los plazos de tutorías
+     */
+    public function plazos()
+    {
+        // Obtener todos los plazos relacionados con tutorías
+        $plazos = Plazo::where('nombre_plazo', 'LIKE', '%TUTORIAS%')->get();
+        
+        // Formatear las fechas para mejor legibilidad
+        foreach ($plazos as $plazo) {
+            $plazo->fecha_inicio_formateada = Carbon::parse($plazo->fecha_inicio)->format('d/m/Y');
+            $plazo->fecha_fin_formateada = Carbon::parse($plazo->fecha_fin)->format('d/m/Y');
+            
+            // Verificar si el plazo está activo actualmente
+            $fechaActual = Carbon::now();
+            $fechaInicio = Carbon::parse($plazo->fecha_inicio);
+            $fechaFin = Carbon::parse($plazo->fecha_fin);
+            
+            $plazo->activo = $fechaActual->between($fechaInicio, $fechaFin);
+        }
+        
+        return view('tutorias.plazos', compact('plazos'));
+    }
 }

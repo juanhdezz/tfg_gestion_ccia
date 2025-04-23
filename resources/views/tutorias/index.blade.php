@@ -1,4 +1,6 @@
 <x-app-layout>
+    @if($dentroDePlazo)
+
     <div class="container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Editar Horario de
             Tutorías</h1>
@@ -113,6 +115,15 @@
             </div>
         </form>
     </div>
+    @else
+    <div class="mt-5 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+        <strong>Aviso:</strong> No es posible modificar las tutorías en este momento. Los plazos para
+        {{ $estaEnProximoCurso ? 'el próximo curso' : 'el curso actual' }}
+        ({{ $cuatrimestreSeleccionado == 1 ? 'primer' : 'segundo' }} cuatrimestre)
+        están cerrados.
+        <a href="{{ route('plazos.index') }}" class="underline text-blue-600">Ver plazos disponibles</a>
+    </div>
+@endif
 
     @push('scripts')
         <script>

@@ -211,9 +211,9 @@
                 </li>
                 <!-- Resto de los elementos del menú igual que antes -->
                 <li>
-                    <a href="{{ route('dashboard') }}" 
+                    <a href="{{ route('ordenacion.index') }}" 
                        class="flex items-center p-2 rounded-lg group 
-                              {{ request()->routeIs('dashboard') 
+                              {{ request()->routeIs('ordenacion.*') 
                                  ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white' 
                                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 nav-icon">

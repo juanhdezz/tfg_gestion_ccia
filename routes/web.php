@@ -277,3 +277,32 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('proyectos/{proyecto}/miembros', [ProyectoController::class, 'miembros'])
         ->name('proyectos.miembros');
 });
+
+// Rutas para ordenación docente
+Route::middleware(['auth'])->group(function () {
+    Route::get('/ordenacion', [App\Http\Controllers\OrdenacionDocenteController::class, 'index'])->name('ordenacion.index');
+    
+    // Primera fase - mantener asignaturas
+    Route::post('/ordenacion/mantener', [App\Http\Controllers\OrdenacionDocenteController::class, 'mantenerAsignacion'])->name('ordenacion.mantener');
+    
+    // Eliminar asignación
+    Route::post('/ordenacion/eliminar', [App\Http\Controllers\OrdenacionDocenteController::class, 'eliminarAsignacion'])->name('ordenacion.eliminar');
+    
+    // Cambiar grupo
+    Route::post('/ordenacion/cambiar-grupo', [App\Http\Controllers\OrdenacionDocenteController::class, 'cambiarGrupo'])->name('ordenacion.cambiar-grupo');
+    
+    // Segunda fase - asignar asignaturas en turno
+    Route::post('/ordenacion/asignar', [App\Http\Controllers\OrdenacionDocenteController::class, 'asignarAsignaturas'])->name('ordenacion.asignar');
+    
+    // Actualizar perfil
+    Route::post('/ordenacion/actualizar-perfil', [App\Http\Controllers\OrdenacionDocenteController::class, 'actualizarPerfil'])->name('ordenacion.actualizar-perfil');
+    
+    // Preferencia de pasar turno
+    Route::post('/ordenacion/pasar-turno-preferencia', [App\Http\Controllers\OrdenacionDocenteController::class, 'actualizarPasarTurno'])->name('ordenacion.pasar-turno-preferencia');
+    
+    // Pasar turno
+    Route::get('/ordenacion/pasar-turno', [App\Http\Controllers\OrdenacionDocenteController::class, 'pasarTurno'])->name('ordenacion.pasar-turno');
+
+    // Resumen de ordenación docente
+    Route::get('/ordenacion/resumen', [App\Http\Controllers\OrdenacionDocenteController::class, 'resumen'])->name('ordenacion.resumen');
+});

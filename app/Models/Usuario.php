@@ -7,6 +7,7 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Config;
 
+
 class Usuario extends Authenticatable
 {
     use Notifiable, HasRoles; // añadimos hasRoles para que spatie maneje los roles de usuario
@@ -63,5 +64,10 @@ class Usuario extends Authenticatable
 public function getConnectionName()
     {
         return Config::get('database.default');
+    }
+
+    public function categoriaDocente()
+    {
+        return $this->belongsTo(CategoriaDocente::class, 'id_categoria', 'id_categoria');
     }
 }

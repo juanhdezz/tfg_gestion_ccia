@@ -19,6 +19,7 @@ use App\Http\Controllers\DespachoController;
 use App\Http\Controllers\ReservaSalaController;
 use App\Http\Controllers\PlazoController;
 use App\Http\Controllers\LibroController;
+use App\Http\Controllers\ConfiguracionOrdenacionController;
 use App\Http\Controllers\LibroAsignaturaController;
 use App\Http\Controllers\ProyectoController;
 
@@ -53,22 +54,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
-    
+
     /**
      * PERFIL DE USUARIO
      */
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    
+
     /**
      * DEPARTAMENTO
      */
     Route::get('/departamento', function () {
         return view('departamento');
     })->name('departamento');
-    
-    
-    
+
+
+
     /**
      * TUTORÍAS
      */
@@ -80,7 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/ver', [TutoriaController::class, 'verTutorias'])->name('ver');
     });
 
-     /**
+    /**
      * RESERVA DE SALAS
      */
     Route::prefix('reserva-salas')->name('reserva_salas.')->group(function () {
@@ -96,7 +97,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('update');
         Route::delete('/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'destroy'])
             ->name('destroy');
-        
+
         // Gestión de estados y verificaciones
         Route::patch('/{id_sala}/{fecha}/{hora_inicio}/{estado}/cambiar-estado', [ReservaSalaController::class, 'cambiarEstado'])
             ->name('cambiar-estado');
@@ -106,13 +107,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('pendientes');
         Route::post('/procesar/{id_sala}/{fecha}/{hora_inicio}/{estado}', [ReservaSalaController::class, 'procesarValidacion'])
             ->name('procesar');
-        
+
         // Calendario de reservas
         Route::get('/calendario', [ReservaSalaController::class, 'calendario'])->name('calendario');
         Route::get('/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
             ->name('obtener-eventos-calendario');
     });
-    
+
     /**
      * GESTIÓN DE LIBROS
      */
@@ -126,13 +127,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('denegar');
         Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/recibir', [LibroController::class, 'recibir'])
             ->name('recibir');
+            Route::get('/imprimir', [LibroController::class, 'imprimir'])->name('imprimir');
     });
-    
+
     /**
      * CAMBIO DE BASE DE DATOS
      */
     Route::post('/cambiar-base-datos', [DatabaseController::class, 'cambiarBaseDatos'])->name('cambiar.base.datos');
-    
+
     /**
      * REASIGNACIÓN DE GRUPOS
      */
@@ -149,9 +151,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     // Panel de administración
     Route::get('/admin', function () {
-        return "Bienvenido admin"; 
+        return "Bienvenido admin";
     })->name('admin');
-    
+
     /**
      * GESTIÓN DE USUARIOS
      */
@@ -164,14 +166,13 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/{id}/edit', [UsuarioController::class, 'edit'])->name('edit');
         Route::put('/{id}', [UsuarioController::class, 'update'])->name('update');
         Route::delete('/{id}', [UsuarioController::class, 'destroy'])->name('destroy');
-        
     });
-    
+
     /**
      * GESTIÓN DE ASIGNATURAS
      */
     Route::prefix('gestion-asignaturas')->name('asignaturas.')->group(function () {
-        
+
         // CRUD principal
         Route::get('/', [AsignaturaController::class, 'index'])->name('index');
         Route::get('/create', [AsignaturaController::class, 'create'])->name('create');
@@ -181,12 +182,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/{id}/edit', [AsignaturaController::class, 'edit'])->name('edit');
         Route::put('/{id}', [AsignaturaController::class, 'update'])->name('update');
         Route::delete('/{id}', [AsignaturaController::class, 'destroy'])->name('destroy');
-        
+
         // Gestión de grupos
-        
+
         Route::patch('/grupos/{asignatura}', [AsignaturaController::class, 'updateGrupos'])->name('updateGrupos');
         Route::patch('/{id}/reasignar-grupos', [AsignaturaController::class, 'reasignarGrupos'])->name('reasignarGrupos');
-        
+
         // Inicialización y verificación
         Route::get('/inicializar-grupos', [AsignaturaController::class, 'inicializarGruposTeoriaPractica'])
             ->name('inicializar-grupos')->prefix('admin/asignaturas');
@@ -211,7 +212,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
         ->name('despachos.exportar');
     Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
         ->name('despachos.usuariosAsignados');
-    
+
     /**
      * EQUIVALENCIAS DE ASIGNATURAS
      */
@@ -226,7 +227,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
         // Route::get('/equivalencias', [AsignaturaController::class, 'listarEquivalencias'])
         //     ->name('listar-equivalencias');
     });
-    
+
     /**
      * GESTIÓN DE USUARIO-ASIGNATURA
      */
@@ -243,7 +244,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::delete('/{id_asignatura}/{id_usuario}/{tipo}/{grupo}', [UsuarioAsignaturaController::class, 'destroy'])
             ->name('destroy');
     });
-    
+
     /**
      * GESTIÓN DE PLAZOS
      */
@@ -256,9 +257,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::put('/{id}', [PlazoController::class, 'update'])->name('update');
         Route::delete('/{id}', [PlazoController::class, 'destroy'])->name('destroy');
     });
-    
-   
-    
+
+
+
     /**
      * GESTIÓN DE PROYECTOS
      */
@@ -270,7 +271,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('proyectos/{proyecto}/edit', [ProyectoController::class, 'edit'])->name('proyectos.edit');
     Route::put('proyectos/{proyecto}', [ProyectoController::class, 'update'])->name('proyectos.update');
     Route::delete('proyectos/{proyecto}', [ProyectoController::class, 'destroy'])->name('proyectos.destroy');
-    
+
     // Rutas adicionales de proyectos
     Route::patch('proyectos/{proyecto}/cambiar-estado', [ProyectoController::class, 'cambiarEstado'])
         ->name('proyectos.cambiarEstado');
@@ -281,28 +282,50 @@ Route::middleware(['auth', 'admin'])->group(function () {
 // Rutas para ordenación docente
 Route::middleware(['auth'])->group(function () {
     Route::get('/ordenacion', [App\Http\Controllers\OrdenacionDocenteController::class, 'index'])->name('ordenacion.index');
-    
+
     // Primera fase - mantener asignaturas
     Route::post('/ordenacion/mantener', [App\Http\Controllers\OrdenacionDocenteController::class, 'mantenerAsignacion'])->name('ordenacion.mantener');
-    
+
     // Eliminar asignación
     Route::post('/ordenacion/eliminar', [App\Http\Controllers\OrdenacionDocenteController::class, 'eliminarAsignacion'])->name('ordenacion.eliminar');
-    
+
     // Cambiar grupo
     Route::post('/ordenacion/cambiar-grupo', [App\Http\Controllers\OrdenacionDocenteController::class, 'cambiarGrupo'])->name('ordenacion.cambiar-grupo');
-    
+
     // Segunda fase - asignar asignaturas en turno
     Route::post('/ordenacion/asignar', [App\Http\Controllers\OrdenacionDocenteController::class, 'asignarAsignaturas'])->name('ordenacion.asignar');
-    
+
     // Actualizar perfil
     Route::post('/ordenacion/actualizar-perfil', [App\Http\Controllers\OrdenacionDocenteController::class, 'actualizarPerfil'])->name('ordenacion.actualizar-perfil');
-    
+
     // Preferencia de pasar turno
     Route::post('/ordenacion/pasar-turno-preferencia', [App\Http\Controllers\OrdenacionDocenteController::class, 'actualizarPasarTurno'])->name('ordenacion.pasar-turno-preferencia');
-    
+
     // Pasar turno
     Route::get('/ordenacion/pasar-turno', [App\Http\Controllers\OrdenacionDocenteController::class, 'pasarTurno'])->name('ordenacion.pasar-turno');
 
     // Resumen de ordenación docente
     Route::get('/ordenacion/resumen', [App\Http\Controllers\OrdenacionDocenteController::class, 'resumen'])->name('ordenacion.resumen');
+
+    // Rutas de configuración de ordenación docente (reordenadas para evitar conflictos)
+    Route::get('/configuracion-ordenacion', [ConfiguracionOrdenacionController::class, 'index'])
+        ->name('configuracion_ordenacion.index');
+    Route::get('configuracion-ordenacion/create', [ConfiguracionOrdenacionController::class, 'create'])
+        ->name('configuracion_ordenacion.create');
+    Route::post('/configuracion-ordenacion', [ConfiguracionOrdenacionController::class, 'store'])
+        ->name('configuracion_ordenacion.store');
+
+    Route::post('/configuracion-ordenacion/restore-defaults', [ConfiguracionOrdenacionController::class, 'restoreDefaults'])
+        ->name('configuracion_ordenacion.restore-defaults');
+
+        Route::put('/configuracion-ordenacion/{id}', [ConfiguracionOrdenacionController::class, 'update'])
+        ->name('configuracion_ordenacion.update');
+    // Rutas con parámetros {id} deben ir después
+    Route::get('/configuracion-ordenacion/{id}/edit', [ConfiguracionOrdenacionController::class, 'edit'])
+        ->name('configuracion_ordenacion.edit');
+    
+    Route::delete('/configuracion-ordenacion/{id}', [ConfiguracionOrdenacionController::class, 'destroy'])
+        ->name('configuracion_ordenacion.destroy');
+    Route::get('/configuracion-ordenacion/{id}', [ConfiguracionOrdenacionController::class, 'show'])
+        ->name('configuracion_ordenacion.show');
 });

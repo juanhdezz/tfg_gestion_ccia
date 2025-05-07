@@ -928,4 +928,100 @@ public function create()
             ]);
         }
     }
+
+    /**
+ * Genera un listado imprimible de libros filtrado por estado
+ *
+ * @param  \Illuminate\Http\Request  $request
+ * @return \Illuminate\Http\Response
+ */
+public function imprimir(Request $request)
+{
+    // Obtener el filtro de estado
+    $estado = $request->estado;
+    $search = $request->search;
+    
+    // Consulta para LibroAsignatura
+    $queryAsignatura = LibroAsignatura::with(['libro', 'usuario', 'asignatura']);
+    
+    // Consulta para LibroProyecto
+    $queryProyecto = LibroProyecto::with(['libro', 'usuario', 'proyecto']);
+    
+    // Consulta para LibroGrupo
+    $queryGrupo = LibroGrupo::with(['libro', 'usuario', 'grupo']);
+    
+    // Consulta para LibroPosgrado
+    $queryPosgrado = LibroPosgrado::with(['libro', 'usuario']);
+    
+    // Consulta para LibroOtro
+    $queryOtro = LibroOtro::with(['libro', 'usuario']);
+    
+    // Aplicar filtro de estado si está presente
+    if ($estado) {
+        $queryAsignatura->where('estado', $estado);
+        $queryProyecto->where('estado', $estado);
+        $queryGrupo->where('estado', $estado);
+        $queryPosgrado->where('estado', $estado);
+        $queryOtro->where('estado', $estado);
+    }
+    
+    // Aplicar filtro de búsqueda si está presente
+    if ($search) {
+        $search = "%{$search}%";
+        
+        $queryAsignatura->where(function($q) use ($search) {
+            $q->whereHas('libro', function($q) use ($search) {
+                $q->where('titulo', 'like', $search)
+                  ->orWhere('autor', 'like', $search)
+                  ->orWhere('isbn', 'like', $search);
+            })->orWhereHas('asignatura', function($q) use ($search) {
+                $q->where('nombre_asignatura', 'like', $search);
+            })->orWhereHas('usuario', function($q) use ($search) {
+                $q->where('nombre', 'like', $search)
+                  ->orWhere('apellidos', 'like', $search);
+            });
+        });
+        
+        // Aplicar de manera similar a los demás queries...
+        // queryProyecto, queryGrupo, queryPosgrado, queryOtro
+    }
+    
+    // Ordenar por fecha de solicitud, de más reciente a más antigua
+    $queryAsignatura->orderBy('fecha_solicitud', 'desc');
+    $queryProyecto->orderBy('fecha_solicitud', 'desc');
+    $queryGrupo->orderBy('fecha_solicitud', 'desc');
+    $queryPosgrado->orderBy('fecha_solicitud', 'desc');
+    $queryOtro->orderBy('fecha_solicitud', 'desc');
+    
+    // Obtener resultados sin paginación
+    $librosAsignatura = $queryAsignatura->get();
+    $librosProyecto = $queryProyecto->get();
+    $librosGrupo = $queryGrupo->get();
+    $librosPosgrado = $queryPosgrado->get();
+    $librosOtros = $queryOtro->get();
+    
+    // Título del listado según el filtro
+    $titulo = $estado 
+        ? "Listado de libros en estado: $estado" 
+        : "Listado completo de libros";
+    
+    if ($search) {
+        $titulo .= " (Búsqueda: $search)";
+    }
+    
+    // Fecha actual para el encabezado del informe
+    $fechaActual = Carbon::now()->format('d/m/Y H:i');
+    
+    return view('libros.imprimir', compact(
+        'librosAsignatura',
+        'librosProyecto',
+        'librosGrupo',
+        'librosPosgrado',
+        'librosOtros',
+        'estado',
+        'search',
+        'titulo',
+        'fechaActual'
+    ));
+}
 }

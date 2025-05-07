@@ -77,12 +77,21 @@ class OrdenacionDocenteController extends Controller
                 'titulaciones' => Titulacion::orderBy('nombre_titulacion')->get(),
             ];
             
-            // Según la fase, renderizamos distintas vistas
-            if ($fase == 1) {
-                return $this->mostrarFase1($data);
-            } else {
-                return $this->mostrarFase2($data);
-            }
+             // Según la fase, renderizamos distintas vistas
+    if ($fase == 1) {
+        return $this->mostrarFase1($data);
+    } elseif ($fase == 2) {
+        return $this->mostrarFase2($data);
+    } elseif ($fase == 3) {
+        return $this->mostrarFase3($data);
+    } else {
+        // Fase no reconocida
+        return view('error.error', [
+            'titulo' => 'Fase no válida',
+            'mensaje' => 'La fase actual de ordenación docente no es válida.',
+            'detalles' => "Fase: $fase"
+        ]);
+    }
         } catch (\Exception $e) {
             Log::error('Error en OrdenacionDocenteController::index: ' . $e->getMessage());
             Log::error($e->getTraceAsString());
@@ -146,6 +155,44 @@ class OrdenacionDocenteController extends Controller
             ]);
         }
     }
+
+/**
+ * Muestra la vista para la tercera fase (similar a fase 2 pero sin eliminar asignaciones)
+ */
+protected function mostrarFase3($data)
+{
+    try {
+        $data['asignaciones_actuales'] = $this->obtenerAsignacionesActuales(Auth::id());
+        
+        if ($data['es_turno_usuario']) {
+            // Si es el turno del usuario, también necesitamos las asignaturas disponibles
+            // En la fase 3, no se eliminan las asignaciones de turnos superiores
+            $data['asignaturas_disponibles'] = $this->obtenerAsignaturasDisponiblesFase3(Auth::id());
+            
+            return view('ordenacion.turno_fase3', $data);
+        } else {
+            return view('ordenacion.fase3', $data);
+        }
+    } catch (\Exception $e) {
+        Log::error('Error en mostrarFase3: ' . $e->getMessage());
+        Log::error($e->getTraceAsString());
+        
+        return view('error.error', [
+            'titulo' => 'Error al mostrar la fase 3',
+            'mensaje' => 'Se ha producido un error al cargar la fase 3 de ordenación docente.',
+            'detalles' => config('app.debug') ? $e->getMessage() : null
+        ]);
+    }
+}
+
+/**
+ * Obtiene las asignaturas disponibles para la fase 3, sin eliminar las asignaciones de turnos superiores
+ */
+protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
+{
+    // Similar a obtenerAsignaturasDisponibles pero sin excluir asignaciones de turnos superiores
+    // Código similar al método original pero adaptado para la fase 3
+}
 
     /**
      * Obtiene las reducciones/compensaciones del usuario
@@ -946,21 +993,86 @@ class OrdenacionDocenteController extends Controller
      */
     public function pasarTurno()
     {
-        $turno = Turno::first();
+        try {
+            // Obtener el turno actual
+            $turno = Turno::first();
         
-        if ($this->esTurnoDelUsuario(Auth::id(), $turno->turno)) {
-            // Avanzar al siguiente turno
-            $turno->turno = $turno->turno + 1;
-            $turno->save();
-            
-            $this->registrarLog('Pasar Turno');
-            
+        if (!$turno) {
+            Log::error('Error en pasarTurno: No se encontró ningún registro en la tabla de turnos');
             return redirect()->route('ordenacion.index')
-                ->with('success', 'Se ha pasado al siguiente turno');
+                ->with('error', 'No se encontró información sobre el turno actual');
         }
         
-        return redirect()->route('ordenacion.index')
-            ->with('error', 'No es su turno para realizar esta acción');
+        // Verificar si es el turno del usuario actual
+        if ($this->esTurnoDelUsuario(Auth::id(), $turno->turno)) {
+            // Verificar si el usuario cumple con los requisitos para pasar turno
+            $puedeAvanzar = false;
+            
+            // Obtener el perfil del usuario para verificar preferencias
+            $perfil = Perfil::findOrFail(Auth::id());
+            
+            if ($perfil->pasar_turno) {
+                $puedeAvanzar = true;
+            } else {
+                // Verificar si al usuario le faltan los créditos configurados o menos para completar su carga
+                // Obtener la categoría del usuario y sus créditos de docencia
+                $usuario = Usuario::with('categoriaDocente')
+                    ->findOrFail(Auth::id());
+                $creditosDocencia = $usuario->categoriaDocente->creditos_docencia;
+                
+                // Obtener los créditos de compensación
+                $creditosCompensacion = $this->obtenerReducciones(Auth::id());
+                
+                // Calcular los créditos que debe impartir tras la compensación
+                $creditosAImpartir = $creditosDocencia - $creditosCompensacion;
+                
+                // Obtener los créditos ya asignados
+                $creditosAsignados = OrdenacionUsuarioAsignatura::where('id_usuario', Auth::id())
+                    ->sum('creditos');
+                
+                // Verificar si la diferencia es menor o igual al valor configurable
+                $creditosFaltantes = $creditosAImpartir - $creditosAsignados;
+                $creditosMenosPermitidos = $this->getCreditosMenosPermitidos();
+                
+                if ($creditosFaltantes <= $creditosMenosPermitidos && $creditosFaltantes >= 0) {
+                    $puedeAvanzar = true;
+                }
+                }
+                
+                if ($puedeAvanzar) {
+                    // Avanzar al siguiente turno
+                    $turnoAnterior = $turno->turno;
+                    $turno->turno = $turno->turno + 1;
+                    
+                    // Guardar el cambio con manejo de errores
+                    if (!$turno->save()) {
+                        Log::error('Error en pasarTurno: No se pudo guardar el nuevo valor del turno');
+                        return redirect()->route('ordenacion.index')
+                            ->with('error', 'No se pudo actualizar el turno');
+                    }
+                    
+                    // Registrar la acción en el log
+                    $this->registrarLog('Pasar Turno', null, null, null, null, 
+                        'Turno cambiado de ' . $turnoAnterior . ' a ' . $turno->turno);
+                    
+                    return redirect()->route('ordenacion.index')
+                        ->with('success', 'Se ha pasado al siguiente turno correctamente');
+                } else {
+                    return redirect()->route('ordenacion.index')
+                        ->with('error', 'No puede pasar turno porque le faltan más de ' . self::CREDITOS_MENOS . ' créditos para completar su carga docente');
+                }
+            }
+            
+            return redirect()->route('ordenacion.index')
+                ->with('error', 'No tiene permiso para realizar esta acción porque no es su turno');
+                
+        } catch (\Exception $e) {
+            Log::error('Error en pasarTurno: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            
+            return redirect()->route('ordenacion.index')
+                ->with('error', 'Ha ocurrido un error al procesar la solicitud: ' . $e->getMessage());
+        }
     }
     
     /**
@@ -1031,4 +1143,50 @@ class OrdenacionDocenteController extends Controller
             'curso_siguiente' => $cursoSiguiente,
         ]);
     }
+
+// Método para obtener parámetros de configuración
+protected function getConfiguracion($clave, $valorPredeterminado = null)
+{
+    try {
+        $config = DB::table('configuracion_ordenacion')
+            ->where('clave', $clave)
+            ->first();
+            
+        return $config ? $config->valor : $valorPredeterminado;
+    } catch (\Exception $e) {
+        Log::error('Error al obtener configuración ' . $clave . ': ' . $e->getMessage());
+        return $valorPredeterminado;
+    }
+}
+
+// Reemplazar la constante con llamada al método
+protected function getCreditosMenosPermitidos()
+{
+    return floatval($this->getConfiguracion('creditos_menos_permitidos', 0.5));
+}
+
+// Método para calcular límites docentes
+protected function calcularLimitesDocentes($creditosDocencia)
+{
+    $porcentajeMenor = floatval($this->getConfiguracion('porcentaje_limite_menor', 25)) / 100;
+    $porcentajeMayor = floatval($this->getConfiguracion('porcentaje_limite_mayor', 50)) / 100;
+    
+    return [
+        'menor' => $creditosDocencia * $porcentajeMenor,
+        'mayor' => $creditosDocencia * $porcentajeMayor
+    ];
+}
+
+// Método mejorado para identificar TFMs
+protected function esTFM($posgrado)
+{
+    if (!$posgrado) return false;
+    
+    $identificadorTFM = $this->getConfiguracion('identificador_tfm', 'TFM');
+    
+    return (
+        strpos(strtoupper($posgrado->nombre), 'TRABAJO FIN') !== false ||
+        strpos(strtoupper($posgrado->codigo), $identificadorTFM) !== false
+    );
+}
 }

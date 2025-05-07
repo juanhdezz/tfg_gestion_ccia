@@ -22,6 +22,14 @@ use Illuminate\Support\Facades\Mail;
 
 class ReservaSalaController extends Controller
 {
+
+    /**
+     * Constantes para las restricciones de tiempo de reservas
+     */
+    const DIAS_MAX_ANTELACION = 28; // Máximo de días para hacer reservas futuras
+    const HORAS_APROBACION_AUTOMATICA = 24; // Horas para aprobación automática de reservas
+
+
     /**
      * Muestra una lista de todas las reservas de salas
      */
@@ -112,6 +120,13 @@ class ReservaSalaController extends Controller
 
     /**
      * Almacena una nueva reserva de sala en la base de datos
+     * 
+     * Restricciones:
+     * - El plazo máximo de antelación es de 28 días naturales
+     * - Las reservas con menos de 24 horas de antelación se validan automáticamente
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
@@ -139,6 +154,41 @@ class ReservaSalaController extends Controller
         $horaInicio = $request->hora_inicio;
         $horaFin = $request->hora_fin;
         
+        // Validar la restricción de máximo 28 días de antelación
+        $fechaActual = Carbon::now();
+        $fechaReserva = Carbon::parse($fecha . ' ' . $horaInicio);
+        $diasAntelacion = $fechaActual->diffInDays($fechaReserva, false);
+        
+        // Verificar si la fecha de reserva es futura
+        if ($diasAntelacion < 0) {
+            session()->flash('swal', [
+                'icon' => 'error',
+                'title' => 'Fecha no válida',
+                'text' => 'No se pueden realizar reservas para fechas pasadas'
+            ]);
+            
+            return redirect()->route('reserva_salas.create')
+                ->withInput()
+                ->with('error', 'No se pueden realizar reservas para fechas pasadas');
+        }
+        
+        // Verificar si excede el máximo de días de antelación
+        if ($diasAntelacion > self::DIAS_MAX_ANTELACION) {
+            session()->flash('swal', [
+                'icon' => 'error',
+                'title' => 'Plazo excedido',
+                'text' => 'Las reservas solo pueden realizarse con un máximo de ' . self::DIAS_MAX_ANTELACION . ' días de antelación'
+            ]);
+            
+            return redirect()->route('reserva_salas.create')
+                ->withInput()
+                ->with('error', 'Las reservas solo pueden realizarse con un máximo de ' . self::DIAS_MAX_ANTELACION . ' días de antelación');
+        }
+        
+        // Verificar si la reserva es para menos de 24 horas (aprobación automática)
+        $horasAntelacion = $fechaActual->diffInHours($fechaReserva, false);
+        $estadoReserva = ($horasAntelacion < self::HORAS_APROBACION_AUTOMATICA) ? 'Validada' : 'Pendiente Validación';
+        
         $reservasExistentes = ReservaSala::where('id_sala', $sala->id_sala)
             ->where('fecha', $fecha)
             ->where('estado', '!=', 'Cancelada')
@@ -165,7 +215,7 @@ class ReservaSalaController extends Controller
                 ->with('error', 'La sala ya está reservada para el horario seleccionado');
         }
         
-        // Verificar días de anticipación para la reserva
+        // Verificar días de anticipación para la reserva de la sala (si tiene un límite propio)
         if ($sala->dias_anticipacion_reserva) {
             $fechaLimite = Carbon::now()->addDays($sala->dias_anticipacion_reserva);
             $fechaReserva = Carbon::parse($fecha);
@@ -194,18 +244,42 @@ class ReservaSalaController extends Controller
             $reserva->hora_fin = $request->hora_fin;
             $reserva->observaciones = $request->observaciones;
             $reserva->fecha_realizada = Carbon::now();
-            $reserva->estado = $request->estado ?? 'Validada';
-            $reserva->save();
             
-            // Preparar mensaje para SweetAlert
+            // Aplicar el estado según la antelación (automático o pendiente)
+            $reserva->estado = $estadoReserva;
+            
+            $reserva->save();
+
+             // Si es una reserva con validación automática, enviar correo
+        if ($estadoReserva === 'Validada') {
+            // Obtener el usuario que realiza la reserva
+            $usuario = Usuario::find($request->id_usuario);
+            
+            if ($usuario) {
+                // Enviar notificación por correo
+                //Temporalmente uso mi correo para pruebas
+                $response = Mail::to('jhernandezsanchezagesta@gmail.com')->send(new Notification($usuario, $reserva, 'Validada'));
+                if ($response) {
+                    Log::info('Correo enviado exitosamente a ' . $usuario->email . ' (validación automática)');
+                } else {
+                    Log::error('Error al enviar correo a ' . $usuario->email . ' (validación automática)');
+                }
+            }
+        }
+            
+            // Preparar mensaje para SweetAlert con información adicional sobre el estado
+            $mensajeEstado = $estadoReserva === 'Validada' ? 
+                'La reserva ha sido creada y validada automáticamente (menos de 24 horas de antelación)' : 
+                'La reserva ha sido creada y está pendiente de validación';
+                
             session()->flash('swal', [
                 'icon' => 'success',
                 'title' => 'Reserva creada',
-                'text' => 'La reserva ha sido creada exitosamente'
+                'text' => $mensajeEstado
             ]);
             
             return redirect()->route('reserva_salas.index')
-                ->with('success', 'Reserva creada exitosamente');
+                ->with('success', $mensajeEstado);
                 
         } catch (\Exception $e) {
             // Log del error para debugging
@@ -257,8 +331,19 @@ class ReservaSalaController extends Controller
         return view('reserva_salas.edit', compact('reserva', 'salas', 'motivos', 'usuarios'));
     }
 
-    /**
+   /**
      * Actualiza una reserva de sala específica en la base de datos
+     * 
+     * Restricciones:
+     * - El plazo máximo de antelación es de 28 días naturales
+     * - Las reservas con menos de 24 horas de antelación se validan automáticamente
+     * 
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id_sala
+     * @param  string  $fecha
+     * @param  string  $hora_inicio
+     * @param  string  $estado
+     * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id_sala, $fecha, $hora_inicio, $estado)
     {
@@ -289,6 +374,56 @@ class ReservaSalaController extends Controller
                 ])
                 ->withErrors($validator)
                 ->withInput();
+        }
+
+        // Validar la restricción de máximo 28 días de antelación
+        $fechaActual = Carbon::now();
+        $fechaReserva = Carbon::parse($request->fecha . ' ' . $request->hora_inicio);
+        $diasAntelacion = $fechaActual->diffInDays($fechaReserva, false);
+        
+        // Verificar si la fecha de reserva es futura
+        if ($diasAntelacion < 0) {
+            session()->flash('swal', [
+                'icon' => 'error',
+                'title' => 'Fecha no válida',
+                'text' => 'No se pueden realizar reservas para fechas pasadas'
+            ]);
+            
+            return redirect()->route('reserva_salas.edit', [
+                    'id_sala' => $id_sala,
+                    'fecha' => $fecha,
+                    'hora_inicio' => $hora_inicio,
+                    'estado' => $estado
+                ])
+                ->withInput()
+                ->with('error', 'No se pueden realizar reservas para fechas pasadas');
+        }
+        
+        // Verificar si excede el máximo de días de antelación
+        if ($diasAntelacion > self::DIAS_MAX_ANTELACION) {
+            session()->flash('swal', [
+                'icon' => 'error',
+                'title' => 'Plazo excedido',
+                'text' => 'Las reservas solo pueden realizarse con un máximo de ' . self::DIAS_MAX_ANTELACION . ' días de antelación'
+            ]);
+            
+            return redirect()->route('reserva_salas.edit', [
+                    'id_sala' => $id_sala,
+                    'fecha' => $fecha,
+                    'hora_inicio' => $hora_inicio,
+                    'estado' => $estado
+                ])
+                ->withInput()
+                ->with('error', 'Las reservas solo pueden realizarse con un máximo de ' . self::DIAS_MAX_ANTELACION . ' días de antelación');
+        }
+        
+        // Verificar si la reserva es para menos de 24 horas (aprobación automática)
+        $horasAntelacion = $fechaActual->diffInHours($fechaReserva, false);
+        $estadoReserva = ($horasAntelacion < self::HORAS_APROBACION_AUTOMATICA) ? 'Validada' : 'Pendiente Validación';
+        
+        // Mantener el estado actual si no es una nueva reserva pendiente o si ya está en un estado final
+        if ($estado === 'Validada' || $estado === 'Rechazada') {
+            $estadoReserva = $estado;
         }
 
         // Verificar disponibilidad de la sala (si cambia sala, fecha u hora)
@@ -352,7 +487,18 @@ class ReservaSalaController extends Controller
             $nuevaReserva->hora_fin = $request->hora_fin;
             $nuevaReserva->observaciones = $request->observaciones;
             $nuevaReserva->fecha_realizada = $reserva->fecha_realizada;
-            $nuevaReserva->estado = $request->estado ?? 'Validada';
+            
+            // Si se modificó la fecha/hora, aplicar reglas de estado según la antelación
+            if ($request->fecha != $fecha || $request->hora_inicio != $hora_inicio) {
+                $nuevaReserva->estado = $estadoReserva;
+                $mensajeAdicional = $estadoReserva === 'Validada' ? 
+                    ' (validada automáticamente por tener menos de 24 horas de antelación)' : 
+                    ' (pendiente de validación)';
+            } else {
+                $nuevaReserva->estado = $request->estado ?? 'Pendiente Validación';
+                $mensajeAdicional = '';
+            }
+            
             $nuevaReserva->save();
             
             DB::commit();
@@ -361,11 +507,11 @@ class ReservaSalaController extends Controller
             session()->flash('swal', [
                 'icon' => 'success',
                 'title' => 'Reserva actualizada',
-                'text' => 'La reserva ha sido actualizada exitosamente'
+                'text' => 'La reserva ha sido actualizada exitosamente' . $mensajeAdicional
             ]);
             
             return redirect()->route('reserva_salas.index')
-                ->with('success', 'Reserva actualizada exitosamente');
+                ->with('success', 'Reserva actualizada exitosamente' . $mensajeAdicional);
                 
         } catch (\Exception $e) {
             DB::rollback();
@@ -687,60 +833,95 @@ public function cambiarEstado(Request $request, $id_sala, $fecha, $hora_inicio, 
         return response()->json($eventos);
     }
 
-/**
- * Verifica si una sala está disponible para un horario específico
- */
-public function verificarDisponibilidad(Request $request)
-{
-    $idSala = $request->input('id_sala');
-    $fecha = $request->input('fecha');
-    $horaInicio = $request->input('hora_inicio');
-    $horaFin = $request->input('hora_fin');
-    
-    // Verificar si hay reservas que se solapen con el horario solicitado
-    $reservasExistentes = ReservaSala::where('id_sala', $idSala)
-        ->where('fecha', $fecha)
-        ->where('estado', '!=', 'Cancelada')
-        ->where('estado', '!=', 'Rechazada')
-        ->where(function($query) use ($horaInicio, $horaFin) {
-            // Verificar solapamiento de horarios:
-            // 1. Si la hora de inicio está dentro de una reserva existente
-            // 2. Si la hora de fin está dentro de una reserva existente
-            // 3. Si el horario solicitado engloba completamente una reserva existente
-            $query->where(function($q) use ($horaInicio, $horaFin) {
-                $q->whereTime('hora_inicio', '<=', $horaInicio)
-                  ->whereTime('hora_fin', '>', $horaInicio);
-            })->orWhere(function($q) use ($horaInicio, $horaFin) {
-                $q->whereTime('hora_inicio', '<', $horaFin)
-                  ->whereTime('hora_fin', '>=', $horaFin);
-            })->orWhere(function($q) use ($horaInicio, $horaFin) {
-                $q->whereTime('hora_inicio', '>=', $horaInicio)
-                  ->whereTime('hora_fin', '<=', $horaFin);
-            });
-        })
-        ->first();
-    
-    if ($reservasExistentes) {
-        // Si hay una reserva existente, devolver información
-        $reservaActual = "Sala reservada de " . $reservasExistentes->hora_inicio->format('H:i') . 
-                        " a " . $reservasExistentes->hora_fin->format('H:i');
+ /**
+     * Verifica si una sala está disponible para un horario específico
+     * 
+     * Restricciones:
+     * - El plazo máximo de antelación es de 28 días naturales
+     * - Las reservas con menos de 24 horas de antelación se validan automáticamente
+     */
+    public function verificarDisponibilidad(Request $request)
+    {
+        $idSala = $request->input('id_sala');
+        $fecha = $request->input('fecha');
+        $horaInicio = $request->input('hora_inicio');
+        $horaFin = $request->input('hora_fin');
         
-        if ($reservasExistentes->id_usuario == Auth::id()) {
-            $reservaActual .= " (por ti)";
-        } else {
-            $reservaActual .= " (por otro usuario)";
+        // Validar la restricción de máximo 28 días de antelación
+        $fechaActual = Carbon::now();
+        $fechaReserva = Carbon::parse($fecha . ' ' . $horaInicio);
+        $diasAntelacion = $fechaActual->diffInDays($fechaReserva, false);
+        
+        // Verificar si la fecha de reserva es pasada
+        if ($diasAntelacion < 0) {
+            return response()->json([
+                'disponible' => false,
+                'mensaje' => 'No se pueden realizar reservas para fechas pasadas'
+            ]);
         }
         
+        // Verificar si excede el máximo de días de antelación
+        if ($diasAntelacion > self::DIAS_MAX_ANTELACION) {
+            return response()->json([
+                'disponible' => false,
+                'mensaje' => 'Las reservas solo pueden realizarse con un máximo de ' . self::DIAS_MAX_ANTELACION . ' días de antelación'
+            ]);
+        }
+        
+        // Verificar si la reserva es para menos de 24 horas (aprobación automática)
+        $horasAntelacion = $fechaActual->diffInHours($fechaReserva, false);
+        $mensajeAprobacion = '';
+        
+        if ($horasAntelacion < self::HORAS_APROBACION_AUTOMATICA) {
+            $mensajeAprobacion = ' Esta reserva será validada automáticamente por tener menos de 24 horas de antelación.';
+        }
+        
+        // Verificar si hay reservas que se solapen con el horario solicitado
+        $reservasExistentes = ReservaSala::where('id_sala', $idSala)
+            ->where('fecha', $fecha)
+            ->where('estado', '!=', 'Cancelada')
+            ->where('estado', '!=', 'Rechazada')
+            ->where(function($query) use ($horaInicio, $horaFin) {
+                // Verificar solapamiento de horarios:
+                // 1. Si la hora de inicio está dentro de una reserva existente
+                // 2. Si la hora de fin está dentro de una reserva existente
+                // 3. Si el horario solicitado engloba completamente una reserva existente
+                $query->where(function($q) use ($horaInicio, $horaFin) {
+                    $q->whereTime('hora_inicio', '<=', $horaInicio)
+                      ->whereTime('hora_fin', '>', $horaInicio);
+                })->orWhere(function($q) use ($horaInicio, $horaFin) {
+                    $q->whereTime('hora_inicio', '<', $horaFin)
+                      ->whereTime('hora_fin', '>=', $horaFin);
+                })->orWhere(function($q) use ($horaInicio, $horaFin) {
+                    $q->whereTime('hora_inicio', '>=', $horaInicio)
+                      ->whereTime('hora_fin', '<=', $horaFin);
+                });
+            })
+            ->first();
+        
+        if ($reservasExistentes) {
+            // Si hay una reserva existente, devolver información
+            $reservaActual = "Sala reservada de " . $reservasExistentes->hora_inicio->format('H:i') . 
+                            " a " . $reservasExistentes->hora_fin->format('H:i');
+            
+            if ($reservasExistentes->id_usuario == Auth::id()) {
+                $reservaActual .= " (por ti)";
+            } else {
+                $reservaActual .= " (por otro usuario)";
+            }
+            
+            return response()->json([
+                'disponible' => false,
+                'reserva_actual' => $reservaActual
+            ]);
+        }
+        
+        // Si no hay reservas que se solapen, la sala está disponible
         return response()->json([
-            'disponible' => false,
-            'reserva_actual' => $reservaActual
+            'disponible' => true,
+            'mensaje' => 'Sala disponible para el horario solicitado.' . $mensajeAprobacion
         ]);
     }
-    
-    // Si no hay reservas que se solapen, la sala está disponible
-    return response()->json(['disponible' => true]);
-}
-
 /**
  * Muestra la lista de reservas pendientes de validación
  */

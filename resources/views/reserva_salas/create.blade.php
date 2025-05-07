@@ -16,7 +16,18 @@
                 </div>
                 <div class="ml-3">
                     <p class="text-sm text-blue-700 dark:text-blue-400">
-                        <strong>Información a insertar próximamente TODO</strong>
+                        <strong>Información importante</strong>
+                        <br>
+                        Las resrevas realizadas a través de la plataforma tienen caracter meramente informativo.La dirección del Departamento se reserva el derecho
+                        de cancelar o modificar unas reserva , por mootivos justificados, previa comuicación al usuario.
+                        <br>
+                        El plazo de antelación para realizar una reserva es de 28 días naturales,
+                        <br>
+                        Las reservas efectuadas con menos de 24 horas de antelacion serán aceptadas automaticamente .
+                        <br>
+                        Las reservas que exceden las 4 horas , con una antelación superior a 24 horas, , requerirán ser validadas, respetándose las horas reservadas hasta la resolución final.
+                        <br>
+                        El plazo de validación será inferior a 48 horas
                     </p>
                 </div>
             </div>

@@ -255,15 +255,15 @@ class BreadcrumbsComposer
                     ];
                     break;
 
-                case 'reserva_salas.edit':
-                    $id = request()->route('id');
+                // case 'reserva_salas.edit':
+                //     $id = request()->route('id_sala');
 
-                    $breadcrumbs = [
-                        ['name' => 'Departamento', 'url' => route('departamento')],
-                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
-                        ['name' => 'Editar reserva', 'url' => route('reserva_salas.edit', $id)]
-                    ];
-                    break;
+                //     $breadcrumbs = [
+                //         ['name' => 'Departamento', 'url' => route('departamento')],
+                //         ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                //         ['name' => 'Editar reserva', 'url' => route('reserva_salas.edit', $id)]
+                //     ];
+                //     break;
 
                 // case 'reserva_salas.show':
                 //     $id = request()->route('id');
@@ -338,6 +338,31 @@ class BreadcrumbsComposer
                         ['name' => 'Departamento', 'url' => route('departamento')],
                         ['name' => 'Gestión de Proyectos', 'url' => route('proyectos.index')],
                         ['name' => 'Ver proyecto', 'url' => route('proyectos.show', $proyecto)]
+                    ];
+                    break;
+                
+                case 'configuracion_ordenacion.index':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Configuración de Ordenación', 'url' => route('configuracion_ordenacion.index')]
+                    ];
+                    break;
+                
+                case 'configuracion_ordenacion.create':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Configuración de Ordenación', 'url' => route('configuracion_ordenacion.index')],
+                        ['name' => 'Nueva configuración', 'url' => route('configuracion_ordenacion.create')]
+                    ];
+                    break;
+                
+                case 'configuracion_ordenacion.edit':
+                    $id = request()->route('id');
+
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Configuración de Ordenación', 'url' => route('configuracion_ordenacion.index')],
+                        ['name' => 'Editar configuración', 'url' => route('configuracion_ordenacion.edit', $id)]
                     ];
                     break;
 

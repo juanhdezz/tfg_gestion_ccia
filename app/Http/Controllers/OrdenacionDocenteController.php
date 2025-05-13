@@ -62,7 +62,14 @@ class OrdenacionDocenteController extends Controller
             $esTurnoUsuario = $this->esTurnoDelUsuario(Auth::id(), $numeroTurno);
             
             // Obtenemos el perfil del usuario
-            $perfil = Perfil::findOrFail(Auth::id());
+            $perfil = Perfil::find(Auth::id());
+            if(!$perfil) {
+                return view('error.error', [
+                    'titulo' => 'Error de perfil',
+                    'mensaje' => 'No se ha encontrado el perfil del usuario.',
+                    'detalles' => 'El usuario no tiene un perfil asignado.'
+                ]);
+            }
             
             $data = [
                 'fase' => $fase,
@@ -190,8 +197,132 @@ protected function mostrarFase3($data)
  */
 protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
 {
-    // Similar a obtenerAsignaturasDisponibles pero sin excluir asignaciones de turnos superiores
-    // Código similar al método original pero adaptado para la fase 3
+    try {
+        $dbSiguiente = $this->getDbSiguiente();
+    
+        // Obtener perfil del usuario
+        $perfil = Perfil::find($idUsuario);
+        
+        // Si no existe el perfil, devolver array vacío
+        if (!$perfil) {
+            Log::warning("No se encontró perfil para el usuario ID {$idUsuario} en obtenerAsignaturasDisponiblesFase3");
+            return [];
+        }
+        
+        // Construir la consulta según el perfil
+        $query = DB::table($dbSiguiente.'.asignatura')
+            ->join($dbSiguiente.'.titulacion', 'asignatura.id_titulacion', '=', 'titulacion.id_titulacion')
+            ->where('asignatura.estado', 'Activa');
+            
+        // Filtrar por palabras clave
+        if (!$perfil->sin_palabras_clave && !empty($perfil->palabras_clave)) {
+            $palabrasClave = explode(' ', $perfil->palabras_clave);
+            $query->where(function($q) use ($palabrasClave) {
+                foreach ($palabrasClave as $palabra) {
+                    $q->orWhere('asignatura.nombre_asignatura', 'like', "%$palabra%");
+                }
+            });
+        }
+        
+        // Filtrar por titulaciones
+        $titulacionesIds = PerfilTitulacion::where('id_usuario', $idUsuario)
+            ->pluck('id_titulacion')
+            ->toArray();
+            
+        if (!empty($titulacionesIds)) {
+            $query->whereIn('asignatura.id_titulacion', $titulacionesIds);
+        }
+        
+        // Obtener los resultados
+        $asignaturas = $query->select(
+            'asignatura.nombre_asignatura',
+            'asignatura.fraccionable',
+            'asignatura.id_asignatura',
+            'asignatura.creditos_teoria',
+            'asignatura.creditos_practicas',
+            'asignatura.grupos_teoria',
+            'asignatura.grupos_practicas',
+            'asignatura.curso',
+            'asignatura.cuatrimestre',
+            'titulacion.nombre_titulacion'
+        )
+        ->orderBy('titulacion.nombre_titulacion')
+        ->orderBy('asignatura.nombre_asignatura')
+        ->get();
+        
+        // Procesar los resultados para determinar disponibilidad
+        foreach ($asignaturas as &$asignatura) {
+            // Obtenemos las asignaciones ya existentes para esta asignatura
+            // A diferencia de la Fase 2, no excluimos asignaciones de turnos superiores
+            $asignaciones = OrdenacionUsuarioAsignatura::where('id_asignatura', $asignatura->id_asignatura)
+                ->get()
+                ->groupBy(function($item) {
+                    return $item->tipo . $item->grupo;
+                });
+                
+            $asignatura->grupos_teoria_disponibles = [];
+            $asignatura->grupos_practicas_disponibles = [];
+            
+            // Verificar disponibilidad de grupos de teoría
+            if ($perfil->teoria) {
+                for ($i = 1; $i <= $asignatura->grupos_teoria; $i++) {
+                    $index = "Teoría" . $i;
+                    $creditosAsignados = isset($asignaciones[$index]) ? 
+                        $asignaciones[$index]->sum('creditos') : 0;
+                    $creditosDisponibles = $asignatura->creditos_teoria - $creditosAsignados;
+                    
+                    if ($creditosDisponibles > 0) {
+                        $asignatura->grupos_teoria_disponibles[] = [
+                            'grupo' => $i,
+                            'creditos_disponibles' => $creditosDisponibles
+                        ];
+                    }
+                }
+            }
+            
+            // Verificar disponibilidad de grupos de prácticas
+            if ($perfil->practicas) {
+                for ($i = 1; $i <= $asignatura->grupos_practicas; $i++) {
+                    $index = "Prácticas" . $i;
+                    $creditosAsignados = isset($asignaciones[$index]) ? 
+                        $asignaciones[$index]->sum('creditos') : 0;
+                    $creditosDisponibles = $asignatura->creditos_practicas - $creditosAsignados;
+                    
+                    if ($creditosDisponibles > 0) {
+                        $asignatura->grupos_practicas_disponibles[] = [
+                            'grupo' => $i,
+                            'creditos_disponibles' => $creditosDisponibles
+                        ];
+                    }
+                }
+            }
+            
+            // Información de profesor anterior
+            $profesoresAnteriores = DB::table($this->getDbActual().'.ordenacion_usuario_asignatura')
+                ->join($this->getDbActual().'.usuario', 'ordenacion_usuario_asignatura.id_usuario', '=', 'usuario.id_usuario')
+                ->join($this->getDbSiguiente().'.miembro', 'ordenacion_usuario_asignatura.id_usuario', '=', 'miembro.id_usuario')
+                ->where('ordenacion_usuario_asignatura.id_asignatura', $asignatura->id_asignatura)
+                ->select(
+                    'ordenacion_usuario_asignatura.tipo',
+                    'ordenacion_usuario_asignatura.grupo',
+                    'usuario.nombre',
+                    'usuario.apellidos',
+                    'miembro.numero_orden'
+                )
+                ->get()
+                ->groupBy(function($item) {
+                    return $item->tipo . $item->grupo;
+                });
+                
+            $asignatura->profesores_anteriores = $profesoresAnteriores;
+        }
+        
+        return $asignaturas;
+    } catch (\Exception $e) {
+        Log::error('Error en obtenerAsignaturasDisponiblesFase3: ' . $e->getMessage());
+        Log::error($e->getTraceAsString());
+        return []; // Devolver un array vacío en caso de error
+    }
 }
 
     /**
@@ -211,8 +342,14 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
 
             // Verificar si el usuario tiene categoría docente asignada
 if (!$usuario->categoriaDocente) {
-    Log::error("Usuario con ID {$idUsuario} no tiene categoría docente asignada");
-    return 0; // O un valor predeterminado que tenga sentido en tu aplicación
+    Log::warning("Usuario con ID {$idUsuario} no tiene categoría docente asignada. Asignando categoría simulada para continuar.");
+    // Crear un objeto simulado con valores predeterminados
+    $categoriaPredeterminada = new \stdClass();
+    $categoriaPredeterminada->creditos_docencia = 24; // Valor predeterminado (ajustar según necesidades)
+    $categoriaPredeterminada->nombre = "Categoría simulada";
+    
+    // Asignar el objeto simulado
+    $usuario->categoriaDocente = $categoriaPredeterminada;
 }
             
         $creditosDocencia = $usuario->categoriaDocente->creditos_docencia;
@@ -1027,9 +1164,16 @@ $docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
                     ->findOrFail(Auth::id());
 
                     // Verificar si el usuario tiene categoría docente asignada
+// Verificar si el usuario tiene categoría docente asignada
 if (!$usuario->categoriaDocente) {
-    Log::error("Usuario con ID  no tiene categoría docente asignada");
-    return 0; // O un valor predeterminado que tenga sentido en tu aplicación
+    Log::warning("Usuario con ID ".Auth::id()." no tiene categoría docente asignada. Asignando categoría simulada para continuar.");
+    // Crear un objeto simulado con valores predeterminados
+    $categoriaPredeterminada = new \stdClass();
+    $categoriaPredeterminada->creditos_docencia = 24; // Valor predeterminado
+    $categoriaPredeterminada->nombre = "Categoría simulada";
+    
+    // Asignar el objeto simulado
+    $usuario->categoriaDocente = $categoriaPredeterminada;
 }
                 $creditosDocencia = $usuario->categoriaDocente->creditos_docencia;
                 
@@ -1140,9 +1284,20 @@ if (!$usuario->categoriaDocente) {
         // Obtenemos las compensaciones del usuario
         $creditos_compensacion = $this->obtenerReducciones(Auth::id());
         
-        // Obtener el usuario con su categoría docente
         $usuario = Usuario::with('categoriaDocente')
-            ->findOrFail(Auth::id());
+    ->findOrFail(Auth::id());
+
+// Verificar si el usuario tiene categoría docente asignada
+if (!$usuario->categoriaDocente) {
+    Log::warning("Usuario con ID ".Auth::id()." no tiene categoría docente asignada. Asignando categoría simulada para continuar.");
+    // Crear un objeto simulado con valores predeterminados
+    $categoriaPredeterminada = new \stdClass();
+    $categoriaPredeterminada->creditos_docencia = 24; // Valor predeterminado
+    $categoriaPredeterminada->nombre = "Categoría simulada";
+    
+    // Asignar el objeto simulado
+    $usuario->categoriaDocente = $categoriaPredeterminada;
+}
         
         // Obtener las asignaciones del usuario para el próximo curso
         $asignaciones = OrdenacionUsuarioAsignatura::where('id_usuario', Auth::id())

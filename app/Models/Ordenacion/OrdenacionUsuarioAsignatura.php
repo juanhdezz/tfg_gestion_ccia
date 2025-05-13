@@ -5,6 +5,7 @@ namespace App\Models\Ordenacion;
 use App\Models\BaseModel;
 use App\Models\Usuario;
 use App\Models\Asignatura;
+use App\Models\Titulacion;
 
 class OrdenacionUsuarioAsignatura extends BaseModel
 {
@@ -31,5 +32,10 @@ class OrdenacionUsuarioAsignatura extends BaseModel
     public function asignatura()
     {
         return $this->belongsTo(Asignatura::class, 'id_asignatura', 'id_asignatura');
+    }
+
+    public function titulacion()
+    {
+        return $this->belongsTo(Titulacion::class, 'id_titulacion', 'id_titulacion');
     }
 }

@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Log;
 class OrdenacionDocenteController extends Controller
 {
     // Constante que determina cuántos créditos por debajo se puede pasar turno
-    const CREDITOS_MENOS = 0.5;
+    //const CREDITOS_MENOS = 0.5;
     
     /**
      * Muestra la pantalla principal de asignaciones
@@ -208,11 +208,18 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
         // Obtener los créditos de docencia del usuario
         $usuario = Usuario::with('categoriaDocente')
             ->findOrFail($idUsuario);
+
+            // Verificar si el usuario tiene categoría docente asignada
+if (!$usuario->categoriaDocente) {
+    Log::error("Usuario con ID {$idUsuario} no tiene categoría docente asignada");
+    return 0; // O un valor predeterminado que tenga sentido en tu aplicación
+}
             
         $creditosDocencia = $usuario->categoriaDocente->creditos_docencia;
         
-        $docencia25 = $creditosDocencia * 0.25;
-        $docencia50 = $creditosDocencia * 0.5;
+       $porcentajesDocencia = $this->getPorcentajesDocencia();
+$docencia25 = $creditosDocencia * $porcentajesDocencia['porcentaje_menor'];
+$docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
         
         $totalCompensacion = 0;
         
@@ -230,7 +237,7 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
             $creditosDocenciaPosgrado += $docencia->creditos;
             
             // Sumamos separado los créditos de TFM
-            if ($docencia->posgrado && $docencia->posgrado->codigo == 'TFM') {
+            if ($docencia->posgrado && $docencia->posgrado->codigo == $this->getConfiguracion('identificador_tfm')) {
                 $creditosDocenciaTFM += $docencia->creditos;
             }
         }
@@ -398,19 +405,19 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
      * Verifica si es el turno del usuario
      */
     protected function esTurnoDelUsuario($idUsuario, $turnoActual)
-    {
-        try {
-            // Lógica real para determinar si es el turno del usuario
-            $orden = DB::table('miembro')
-                ->where('id_usuario', $idUsuario)
-                ->value('numero_orden');
+{
+    try {
+        // Lógica real para determinar si es el turno del usuario
+        $orden = DB::table('miembro')
+            ->where('id_usuario', $idUsuario)
+            ->value('numero_orden');
                 
-            return $orden == $turnoActual;
-        } catch (\Exception $e) {
-            Log::error('Error en esTurnoDelUsuario: ' . $e->getMessage());
-            return false; // Por defecto, asumimos que no es el turno del usuario
-        }
+        return $orden == $turnoActual;
+    } catch (\Exception $e) {
+        Log::error('Error en esTurnoDelUsuario: ' . $e->getMessage());
+        return false; // Por defecto, asumimos que no es el turno del usuario
     }
+}
     
     /**
      * Obtiene las asignaciones actuales del usuario
@@ -1018,6 +1025,12 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
                 // Obtener la categoría del usuario y sus créditos de docencia
                 $usuario = Usuario::with('categoriaDocente')
                     ->findOrFail(Auth::id());
+
+                    // Verificar si el usuario tiene categoría docente asignada
+if (!$usuario->categoriaDocente) {
+    Log::error("Usuario con ID  no tiene categoría docente asignada");
+    return 0; // O un valor predeterminado que tenga sentido en tu aplicación
+}
                 $creditosDocencia = $usuario->categoriaDocente->creditos_docencia;
                 
                 // Obtener los créditos de compensación
@@ -1059,7 +1072,7 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
                         ->with('success', 'Se ha pasado al siguiente turno correctamente');
                 } else {
                     return redirect()->route('ordenacion.index')
-                        ->with('error', 'No puede pasar turno porque le faltan más de ' . self::CREDITOS_MENOS . ' créditos para completar su carga docente');
+    ->with('error', 'No puede pasar turno porque le faltan más de ' . $this->getCreditosMenosPermitidos() . ' créditos para completar su carga docente');
                 }
             }
             
@@ -1165,15 +1178,19 @@ protected function getCreditosMenosPermitidos()
     return floatval($this->getConfiguracion('creditos_menos_permitidos', 0.5));
 }
 
-// Método para calcular límites docentes
-protected function calcularLimitesDocentes($creditosDocencia)
+/**
+ * Obtiene los porcentajes de docencia configurados
+ * 
+ * @return array Porcentajes de docencia [porcentaje_menor, porcentaje_mayor]
+ */
+protected function getPorcentajesDocencia()
 {
     $porcentajeMenor = floatval($this->getConfiguracion('porcentaje_limite_menor', 25)) / 100;
     $porcentajeMayor = floatval($this->getConfiguracion('porcentaje_limite_mayor', 50)) / 100;
     
     return [
-        'menor' => $creditosDocencia * $porcentajeMenor,
-        'mayor' => $creditosDocencia * $porcentajeMayor
+        'porcentaje_menor' => $porcentajeMenor,
+        'porcentaje_mayor' => $porcentajeMayor
     ];
 }
 

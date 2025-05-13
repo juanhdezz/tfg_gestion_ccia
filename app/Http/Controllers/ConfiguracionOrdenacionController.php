@@ -204,7 +204,7 @@ class ConfiguracionOrdenacionController extends Controller
                     'descripcion' => 'Porcentaje límite mayor para compensaciones (tradicionalmente 50%)'
                 ],
                 'identificador_tfm' => [
-                    'valor' => 'TFM',
+                    'valor' => '9999601',
                     'descripcion' => 'Texto usado para identificar asignaturas de TFM'
                 ],
             ];

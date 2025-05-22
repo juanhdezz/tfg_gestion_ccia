@@ -179,7 +179,7 @@ CREATE TABLE `asignaturas_equivalentes` (
 UPDATE `usuarios` SET `tipo_usuario` = 'Contratado' WHERE `tipo_usuario` = 'Becario';
 
 -- Modificar el ENUM para reemplazar 'Becario' por 'Contratado'
-ALTER TABLE `usuarios` MODIFY COLUMN `tipo_usuario` enum('Administrador','Coordinador','Profesor','Contratado') DEFAULT NULL;
+ALTER TABLE `usuarios` MODIFY COLUMN `tipo_usuario` enum('Administrador','Administrativo','Profesor','Contratado','Invitado', 'InvitadoP','NoAccess', 'Profesor externo', 'Estudiante') DEFAULT NULL;
 
 -- =====================================================
 -- 5. GRUPOS TEORIA-PRACTICA Y CAMPUS (21/02/2025)

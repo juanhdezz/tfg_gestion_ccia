@@ -1,4 +1,3 @@
-<!-- filepath: c:\xampp\htdocs\laravel\tfg_gestion_ccia\resources\views\error\error.blade.php -->
 <x-app-layout>
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-md w-full space-y-8 bg-white dark:bg-gray-800 p-10 rounded-xl shadow-lg">
@@ -22,18 +21,17 @@
             <!-- Mensaje de error -->
             <div class="text-center">
                 <h2 class="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
-                    ¡Ups! Ha ocurrido un error
+                    {{ $titulo ?? '¡Ups! Ha ocurrido un error' }}
                 </h2>
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    No se ha podido completar la operación solicitada. Por favor, inténtelo de nuevo más tarde.
+                    {{ $mensaje ?? 'No se ha podido completar la operación solicitada. Por favor, inténtelo de nuevo más tarde.' }}
                 </p>
-                @if(isset($errorMessage))
+                @if(isset($detalles) || isset($errorMessage))
                     <div class="mt-4 p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">
                         <p class="text-sm text-red-800 dark:text-red-300">
-                            {{ $errorMessage }}
+                            {{ $detalles ?? $errorMessage ?? '' }}
                             {{ $errorCode ?? '' }}
-                            {{ $errorDescription ?? '' }}                        
-
+                            {{ $errorDescription ?? '' }}
                         </p>
                     </div>
                 @endif

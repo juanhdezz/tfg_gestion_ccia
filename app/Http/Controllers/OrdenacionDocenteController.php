@@ -63,13 +63,13 @@ class OrdenacionDocenteController extends Controller
             
             // Obtenemos el perfil del usuario
             $perfil = Perfil::find(Auth::id());
-            if(!$perfil) {
-                return view('error.error', [
-                    'titulo' => 'Error de perfil',
-                    'mensaje' => 'No se ha encontrado el perfil del usuario.',
-                    'detalles' => 'El usuario no tiene un perfil asignado.'
-                ]);
-            }
+            // if(!$perfil) {
+            //     return view('error.error', [
+            //         'titulo' => 'Error de perfil',
+            //         'mensaje' => 'No se ha encontrado el perfil del usuario.',
+            //         'detalles' => 'El usuario no tiene un perfil asignado.'
+            //     ]);
+            // }
             
             $data = [
                 'fase' => $fase,
@@ -83,6 +83,8 @@ class OrdenacionDocenteController extends Controller
                 'perfil' => $perfil,
                 'titulaciones' => Titulacion::orderBy('nombre_titulacion')->get(),
             ];
+
+            $fase = 1; // Para simular y ver que tal las vistas, se puede cambiar a 2 o 3
             
              // Según la fase, renderizamos distintas vistas
     if ($fase == 1) {

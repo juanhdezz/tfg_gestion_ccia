@@ -15,7 +15,7 @@
                 <div class="ml-3">
                     <p class="text-sm text-yellow-700">
                         Actualmente estamos en la <strong>primera fase</strong>. Los profesores pueden escoger las asignaturas que hayan impartido anteriormente
-                        durante un periodo máximo de {{ $cursos_con_preferencia }} cursos académicos.
+                        durante un periodo máximo de {{ $cursos_con_preferencia ?? 'N/A' }} cursos académicos.
                     </p>
                 </div>
             </div>
@@ -46,7 +46,7 @@
         <!-- Sección de asignaciones actuales -->
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg mb-6 overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Asignaturas asignadas en el {{ $curso_siguiente }}</h2>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Asignaturas asignadas en el {{ $curso_siguiente ?? 'próximo curso' }}</h2>
             </div>
             <div class="p-4">
                 @include('ordenacion.partials.asignaciones_actuales')
@@ -57,7 +57,7 @@
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg mb-6 overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-white">
-                    Asignaturas del curso anterior impartidas durante menos de {{ $cursos_con_preferencia }} cursos
+                    Asignaturas del curso anterior impartidas durante menos de {{ $cursos_con_preferencia ?? 'N/A' }} cursos
                 </h2>
             </div>
             <div class="p-4">
@@ -65,7 +65,7 @@
                     Marcar las asignaturas que se quieran mantener para el próximo curso
                 </p>
                 
-                @if(count($asignaciones_previas) > 0)
+                @if(isset($asignaciones_previas) && count($asignaciones_previas) > 0)
                     <form action="{{ route('ordenacion.mantener') }}" method="POST">
                         @csrf
                         
@@ -87,32 +87,32 @@
                                 </thead>
                                 <tbody>
                                     @foreach($asignaciones_previas as $asignacion)
-                                        @if($asignacion->existe)
+                                        @if(optional($asignacion)->existe)
                                             @php
                                                 $rowClass = '';
-                                                if($asignacion->posible_perdida) {
+                                                if(optional($asignacion)->posible_perdida) {
                                                     $rowClass = 'bg-red-100 dark:bg-red-900';
-                                                } elseif($asignacion->posible_no_fase2) {
+                                                } elseif(optional($asignacion)->posible_no_fase2) {
                                                     $rowClass = 'bg-yellow-100 dark:bg-yellow-900';
                                                 }
                                             @endphp
                                             
                                             <tr class="border-b dark:border-gray-700 {{ $rowClass }}">
-                                                <td class="px-6 py-4">{{ $asignacion->nombre_asignatura }}</td>
-                                                <td class="px-6 py-4">{{ $asignacion->nombre_titulacion ?? 'Libre Configuración Específica' }}</td>
-                                                <td class="px-6 py-4">{{ $asignacion->curso }}º</td>
-                                                <td class="px-6 py-4">{{ $asignacion->cuatrimestre }}</td>
-                                                <td class="px-6 py-4">{{ $asignacion->tipo }}</td>
-                                                <td class="px-6 py-4">{{ $asignacion->grupo }}</td>
-                                                <td class="px-6 py-4">{{ $asignacion->creditos }}</td>
+                                                <td class="px-6 py-4">{{ optional($asignacion)->nombre_asignatura ?? 'N/A' }}</td>
+                                                <td class="px-6 py-4">{{ optional($asignacion)->nombre_titulacion ?? 'Libre Configuración Específica' }}</td>
+                                                <td class="px-6 py-4">{{ optional($asignacion)->curso ?? 'N/A' }}º</td>
+                                                <td class="px-6 py-4">{{ optional($asignacion)->cuatrimestre ?? 'N/A' }}</td>
+                                                <td class="px-6 py-4">{{ optional($asignacion)->tipo ?? 'N/A' }}</td>
+                                                <td class="px-6 py-4">{{ optional($asignacion)->grupo ?? 'N/A' }}</td>
+                                                <td class="px-6 py-4">{{ optional($asignacion)->creditos ?? 'N/A' }}</td>
                                                 <td class="px-6 py-4">Posible mantenerla en primera fase</td>
                                                 <td class="px-6 py-4">
-                                                    {{ $asignacion->antiguedad }} 
-                                                    {{ $asignacion->antiguedad == 1 ? 'año' : 'años' }}
+                                                    {{ optional($asignacion)->antiguedad ?? 0 }} 
+                                                    {{ (optional($asignacion)->antiguedad ?? 0) == 1 ? 'año' : 'años' }}
                                                 </td>
                                                 <td class="px-6 py-4">
                                                     <input type="checkbox" name="asignaturas[]" 
-                                                           value="{{ $asignacion->id_asignatura }}_{{ $asignacion->tipo }}_{{ $asignacion->grupo }}"
+                                                           value="{{ optional($asignacion)->id_asignatura ?? '' }}_{{ optional($asignacion)->tipo ?? '' }}_{{ optional($asignacion)->grupo ?? '' }}"
                                                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded">
                                                 </td>
                                             </tr>
@@ -122,7 +122,7 @@
                             </table>
                         </div>
                         
-                        @if($asignaciones_previas->where('posible_perdida', true)->count() > 0)
+                        @if(isset($asignaciones_previas) && $asignaciones_previas->where('posible_perdida', true)->count() > 0)
                             <div class="mt-4 p-4 text-sm text-red-700 bg-red-100 dark:bg-red-200 dark:text-red-800 rounded-lg">
                                 <strong>ATENCIÓN:</strong> Debido a la reducción en el número de grupos de una asignatura sobre la que mantiene derecho de reserva, 
                                 es posible que al terminar la 1ª fase no se pueda realizar la asignación.
@@ -130,11 +130,11 @@
                             </div>
                         @endif
                         
-                        @if($asignaciones_previas->where('posible_no_fase2', true)->count() > 0)
+                        @if(isset($asignaciones_previas) && $asignaciones_previas->where('posible_no_fase2', true)->count() > 0)
                             <div class="mt-4 p-4 text-sm text-yellow-700 bg-yellow-100 dark:bg-yellow-200 dark:text-yellow-800 rounded-lg">
                                 <strong>ATENCIÓN:</strong> Debido a la reducción en el número de grupos de una asignatura sobre la que mantiene derecho de reserva, 
                                 es posible que todos los grupos queden asignados en primera fase, por lo que si no lo reserva, (y a pesar de haberlo impartido durante 
-                                menos de {{ $cursos_con_preferencia }} años), no podrá impartirlo el curso que viene. Dichas asignaturas aparecen sobre fondo amarillo 
+                                menos de {{ $cursos_con_preferencia ?? 'N/A' }} años), no podrá impartirlo el curso que viene. Dichas asignaturas aparecen sobre fondo amarillo 
                                 y eventualmente en rojo si además es posible que la reserva no garantice la asignación.
                             </div>
                         @endif
@@ -162,7 +162,7 @@
                 </button>
             </div>
             <div id="perfil-content" class="p-4 hidden">
-                @include('ordenacion.partials.perfil_academico')
+                @include('ordenacion.partials.perfil_academico', ['perfil' => $perfil ?? null, 'titulaciones' => $titulaciones ?? []])
             </div>
         </div>
         
@@ -172,33 +172,45 @@
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Pasar Turno</h2>
             </div>
             <div class="p-4">
-                <form method="post" action="{{ route('ordenacion.pasar-turno-preferencia') }}">
-                    @csrf
-                    <div class="mb-4">
-                        <p class="text-gray-700 dark:text-gray-300 mb-2">
-                            Si esta opción está activada, cuando llegue su turno se pasará al siguiente usuario sin realizar ningún cambio en su ordenación docente
+                @if(is_null($perfil))
+                    <div class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                        <p class="text-red-800 dark:text-red-300">
+                            <strong>Error:</strong> No se ha encontrado el perfil del usuario. Contacte con el administrador.
                         </p>
-                        <div class="flex items-center">
-                            <input type="checkbox" name="pasar_turno" id="pasar_turno" 
-                                   {{ $perfil->pasar_turno ? 'checked' : '' }}
-                                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded">
-                            <label for="pasar_turno" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                Pasar Turno
-                            </label>
-                        </div>
                     </div>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        Guardar Cambios
-                    </button>
-                </form>
+                @else
+                    <form method="post" action="{{ route('ordenacion.pasar-turno-preferencia') }}">
+                        @csrf
+                        <div class="mb-4">
+                            <p class="text-gray-700 dark:text-gray-300 mb-2">
+                                Si esta opción está activada, cuando llegue su turno se pasará al siguiente usuario sin realizar ningún cambio en su ordenación docente
+                            </p>
+                            <div class="flex items-center">
+                                <input type="checkbox" name="pasar_turno" id="pasar_turno" 
+                                       {{ (optional($perfil)->pasar_turno ?? false) ? 'checked' : '' }}
+                                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded">
+                                <label for="pasar_turno" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                    Pasar Turno
+                                    @if(is_null(optional($perfil)->pasar_turno))
+                                        <span class="text-gray-500 italic"> - (no configurado)</span>
+                                    @endif
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Guardar Cambios
+                        </button>
+                    </form>
+                @endif
             </div>
         </div>
+        
         <!-- Resumen -->
-<div class="flex justify-center mt-6">
-    <a href="{{ route('ordenacion.resumen') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-        Ver Resumen de Ordenación Docente
-    </a>
-</div>
+        <div class="flex justify-center mt-6">
+            <a href="{{ route('ordenacion.resumen') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Ver Resumen de Ordenación Docente
+            </a>
+        </div>
     </div>
 
     @push('scripts')

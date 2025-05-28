@@ -118,6 +118,69 @@
                 <p class="text-gray-700 dark:text-gray-400 text-center">Administración de peticiones de libros.</p>
             </a>
 
+            @role('admin')
+
+             <!-- Gestión de impersonación de usuarios - Solo para Administradores -->
+            <div class="module-card flex flex-col items-center p-6 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-lg shadow-md hover:shadow-lg dark:from-amber-900/20 dark:to-yellow-900/20 dark:border-amber-700" data-title="Impersonación de usuarios" data-keywords="impersonar, usuario, administrador, soporte, ayuda, actuar como">
+                <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-lg flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-amber-600 dark:text-amber-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                    </svg>
+                </div>
+                <h5 class="text-xl font-bold text-gray-900 dark:text-white mb-2">🎭 Impersonación</h5>
+                <p class="text-gray-700 dark:text-gray-400 text-center mb-4">Actuar como otro usuario para resolver problemas y brindar soporte</p>
+                
+                <div class="w-full space-y-2">
+                    <a href="{{ route('usuarios.index') }}" 
+                       class="block w-full px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-300 text-center font-medium">
+                        Ver Lista de Usuarios
+                    </a>
+                    
+                    @php
+                        $impersonateController = new \App\Http\Controllers\ImpersonateController();
+                        $isCurrentlyImpersonating = $impersonateController->isImpersonating();
+                    @endphp
+                    
+                    @if($isCurrentlyImpersonating)
+                    <form method="POST" action="{{ route('impersonate.stop') }}" class="w-full">
+                        @csrf
+                        <button type="submit" 
+                                class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-300 font-medium">
+                            🔚 Finalizar Impersonación Actual
+                        </button>
+                    </form>
+                    @endif
+                </div>
+            </div>
+
+            
+            <!-- Selector de Base de Datos - Solo Administradores -->
+            <div class="module-card flex flex-col items-center p-6 bg-white border border-gray-200 rounded-lg shadow-md dark:border-gray-700 dark:bg-gray-800" data-title="Gestión de cursos académicos" data-keywords="cursos, base de datos, administración, cambio">
+                <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-lg flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-amber-600 dark:text-amber-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                    </svg>
+                </div>
+                <h5 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Gestión de Cursos</h5>
+                <p class="text-gray-700 dark:text-gray-400 text-center mb-4">Cambiar entre curso actual y siguiente</p>
+                
+                <!-- Botón para mostrar/ocultar selector -->
+                <button id="toggle-database-selector" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-300 transform hover:scale-105">
+                    <span id="button-text">Mostrar Selector</span>
+                    <svg id="button-icon" xmlns="http://www.w3.org/2000/svg" class="inline w-4 h-4 ml-2 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                
+                <!-- Contenedor del selector (inicialmente oculto) -->
+                <div id="database-selector-container" class="w-full mt-4 overflow-hidden transition-all duration-500 ease-in-out opacity-0 max-h-0">
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <x-database-selector />
+                    </div>
+                </div>
+            </div>
+            @endrole
+
         </div>
 
         <!-- Mensaje cuando no hay resultados -->
@@ -133,7 +196,7 @@
         </div>
     </div>
 
-    @push('scripts')
+     @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('search-modules');
@@ -144,6 +207,38 @@
             const modulesGrid = document.getElementById('modules-grid');
             const moduleCards = document.querySelectorAll('.module-card');
             const noResults = document.getElementById('no-results');
+            
+            // Funcionalidad del selector de base de datos
+            const toggleButton = document.getElementById('toggle-database-selector');
+            const selectorContainer = document.getElementById('database-selector-container');
+            const buttonText = document.getElementById('button-text');
+            const buttonIcon = document.getElementById('button-icon');
+            
+            if (toggleButton && selectorContainer) {
+                let isVisible = false;
+                
+                toggleButton.addEventListener('click', function() {
+                    isVisible = !isVisible;
+                    
+                    if (isVisible) {
+                        // Mostrar selector
+                        selectorContainer.style.maxHeight = selectorContainer.scrollHeight + 'px';
+                        selectorContainer.classList.remove('opacity-0');
+                        selectorContainer.classList.add('opacity-100');
+                        buttonText.textContent = 'Ocultar Selector';
+                        buttonIcon.style.transform = 'rotate(180deg)';
+                        toggleButton.classList.add('bg-amber-700');
+                    } else {
+                        // Ocultar selector
+                        selectorContainer.style.maxHeight = '0px';
+                        selectorContainer.classList.remove('opacity-100');
+                        selectorContainer.classList.add('opacity-0');
+                        buttonText.textContent = 'Mostrar Selector';
+                        buttonIcon.style.transform = 'rotate(0deg)';
+                        toggleButton.classList.remove('bg-amber-700');
+                    }
+                });
+            }
             
             // Función para filtrar los módulos
             function filterModules(searchTerm) {

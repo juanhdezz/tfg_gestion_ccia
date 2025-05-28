@@ -8,12 +8,26 @@ use App\Exports\ListaUsuariosExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Despacho;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+use App\Helpers\ImpersonationHelper;
+
+
 
 
 class UsuarioController extends Controller
 {
     public function index(Request $request)
 {
+    // Debug temporal CORREGIDO - agregar dentro del método
+        Log::info('Debug usuario actual', [
+            'auth_id' => Auth::id(),
+            'auth_name' => Auth::user() ? Auth::user()->nombre : 'No autenticado',
+            'session_impersonate' => Session::get('impersonate_user_id'),
+            'has_impersonate_session' => Session::has('impersonate_user_id')
+        ]);
+    
     $search = $request->input('search');
 
     $usuarios = Usuario::with(['despacho'])

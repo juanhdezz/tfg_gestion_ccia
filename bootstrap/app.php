@@ -15,10 +15,27 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias para middleware personalizado
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'impersonate' => \App\Http\Middleware\ImpersonateMiddleware::class,
         ]);
         
         // Añadir DatabaseSwitcher al middleware web
-        $middleware->web([\App\Http\Middleware\DatabaseSwitcher::class]);
+        $middleware->web([
+            \App\Http\Middleware\DatabaseSwitcher::class,
+            //\App\Http\Middleware\ImpersonateMiddleware::class,
+]);
+
+// Asegurar que el middleware de impersonación se ejecute ANTES que el de autenticación
+    $middleware->priority([
+            \Illuminate\Session\Middleware\StartSession::class,
+            \App\Http\Middleware\ImpersonateMiddleware::class,
+            \Illuminate\Auth\Middleware\Authenticate::class,
+            \App\Http\Middleware\DatabaseSwitcher::class,
+        ]);
+
+        // Añadir el middleware de impersonación específicamente después de StartSession
+        $middleware->appendToGroup('web', [
+            \App\Http\Middleware\ImpersonateMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         

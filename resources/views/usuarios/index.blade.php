@@ -62,6 +62,17 @@
                                 <a href="{{ route('usuarios.edit', $usuario->id_usuario) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
                                     Editar &#9999;
                                 </a>
+                                <!-- Botón Impersonar - Solo para administradores -->
+        @if(Auth::user()->hasRole('admin') && !$usuario->hasRole('admin') && Auth::id() !== $usuario->id_usuario)
+        <form method="POST" action="{{ route('impersonate.start', $usuario->id_usuario) }}" class="inline">
+            @csrf
+            <button type="submit" 
+                    class="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 hover:underline font-medium"
+                    onclick="return confirm('¿Estás seguro de que quieres impersonar a {{ $usuario->nombre }} {{ $usuario->apellidos }}?\n\nEsta acción será registrada por seguridad.')">
+                🎭 Impersonar
+            </button>
+        </form>
+        @endif
                                 <form class="delete-form" action="{{ route('usuarios.destroy', $usuario->id_usuario) }}" method="POST" class="inline">
                                     @csrf
                                     @method('DELETE')

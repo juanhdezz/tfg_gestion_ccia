@@ -128,8 +128,13 @@
     </style>
 </head>
 <body class="bg-white dark:bg-gray-900">
+
+    <!-- Banner de impersonación - ANTES del navbar -->
+    <x-impersonation-banner />
+
+
     <!-- Navbar mejorado con mejor estructura para las imágenes -->
-    <nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+    <nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700" style="margin-top: var(--impersonation-banner-height, 0);">
         <div class="header-container">
             <!-- Logo UGR - Izquierda -->
             <div class="header-logo-left">
@@ -151,20 +156,43 @@
                     </svg>
                 </button>
 
-                <!-- Selector de base de datos -->
-                <x-database-selector />
-                
                 <!-- User menu -->
                 <div class="relative">
-                    <button onclick="toggleDropdown()" class="focus:outline-none">
-                        Usuario : {{ Auth::user()->nombre }}
+                    @php
+                        $impersonateController = new \App\Http\Controllers\ImpersonateController();
+                        $isImpersonating = $impersonateController->isImpersonating();
+                        $displayName = Auth::user()->nombre;
+                        $displayClass = $isImpersonating ? 'text-yellow-600 font-bold' : '';
+                    @endphp
+                    
+                    <button onclick="toggleDropdown()" class="focus:outline-none {{ $displayClass }}">
+                        {{ $isImpersonating ? '🎭 ' : '' }}Usuario: {{ $displayName }}
                     </button>
+                    
                     <!-- Menú desplegable -->
-                    <div id="profileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg hidden">
-                        <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Editar Perfil</a>
-                        <form method="POST" action="{{ route('logout') }} ">
+                    <div id="profileDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg hidden dark:bg-gray-700">
+                        @if($isImpersonating)
+                        <div class="px-4 py-2 text-sm text-yellow-600 border-b border-gray-200 dark:border-gray-600 bg-yellow-50 dark:bg-yellow-900/20">
+                            🎭 Modo Impersonación
+                        </div>
+                        @endif
+                        
+                        <a href="{{ route('profile.edit') }}" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">
+                            Editar Perfil
+                        </a>
+                        
+                        @if($isImpersonating)
+                        <form method="POST" action="{{ route('impersonate.stop') }}" class="border-t border-gray-200 dark:border-gray-600">
                             @csrf
-                            <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-200">
+                            <button type="submit" class="w-full text-left px-4 py-2 text-yellow-600 hover:bg-gray-200 dark:hover:bg-gray-600">
+                                🔚 Finalizar Impersonación
+                            </button>
+                        </form>
+                        @endif
+                        
+                        <form method="POST" action="{{ route('logout') }}" class="border-t border-gray-200 dark:border-gray-600">
+                            @csrf
+                            <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-200 dark:hover:bg-gray-600">
                                 Cerrar Sesión
                             </button>
                         </form>
@@ -268,8 +296,26 @@
             document.getElementById("profileDropdown").classList.toggle("hidden");
         }
 
+        
+
         // Toggle del sidebar con localStorage
         document.addEventListener('DOMContentLoaded', function() {
+            const impersonationBanner = document.querySelector('[class*="bg-yellow-500"]');
+            if (impersonationBanner) {
+                const bannerHeight = impersonationBanner.offsetHeight;
+                document.documentElement.style.setProperty('--impersonation-banner-height', bannerHeight + 'px');
+                
+                // Ajustar el margen superior del sidebar y contenido principal
+                const sidebar = document.getElementById('logo-sidebar');
+                const mainContent = document.getElementById('main-content');
+                
+                if (sidebar) {
+                    sidebar.style.paddingTop = (80 + bannerHeight) + 'px';
+                }
+                if (mainContent) {
+                    mainContent.style.marginTop = bannerHeight + 'px';
+                }
+            }
             const sidebarToggle = document.getElementById('sidebarToggle');
             const sidebar = document.getElementById('logo-sidebar');
             const mainContent = document.getElementById('main-content');

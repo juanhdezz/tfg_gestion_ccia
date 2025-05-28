@@ -22,6 +22,7 @@ use App\Http\Controllers\LibroController;
 use App\Http\Controllers\ConfiguracionOrdenacionController;
 use App\Http\Controllers\LibroAsignaturaController;
 use App\Http\Controllers\ProyectoController;
+use App\Http\Controllers\ImpersonateController;
 
 /**
  * ====================================
@@ -54,6 +55,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
+
+    /**
+     * IMPERSONACIÓN DE USUARIOS - DEBEN IR AQUÍ, NO EN EL GRUPO ADMIN
+     * Estas rutas NO deben tener el middleware de impersonación
+     */
+    Route::middleware(['admin'])->prefix('impersonate')->name('impersonate.')->group(function () {
+        Route::post('/start/{user}', [ImpersonateController::class, 'start'])->name('start');
+        Route::post('/stop', [ImpersonateController::class, 'stop'])->name('stop');
+    });
 
     /**
      * PERFIL DE USUARIO
@@ -153,6 +163,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin', function () {
         return "Bienvenido admin";
     })->name('admin');
+
+    // /**
+    //  * IMPERSONACIÓN DE USUARIOS
+    //  */
+    // Route::prefix('impersonate')->name('impersonate.')->group(function () {
+    //     Route::post('/stop', [ImpersonateController::class, 'stop'])->name('stop');
+    //     Route::post('/start/{user}', [ImpersonateController::class, 'start'])->name('start');
+        
+    // });
 
     /**
      * GESTIÓN DE USUARIOS

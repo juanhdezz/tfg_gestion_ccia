@@ -7,7 +7,7 @@
                 <div class="bg-red-500 text-white p-2 rounded mb-4">{{ session('error') }}</div>
             @endif
             <form action="{{ route('usuarios.update', $usuario->id_usuario) }}" method="POST"
-                enctype="multipart/form-data">
+                enctype="multipart/form-data" id="editUsuarioForm">
                 @csrf
                 @method('PUT')
                 <div class="mb-4">
@@ -48,10 +48,6 @@
                     <input type="text" id="foto" name="foto" value="{{ $usuario->foto }}"
                         class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                 </div>
-                {{-- <div class="mb-4">
-                    <label for="id_despacho" class="block text-sm font-medium text-gray-700 dark:text-gray-300">ID Despacho:</label>
-                    <input type="text" id="id_despacho" name="id_despacho" value="{{ $usuario->id_despacho }}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
-                </div> --}}
                 <div class="mb-4">
                     <label for="id_despacho"
                         class="block text-sm font-medium text-gray-700 dark:text-gray-300">Despacho:</label>
@@ -59,8 +55,9 @@
                         class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                         <option value="">Seleccionar Despacho</option>
                         @foreach ($despachos as $despacho)
-                            <option value="{{ $despacho->id_despacho }}">{{ $despacho->nombre_despacho }}
-                                ({{ $despacho->siglas_despacho }})</option>
+                            <option value="{{ $despacho->id_despacho }}" {{ $usuario->id_despacho == $despacho->id_despacho ? 'selected' : '' }}>
+                                {{ $despacho->nombre_despacho }} ({{ $despacho->siglas_despacho }})
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -123,6 +120,13 @@
                         class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Déjalo en blanco si no deseas cambiar la
                         contraseña.</p>
+                </div>
+
+                <div class="mb-4">
+                    <label for="passwd_confirmation" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirmar Nueva Contraseña:</label>
+                    <input type="password" id="passwd_confirmation" name="passwd_confirmation"
+                        class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Solo necesario si vas a cambiar la contraseña.</p>
                 </div>
 
                 <div class="mb-4">
@@ -204,16 +208,223 @@
                         para seleccionar múltiples roles.</p>
                 </div>
 
-
-                <button type="submit"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Actualizar</button>
+                <div class="mt-8 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                    <button type="submit" id="submitBtn"
+                        class="px-5 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition shadow-sm">
+                        <i class="fas fa-save mr-2"></i>Actualizar Usuario
+                    </button>
+                    <a href="{{ route('usuarios.index') }}"
+                        class="px-5 py-2 bg-gray-500 text-white font-semibold rounded-md hover:bg-gray-600 transition shadow-sm text-center">
+                        <i class="fas fa-times mr-2"></i>Cancelar
+                    </a>
+                </div>
             </form>
-            <a href="{{ route('usuarios.index') }}"
-                class="block text-center mt-4 text-blue-600 hover:underline">Volver a la lista de usuarios</a>
         </div>
     </div>
 
+    @push('scripts')
+    <script>
+        const CURRENT_USER_ID = {{ $usuario->id_usuario }}; // ID del usuario actual que se está editando
+        
+        document.getElementById('editUsuarioForm').addEventListener('submit', function(event) {
+            // Desactivar el botón para evitar múltiples envíos
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Procesando...';
+            
+            // Validar contraseñas solo si se está cambiando
+            const password = document.getElementById('passwd').value;
+            const passwordConfirmation = document.getElementById('passwd_confirmation').value;
+            
+            if (password || passwordConfirmation) {
+                if (password !== passwordConfirmation) {
+                    event.preventDefault();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Las contraseñas no coinciden',
+                        text: 'Por favor, verifique que ambas contraseñas sean idénticas'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Actualizar Usuario';
+                    return false;
+                }
+            }
+            
+            // Validar unicidad de campos antes del envío
+            event.preventDefault();
+            const login = document.getElementById('login').value;
+            const correo = document.getElementById('correo').value;
+            const dni = document.getElementById('dni_pasaporte').value;
 
-   
+            // Validar que los campos requeridos no estén vacíos
+            if (!login || !correo || !dni) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Campos obligatorios',
+                    text: 'Por favor, complete todos los campos obligatorios'
+                });
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Actualizar Usuario';
+                return false;
+            }
 
+            // Realizar validaciones AJAX (excluyendo el usuario actual)
+            Promise.all([
+                checkUniqueness('login', login, CURRENT_USER_ID),
+                checkUniqueness('correo', correo, CURRENT_USER_ID),
+                checkUniqueness('dni_pasaporte', dni, CURRENT_USER_ID)
+            ]).then(results => {
+                const [loginExists, correoExists, dniExists] = results;
+                
+                if (loginExists) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login ya existe',
+                        text: 'El nombre de usuario ya está en uso. Por favor, elija otro.'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Actualizar Usuario';
+                    return;
+                }
+                
+                if (correoExists) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Correo ya existe',
+                        text: 'Este correo electrónico ya está registrado.'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Actualizar Usuario';
+                    return;
+                }
+                
+                if (dniExists) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'DNI/Pasaporte ya existe',
+                        text: 'Este DNI/Pasaporte ya está registrado.'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Actualizar Usuario';
+                    return;
+                }
+                
+                // Si todas las validaciones pasan, enviar el formulario
+                document.getElementById('editUsuarioForm').submit();
+                
+            }).catch(error => {
+                console.error('Error en la validación:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de validación',
+                    text: 'Ocurrió un error al validar los datos. Por favor, inténtelo de nuevo.'
+                });
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Actualizar Usuario';
+            });
+        });
+
+        // Función para verificar unicidad via AJAX (incluyendo user_id para excluir)
+        function checkUniqueness(field, value, userId = null) {
+            const requestData = {
+                field: field,
+                value: value
+            };
+            
+            if (userId) {
+                requestData.user_id = userId;
+            }
+            
+            return fetch('{{ route("usuarios.check-uniqueness") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Respuesta del servidor:', data);
+                return data.exists;
+            })
+            .catch(error => {
+                console.error('Error en checkUniqueness:', error);
+                return false;
+            });
+        }
+
+        // Validaciones en tiempo real mientras el usuario escribe
+        document.getElementById('login').addEventListener('blur', function() {
+            const login = this.value;
+            if (login) {
+                checkUniqueness('login', login, CURRENT_USER_ID).then(exists => {
+                    if (exists) {
+                        this.classList.add('border-red-500');
+                        showFieldError(this, 'Este login ya está en uso');
+                    } else {
+                        this.classList.remove('border-red-500');
+                        this.classList.add('border-green-500');
+                        clearFieldError(this);
+                    }
+                });
+            }
+        });
+
+        document.getElementById('correo').addEventListener('blur', function() {
+            const correo = this.value;
+            if (correo) {
+                checkUniqueness('correo', correo, CURRENT_USER_ID).then(exists => {
+                    if (exists) {
+                        this.classList.add('border-red-500');
+                        showFieldError(this, 'Este correo ya está registrado');
+                    } else {
+                        this.classList.remove('border-red-500');
+                        this.classList.add('border-green-500');
+                        clearFieldError(this);
+                    }
+                });
+            }
+        });
+
+        document.getElementById('dni_pasaporte').addEventListener('blur', function() {
+            const dni = this.value;
+            if (dni) {
+                checkUniqueness('dni_pasaporte', dni, CURRENT_USER_ID).then(exists => {
+                    if (exists) {
+                        this.classList.add('border-red-500');
+                        showFieldError(this, 'Este DNI/Pasaporte ya está registrado');
+                    } else {
+                        this.classList.remove('border-red-500');
+                        this.classList.add('border-green-500');
+                        clearFieldError(this);
+                    }
+                });
+            }
+        });
+
+        // Funciones auxiliares para mostrar/ocultar errores de campo
+        function showFieldError(field, message) {
+            clearFieldError(field);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'text-red-500 text-xs mt-1 field-error';
+            errorDiv.textContent = message;
+            field.parentNode.appendChild(errorDiv);
+        }
+
+        function clearFieldError(field) {
+            const existingError = field.parentNode.querySelector('.field-error');
+            if (existingError) {
+                existingError.remove();
+            }
+            field.classList.remove('border-red-500', 'border-green-500');
+        }
+    </script>
+    @endpush
 </x-app-layout>

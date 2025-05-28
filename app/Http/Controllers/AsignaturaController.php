@@ -210,14 +210,12 @@ class AsignaturaController extends Controller
             'text' => 'La asignatura ha sido actualizada correctamente',
         ]);
 
-        return redirect()->route('asignaturas.index')->with('success', 'Asignatura updated successfully');
-    }
-
-    public function destroy($id)
+        return redirect()->route('asignaturas.index')->with('success', 'Asignatura actualizada exitosamente');
+    }    public function destroy($id)
     {
         $asignatura = Asignatura::find($id);
         if (is_null($asignatura)) {
-            return redirect()->route('asignaturas.index')->with('error', 'Asignatura not found');
+            return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
         }
 
         // Eliminar primero los registros de grupo_teoria_practica
@@ -232,7 +230,7 @@ class AsignaturaController extends Controller
             'text' => 'La asignatura ha sido eliminada exitosamente' 
         ]);
 
-        return redirect()->route('asignaturas.index')->with('success', 'Asignatura deleted successfully');
+        return redirect()->route('asignaturas.index')->with('success', 'Asignatura eliminada exitosamente');
     }
 
     public function grupos(Request $request)

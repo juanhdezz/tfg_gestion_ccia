@@ -298,7 +298,7 @@
         </div>
     </div>
 
-    @push('scripts')
+        @push('scripts')
     <script>
         document.getElementById('createUsuarioForm').addEventListener('submit', function(event) {
             // Desactivar el botón para evitar múltiples envíos
@@ -344,7 +344,176 @@
                 submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Crear Usuario';
                 return false;
             }
+
+            // Validar unicidad de login y correo antes del envío
+            event.preventDefault();
+            const login = document.getElementById('login').value;
+            const correo = document.getElementById('correo').value;
+            const dni = document.getElementById('dni_pasaporte').value;
+
+            // Validar que los campos requeridos no estén vacíos
+            if (!login || !correo || !dni) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Campos obligatorios',
+                    text: 'Por favor, complete todos los campos obligatorios'
+                });
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Crear Usuario';
+                return false;
+            }
+
+            // Realizar validaciones AJAX
+            Promise.all([
+                checkUniqueness('login', login),
+                checkUniqueness('correo', correo),
+                checkUniqueness('dni_pasaporte', dni)
+            ]).then(results => {
+                const [loginExists, correoExists, dniExists] = results;
+                
+                if (loginExists) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login ya existe',
+                        text: 'El nombre de usuario ya está en uso. Por favor, elija otro.'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Crear Usuario';
+                    return;
+                }
+                
+                if (correoExists) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Correo ya existe',
+                        text: 'Este correo electrónico ya está registrado.'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Crear Usuario';
+                    return;
+                }
+                
+                if (dniExists) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'DNI/Pasaporte ya existe',
+                        text: 'Este DNI/Pasaporte ya está registrado.'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Crear Usuario';
+                    return;
+                }
+                
+                // Si todas las validaciones pasan, enviar el formulario
+                document.getElementById('createUsuarioForm').submit();
+                
+            }).catch(error => {
+                console.error('Error en la validación:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de validación',
+                    text: 'Ocurrió un error al validar los datos. Por favor, inténtelo de nuevo.'
+                });
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>Crear Usuario';
+            });
         });
+
+       // Función para verificar unicidad via AJAX
+        function checkUniqueness(field, value) {
+            return fetch('{{ route("usuarios.check-uniqueness") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    field: field,
+                    value: value
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Respuesta del servidor:', data); // Para debug
+                return data.exists;
+            })
+            .catch(error => {
+                console.error('Error en checkUniqueness:', error);
+                return false; // En caso de error, asumir que no existe
+            });
+        }
+
+        // Validaciones en tiempo real mientras el usuario escribe
+        document.getElementById('login').addEventListener('blur', function() {
+            const login = this.value;
+            if (login) {
+                checkUniqueness('login', login).then(exists => {
+                    if (exists) {
+                        this.classList.add('border-red-500');
+                        showFieldError(this, 'Este login ya está en uso');
+                    } else {
+                        this.classList.remove('border-red-500');
+                        this.classList.add('border-green-500');
+                        clearFieldError(this);
+                    }
+                });
+            }
+        });
+
+        document.getElementById('correo').addEventListener('blur', function() {
+            const correo = this.value;
+            if (correo) {
+                checkUniqueness('correo', correo).then(exists => {
+                    if (exists) {
+                        this.classList.add('border-red-500');
+                        showFieldError(this, 'Este correo ya está registrado');
+                    } else {
+                        this.classList.remove('border-red-500');
+                        this.classList.add('border-green-500');
+                        clearFieldError(this);
+                    }
+                });
+            }
+        });
+
+        document.getElementById('dni_pasaporte').addEventListener('blur', function() {
+            const dni = this.value;
+            if (dni) {
+                checkUniqueness('dni_pasaporte', dni).then(exists => {
+                    if (exists) {
+                        this.classList.add('border-red-500');
+                        showFieldError(this, 'Este DNI/Pasaporte ya está registrado');
+                    } else {
+                        this.classList.remove('border-red-500');
+                        this.classList.add('border-green-500');
+                        clearFieldError(this);
+                    }
+                });
+            }
+        });
+
+        // Funciones auxiliares para mostrar/ocultar errores de campo
+        function showFieldError(field, message) {
+            clearFieldError(field);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'text-red-500 text-xs mt-1 field-error';
+            errorDiv.textContent = message;
+            field.parentNode.appendChild(errorDiv);
+        }
+
+        function clearFieldError(field) {
+            const existingError = field.parentNode.querySelector('.field-error');
+            if (existingError) {
+                existingError.remove();
+            }
+            field.classList.remove('border-red-500', 'border-green-500');
+        }
     </script>
     @endpush
 </x-app-layout>

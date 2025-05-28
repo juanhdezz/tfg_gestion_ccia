@@ -56,6 +56,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return view('dashboard');
     })->name('dashboard');
 
+    Route::post('/usuarios/check-uniqueness', [UsuarioController::class, 'checkUniqueness'])->name('usuarios.check-uniqueness');
+
     /**
      * IMPERSONACIÓN DE USUARIOS - DEBEN IR AQUÍ, NO EN EL GRUPO ADMIN
      * Estas rutas NO deben tener el middleware de impersonación
@@ -139,6 +141,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('recibir');
             Route::get('/imprimir', [LibroController::class, 'imprimir'])->name('imprimir');
     });
+
+
 
     /**
      * CAMBIO DE BASE DE DATOS

@@ -3,8 +3,6 @@
     <div class="container mx-auto px-4 py-8">
         <!-- Navegación y título -->
         <div class="mb-6">
-            
-
             <div class="flex items-center">
                 <div class="mr-4">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 p-2 rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -43,7 +41,7 @@
                 </h2>
             </div>
             
-            <form action="{{ route('plazos.update', $plazo->id_plazo) }}" method="POST" class="p-6">
+            <form action="{{ route('plazos.update', $plazo->id_plazo) }}" method="POST" class="p-6" id="editPlazoForm">
                 @csrf
                 @method('PUT')
                 
@@ -242,9 +240,12 @@
                 <!-- Botones de acción -->
                 <div class="flex flex-col-reverse sm:flex-row sm:justify-between sm:space-x-3">
                     <div class="mt-3 sm:mt-0">
-                        <a href="{{ route('plazos.show', $plazo->id_plazo) }}" class="btn-subtle">
+                        <button type="button" class="btn-subtle" id="cancel_button">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                             Cancelar
-                        </a>
+                        </button>
                     </div>
                     
                     <div class="flex space-x-3">
@@ -290,14 +291,40 @@
             const nombreInput = document.getElementById('nombre_plazo');
             const fechaInicioInput = document.getElementById('fecha_inicio');
             const fechaFinInput = document.getElementById('fecha_fin');
+            const descripcionInput = document.getElementById('descripcion');
             const fechaError = document.getElementById('fecha_error');
             const submitButton = document.getElementById('submit_button');
+            const cancelButton = document.getElementById('cancel_button');
+            const form = document.getElementById('editPlazoForm');
             
             // Referencias a elementos de previsualización
             const previewNombre = document.getElementById('preview_nombre');
             const previewPeriodo = document.getElementById('preview_periodo');
             const previewDuracion = document.getElementById('preview_duracion');
             const previewEstado = document.getElementById('preview_estado');
+            
+            // Estado original del formulario
+            const formOriginalState = {
+                nombre: nombreInput.value,
+                fechaInicio: fechaInicioInput.value,
+                fechaFin: fechaFinInput.value,
+                descripcion: descripcionInput.value
+            };
+            
+            let hasUnsavedChanges = false;
+            
+            // Función para verificar cambios
+            function checkForChanges() {
+                const currentState = {
+                    nombre: nombreInput.value,
+                    fechaInicio: fechaInicioInput.value,
+                    fechaFin: fechaFinInput.value,
+                    descripcion: descripcionInput.value
+                };
+                
+                hasUnsavedChanges = JSON.stringify(currentState) !== JSON.stringify(formOriginalState);
+                return hasUnsavedChanges;
+            }
             
             // Función para actualizar la vista previa
             function actualizarVistaPrevia() {
@@ -318,7 +345,7 @@
                     
                     // Cálculo de duración
                     const diffTime = Math.abs(fechaFin - fechaInicio);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir el día final
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
                     previewDuracion.textContent = `${diffDays} día${diffDays !== 1 ? 's' : ''}`;
                     
                     // Determinar estado
@@ -336,6 +363,9 @@
                     
                     previewEstado.innerHTML = estadoHTML;
                 }
+                
+                // Verificar cambios
+                checkForChanges();
             }
             
             // Validación de fechas
@@ -349,13 +379,16 @@
                         submitButton.disabled = true;
                         fechaFinInput.classList.add('border-red-300', 'dark:border-red-600');
                         fechaFinInput.classList.remove('border-gray-300', 'dark:border-gray-600');
+                        return false;
                     } else {
                         fechaError.classList.add('hidden');
                         submitButton.disabled = false;
                         fechaFinInput.classList.remove('border-red-300', 'dark:border-red-600');
                         fechaFinInput.classList.add('border-gray-300', 'dark:border-gray-600');
+                        return true;
                     }
                 }
+                return true;
             }
             
             // Eventos para actualizar vista previa
@@ -368,36 +401,142 @@
                 actualizarVistaPrevia();
                 validarFechas();
             });
+            descripcionInput.addEventListener('input', actualizarVistaPrevia);
             
-            // Detectar si hay cambios en el formulario
-            const formOriginalState = {
-                nombre: nombreInput.value,
-                fechaInicio: fechaInicioInput.value,
-                fechaFin: fechaFinInput.value,
-                descripcion: document.getElementById('descripcion').value
-            };
+            // Manejo del envío del formulario con confirmación SweetAlert
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validar fechas antes de continuar
+                if (!validarFechas()) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error en las fechas',
+                        text: 'Por favor, corrija los errores en las fechas antes de continuar.',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return;
+                }
+                
+                // Verificar si hay cambios
+                if (!checkForChanges()) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Sin cambios detectados',
+                        text: 'No se han realizado modificaciones en el plazo.',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return;
+                }
+                
+                // Mostrar resumen de cambios
+                let cambiosHTML = '<div class="text-left">';
+                
+                if (nombreInput.value !== formOriginalState.nombre) {
+                    cambiosHTML += `<p><strong>Nombre:</strong> "${formOriginalState.nombre}" → "${nombreInput.value}"</p>`;
+                }
+                
+                if (fechaInicioInput.value !== formOriginalState.fechaInicio) {
+                    const fechaOriginal = new Date(formOriginalState.fechaInicio).toLocaleDateString('es-ES');
+                    const fechaNueva = new Date(fechaInicioInput.value).toLocaleDateString('es-ES');
+                    cambiosHTML += `<p><strong>Fecha inicio:</strong> ${fechaOriginal} → ${fechaNueva}</p>`;
+                }
+                
+                if (fechaFinInput.value !== formOriginalState.fechaFin) {
+                    const fechaOriginal = new Date(formOriginalState.fechaFin).toLocaleDateString('es-ES');
+                    const fechaNueva = new Date(fechaFinInput.value).toLocaleDateString('es-ES');
+                    cambiosHTML += `<p><strong>Fecha fin:</strong> ${fechaOriginal} → ${fechaNueva}</p>`;
+                }
+                
+                if (descripcionInput.value !== formOriginalState.descripcion) {
+                    cambiosHTML += `<p><strong>Descripción:</strong> Modificada</p>`;
+                }
+                
+                cambiosHTML += '</div>';
+                
+                // Confirmación con SweetAlert
+                Swal.fire({
+                    title: '¿Confirmar cambios del plazo?',
+                    html: `
+                        <div class="text-sm text-gray-600 mb-4">
+                            Se aplicarán los siguientes cambios al plazo <strong>"${formOriginalState.nombre}"</strong>:
+                        </div>
+                        ${cambiosHTML}
+                    `,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3b82f6',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '<i class="fas fa-save mr-2"></i>Sí, guardar cambios',
+                    cancelButtonText: '<i class="fas fa-times mr-2"></i>Cancelar',
+                    customClass: {
+                        popup: 'swal-wide'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Mostrar indicador de carga
+                        Swal.fire({
+                            title: 'Guardando cambios...',
+                            text: 'Por favor, espere mientras se actualizan los datos.',
+                            icon: 'info',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            willOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                        
+                        // Enviar formulario
+                        hasUnsavedChanges = false;
+                        form.submit();
+                    }
+                });
+            });
             
-            function hayModificaciones() {
-                return (
-                    nombreInput.value !== formOriginalState.nombre ||
-                    fechaInicioInput.value !== formOriginalState.fechaInicio ||
-                    fechaFinInput.value !== formOriginalState.fechaFin ||
-                    document.getElementById('descripcion').value !== formOriginalState.descripcion
-                );
-            }
-            
-            // Confirmar antes de salir si hay cambios sin guardar
-            window.addEventListener('beforeunload', function(e) {
-                if (hayModificaciones()) {
-                    e.preventDefault();
-                    e.returnValue = ''; // Mensaje estándar del navegador
+            // Manejo del botón cancelar
+            cancelButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                if (checkForChanges()) {
+                    Swal.fire({
+                        title: '¿Descartar cambios?',
+                        text: 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir sin guardar?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#6b7280',
+                        confirmButtonText: '<i class="fas fa-trash mr-2"></i>Sí, descartar',
+                        cancelButtonText: '<i class="fas fa-arrow-left mr-2"></i>Continuar editando'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            hasUnsavedChanges = false;
+                            window.location.href = "{{ route('plazos.show', $plazo->id_plazo) }}";
+                        }
+                    });
+                } else {
+                    window.location.href = "{{ route('plazos.show', $plazo->id_plazo) }}";
                 }
             });
             
-            // Actualizar vista previa inicial
+            // Prevenir salida accidental con cambios no guardados
+            window.addEventListener('beforeunload', function(e) {
+                if (hasUnsavedChanges) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+            
+            // Inicialización
             actualizarVistaPrevia();
             validarFechas();
         });
     </script>
+    
+    <style>
+        .swal-wide {
+            width: 600px !important;
+        }
+    </style>
     @endpush
 </x-app-layout>

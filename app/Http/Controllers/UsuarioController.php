@@ -38,13 +38,11 @@ class UsuarioController extends Controller
         ->get();
 
     return view('usuarios.index', compact('usuarios', 'search'));
-}
-
-    public function show($id)
+}    public function show($id)
     {
         $usuario = Usuario::find($id);
         if (is_null($usuario)) {
-            return redirect()->route('usuarios.index')->with('error', 'Usuario not found');
+            return redirect()->route('usuarios.index')->with('error', 'Usuario no encontrado');
         }
         return view('usuarios.show', compact('usuario'));
     }
@@ -61,69 +59,102 @@ class UsuarioController extends Controller
     return view('usuarios.create', compact('despachos','titulaciones','roles'),compact('roles'));
     }
 
-    public function store(Request $request)
+public function store(Request $request)
 {    
+    
 
-    // Encriptar la contraseña
-    $data = $request->all();
-    $data['passwd'] = bcrypt($request->passwd);
+    try {
+        // Encriptar la contraseña
+        $data = $request->all();
+        $data['passwd'] = bcrypt($request->passwd);
 
-    // Crear el usuario
-    $usuario = Usuario::create($data);
-    $usuario->syncRoles($request->roles); // Asignar los roles al usuario
-    session()->flash('swal', [
-        'icon' => 'success',
-        'title' => 'Usuario añadido',
-        'text' => 'El usuario ha sido añadido exitosamente' 
-    ]);
+        // Crear el usuario
+        $usuario = Usuario::create($data);
+        $usuario->syncRoles($request->roles); // Asignar los roles al usuario
+        
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Usuario añadido',
+            'text' => 'El usuario ha sido añadido exitosamente' 
+        ]);
 
-    return redirect()->route('usuarios.index')->with('success', 'Usuario creado exitosamente');
-}
+        return redirect()->route('usuarios.index')->with('success', 'Usuario creado exitosamente');
+        
+    } catch (\Exception $e) {
+        Log::error('Error al crear usuario: ' . $e->getMessage());
+        
+        session()->flash('swal', [
+            'icon' => 'error',
+            'title' => 'Error al crear usuario',
+            'text' => 'Ocurrió un error inesperado. Por favor, inténtelo de nuevo.' 
+        ]);
+        
+        return back()->withInput()->with('error', 'Error al crear el usuario. Por favor, verifique los datos.');
+    }
+}  
 
-    public function edit($id)
+public function edit($id)
     {
         $usuario = Usuario::find($id);
         $despachos = Despacho::all();
         $roles = Role::all(); // Obtener todos los roles disponibles
         if (is_null($usuario)) {
-            return redirect()->route('usuarios.index')->with('error', 'Usuario not found');
+            return redirect()->route('usuarios.index')->with('error', 'Usuario no encontrado');
         }
         return view('usuarios.edit', compact('usuario', 'despachos', 'roles'));
+    }    
+    
+public function update(Request $request, $id)
+{
+    $usuario = Usuario::find($id);
+    if (is_null($usuario)) {
+        return redirect()->route('usuarios.index')->with('error', 'Usuario no encontrado');
     }
+            
 
-    public function update(Request $request, $id)
-    {
-        $usuario = Usuario::find($id);
-        if (is_null($usuario)) {
-            return redirect()->route('usuarios.index')->with('error', 'Usuario not found');
+    try {
+        $data = $request->except(['passwd', 'passwd_confirmation']);
+        
+        // Solo actualizar contraseña si se proporciona
+        if ($request->filled('passwd')) {
+            $data['passwd'] = bcrypt($request->passwd);
         }
         
-        $usuario->update($request->all());
-        if ($request->filled('passwd')) {
-            $usuario->update([
-                'passwd' => bcrypt($request->passwd),
-            ]);
-        }
+        $usuario->update($data);
 
         // Asignar los roles seleccionados
-    if ($request->has('roles')) {
-        $usuario->syncRoles($request->roles); // Sincronizar roles (remueve los anteriores y asigna los nuevos)
-    } else {
-        $usuario->syncRoles([]); // Si no se selecciona ninguno, se eliminan los roles existentes
+        if ($request->has('roles')) {
+            $usuario->syncRoles($request->roles);
+        } else {
+            $usuario->syncRoles([]);
+        }
+        
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Usuario actualizado',
+            'text' => 'El usuario ha sido actualizado exitosamente' 
+        ]);
+        
+        return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado exitosamente');
+        
+    } catch (\Exception $e) {
+        Log::error('Error al actualizar usuario: ' . $e->getMessage());
+        
+        session()->flash('swal', [
+            'icon' => 'error',
+            'title' => 'Error al actualizar usuario',
+            'text' => 'Ocurrió un error inesperado. Por favor, inténtelo de nuevo.' 
+        ]);
+        
+        return back()->withInput()->with('error', 'Error al actualizar el usuario.');
     }
-    session()->flash('swal', [
-        'icon' => 'success',
-        'title' => 'Usuario actualizado',
-        'text' => 'El usuario ha sido actualizado exitosamente' 
-    ]);
-        return redirect()->route('usuarios.index')->with('success', 'Usuario updated successfully');
-    }
+}
 
     public function destroy($id)
     {
         $usuario = Usuario::find($id);
         if (is_null($usuario)) {
-            return redirect()->route('usuarios.index')->with('error', 'Usuario not found');
+            return redirect()->route('usuarios.index')->with('error', 'Usuario no encontrado');
         }
         $usuario->delete();
         session()->flash('swal', [
@@ -131,11 +162,50 @@ class UsuarioController extends Controller
             'title' => 'Usuario eliminado',
             'text' => 'El usuario ha sido eliminado exitosamente' 
         ]);
-        return redirect()->route('usuarios.index')->with('success', 'Usuario deleted successfully');
+        return redirect()->route('usuarios.index')->with('success', 'Usuario eliminado exitosamente');
     }
 
     public function export()
     {
         return Excel::download(new ListaUsuariosExport, 'usuarios.xlsx');
     }
+
+public function checkUniqueness(Request $request)
+{
+    try {
+        $field = $request->input('field');
+        $value = $request->input('value');
+        $userId = $request->input('user_id'); // Para excluir en ediciones
+        
+        // Validar que el campo y valor existan
+        if (!$field || !$value) {
+            return response()->json(['exists' => false, 'error' => 'Campo o valor faltante']);
+        }
+        
+        // Validar que el campo sea uno de los permitidos
+        $allowedFields = ['login', 'correo', 'dni_pasaporte'];
+        if (!in_array($field, $allowedFields)) {
+            return response()->json(['exists' => false, 'error' => 'Campo no permitido']);
+        }
+        
+        $query = Usuario::where($field, $value);
+        
+        // Si estamos editando, excluir el usuario actual
+        if ($userId) {
+            $query->where('id_usuario', '!=', $userId);
+        }
+        
+        $exists = $query->exists();
+        
+        return response()->json([
+            'exists' => $exists,
+            'field' => $field,
+            'value' => $value
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error en checkUniqueness: ' . $e->getMessage());
+        return response()->json(['exists' => false, 'error' => 'Error del servidor']);
+    }
+}
 }

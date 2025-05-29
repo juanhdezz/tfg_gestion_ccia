@@ -15,11 +15,15 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use App\Models\Proyecto;
 use App\Models\Grupo; // Modelo para grupos de investigación
 use App\Models\Posgrado; // Modelo para programas de posgrado
 use App\Mail\Notification;
 use Illuminate\Support\Facades\Mail;
+use App\Traits\SolicitudLibroTrait; // Trait para lógica común de solicitudes de libros
+use App\Models\BaseModel; // Modelo base para manejar conexiones dinámicas
+
 
 
 class LibroController extends Controller
@@ -212,159 +216,194 @@ public function create()
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
-    {
-        // Validación básica de libro (común para todos los tipos)
-        $validatedLibro = $request->validate([
-            'titulo' => 'required|string|max:255',
-            'autor' => 'required|string|max:255',
-            'editorial' => 'required|string|max:255',
-            'isbn' => 'required|string|max:20',
-            'precio' => 'required|numeric|min:0',
-            'num_ejemplares' => 'required|integer|min:1',
-            'tipo_solicitud' => 'required|in:asignatura,proyecto,investigacion,posgrado,otros,grupo',
-            'justificacion' => 'required|string',
-        ]);
-        
-        try {
-            // Crear el libro (común para todos los tipos)
-            $libro = Libro::firstOrCreate(
-                ['isbn' => $request->isbn],
-                [
-                    'titulo' => $request->titulo,
-                    'autor' => $request->autor,
-                    'editorial' => $request->editorial,
-                    'year' => $request->year ?? date('Y'),
-                ]
-            );
-
-            // Procesar según el tipo de solicitud
-            switch ($request->tipo_solicitud) {
-                case 'asignatura':
-                    // Validación adicional para asignatura
-                    $request->validate([
-                        'id_asignatura' => 'required|exists:asignatura,id_asignatura'
-                        
-                    ]);
-                    
-                    // Crear solicitud para asignatura
-                    $solicitud = new LibroAsignatura();
-                    $solicitud->id_libro = $libro->id_libro;
-                    $solicitud->id_usuario = Auth::id();
-                    $solicitud->id_asignatura = $request->id_asignatura;
-                    $solicitud->precio = $request->precio;
-                    $solicitud->num_ejemplares = $request->num_ejemplares;
-                    $solicitud->estado = 'Pendiente Aceptación';
-                    $solicitud->justificacion = $request->justificacion;
-                    $solicitud->observaciones = $request->observaciones;
-                    $solicitud->fecha_solicitud = Carbon::now();
-                    //$solicitud->curso_academico = $request->curso_academico;
-                    $solicitud->save();
-                    
-                    $tipo = 'asignatura';
-                    break;
-                    
-                case 'proyecto':
-                    // Validación adicional para proyecto
-                    $request->validate([
-                        'id_proyecto' => 'required|exists:proyecto,id_proyecto',
-                    ]);
-                    
-                    // Crear solicitud para proyecto
-                    $solicitud = new LibroProyecto();
-                    $solicitud->id_libro = $libro->id_libro;
-                    $solicitud->id_usuario = Auth::id();
-                    $solicitud->id_proyecto = $request->id_proyecto;
-                    $solicitud->precio = $request->precio;
-                    $solicitud->num_ejemplares = $request->num_ejemplares;
-                    $solicitud->estado = 'Pendiente Aceptación';
-                    $solicitud->justificacion = $request->justificacion;
-                    $solicitud->observaciones = $request->observaciones;
-                    $solicitud->fecha_solicitud = Carbon::now();
-                    $solicitud->save();
-                    
-                    $tipo = 'proyecto';
-                    break;
-                
-                case 'grupo':
-                    // Validación adicional para grupo de investigación
-                    $request->validate([
-                        'id_grupo' => 'required',
-                    ]);
-                    
-                    // Crear solicitud para grupo de investigación
-                    $solicitud = new LibroGrupo();
-                    $solicitud->id_libro = $libro->id_libro;
-                    $solicitud->id_usuario = Auth::id();
-                    $solicitud->id_grupo = $request->id_grupo;
-                    $solicitud->precio = $request->precio;
-                    $solicitud->num_ejemplares = $request->num_ejemplares;
-                    $solicitud->estado = 'Pendiente Aceptación';
-                    $solicitud->justificacion = $request->justificacion;
-                    $solicitud->observaciones = $request->observaciones;
-                    $solicitud->fecha_solicitud = Carbon::now();
-                    $solicitud->save();
-                    
-                    $tipo = 'grupo';
-                    break;
-                
-                case 'posgrado':
-                    // Validación adicional para posgrado
-                    $request->validate([
-                        'id_posgrado' => 'required',
-                    ]);
-                    
-                    // Crear solicitud para posgrado
-                    $solicitud = new LibroPosgrado();
-                    $solicitud->id_libro = $libro->id_libro;
-                    $solicitud->id_usuario = Auth::id();
-                    $solicitud->id_posgrado = $request->id_posgrado;
-                    $solicitud->precio = $request->precio;
-                    $solicitud->num_ejemplares = $request->num_ejemplares;
-                    $solicitud->estado = 'Pendiente Aceptación';
-                    $solicitud->justificacion = $request->justificacion;
-                    $solicitud->observaciones = $request->observaciones;
-                    $solicitud->fecha_solicitud = Carbon::now();
-                    $solicitud->save();
-                    
-                    $tipo = 'posgrado';
-                    break;
-                
-                case 'otros':
-                    // Validación adicional para otros
-                    $request->validate([
-                        'descripcion_otros' => 'required|string',
-                    ]);
-                    
-                    // Crear solicitud para otros
-                    $solicitud = new LibroOtro();
-                    $solicitud->id_libro = $libro->id_libro;
-                    $solicitud->id_usuario = Auth::id();
-                    // $solicitud->descripcion = $request->descripcion_otros; // Este campo no existe en el modelo actual
-                    $solicitud->precio = $request->precio;
-                    $solicitud->num_ejemplares = $request->num_ejemplares;
-                    $solicitud->estado = 'Pendiente Aceptación';
-                    $solicitud->justificacion = $request->justificacion;
-                    $solicitud->observaciones = $request->observaciones;
-                    $solicitud->fecha_solicitud = Carbon::now();
-                    $solicitud->save();
-                    
-                    $tipo = 'otros';
-                    break;
-                    
-                default:
-                    return back()->withInput()->withErrors(['error' => 'Tipo de solicitud no válido']);
-            }
-
-            return redirect()->route('libros.index')
-                ->with('success', "Solicitud de libro con cargo a {$tipo} creada correctamente. Estado: Pendiente Aceptación");
-
-        } catch (\Exception $e) {
-            // Registra el error para poder depurarlo
-            Log::error('Error al guardar la solicitud de libro: ' . $e->getMessage());
-            return back()->withInput()->withErrors(['error' => 'Ha ocurrido un error al guardar la solicitud: ' . $e->getMessage()]);
+public function store(Request $request)
+{
+    // Validación básica de libro (común para todos los tipos)
+    $validatedLibro = $request->validate([
+        'titulo' => 'required|string|max:255',
+        'autor' => 'required|string|max:255',
+        'editorial' => 'required|string|max:255',
+        'isbn' => 'required|string|max:20',
+        'precio' => 'required|numeric|min:0',
+        'num_ejemplares' => 'required|integer|min:1',
+        'tipo_solicitud' => 'required|in:asignatura,proyecto,investigacion,posgrado,otros,grupo',
+        'justificacion' => 'required|string',
+    ]);
+    
+    try {
+        // Determinar la conexión de base de datos (solo para asignaturas)
+        $conexion = 'mysql'; // Por defecto
+        if ($request->tipo_solicitud === 'asignatura' && $request->curso_academico === 'mysql_proximo') {
+            $conexion = 'mysql_proximo';
         }
+        
+        // Usar DB facade para garantizar que se use la conexión correcta
+        $libroData = [
+            'isbn' => $request->isbn,
+            'titulo' => $request->titulo,
+            'autor' => $request->autor,
+            'editorial' => $request->editorial,
+            'edicion' => $request->edicion ?? null,
+            'year' => $request->year ?? date('Y'),
+            'num_paginas' => $request->num_paginas ?? null,
+            'portada' => $request->portada ?? null,
+            'website' => $request->website ?? null,
+        ];
+        
+        // Buscar libro existente en la conexión correcta
+        $libroExistente = DB::connection($conexion)
+            ->table('libro')
+            ->where('isbn', $request->isbn)
+            ->first();
+        
+        if ($libroExistente) {
+            $idLibro = $libroExistente->id_libro;
+        } else {
+            // Insertar nuevo libro en la conexión correcta
+            $idLibro = DB::connection($conexion)
+                ->table('libro')
+                ->insertGetId($libroData);
+        }
+        
+        // Crear el objeto libro para usar en las relaciones
+        $libro = new Libro();
+        $libro->setConnection($conexion);
+        $libro->id_libro = $idLibro;
+        $libro->fill($libroData);
+        $libro->exists = true; // Marcar como existente para evitar intentos de guardado
+        
+        // Procesar según el tipo de solicitud
+        switch ($request->tipo_solicitud) {
+            case 'asignatura':
+                // Validación adicional para asignatura
+                $request->validate([
+                    'id_asignatura' => 'required|exists:asignatura,id_asignatura'
+                ]);
+                
+                // Crear solicitud para asignatura en la BD correspondiente
+                $solicitud = new LibroAsignatura();
+                $solicitud->setConnection($conexion);
+                $solicitud->id_libro = $libro->id_libro;
+                $solicitud->id_usuario = Auth::id();
+                $solicitud->id_asignatura = $request->id_asignatura;
+                $solicitud->precio = $request->precio;
+                $solicitud->num_ejemplares = $request->num_ejemplares;
+                $solicitud->estado = 'Pendiente Aceptación';
+                $solicitud->justificacion = $request->justificacion;
+                $solicitud->observaciones = $request->observaciones;
+                $solicitud->fecha_solicitud = Carbon::now();
+                $solicitud->save();
+                
+                $tipo = 'asignatura';
+                $bdInfo = $conexion === 'mysql_proximo' ? ' (próximo curso académico)' : ' (curso académico actual)';
+                break;
+                
+            case 'proyecto':
+                // Validación adicional para proyecto
+                $request->validate([
+                    'id_proyecto' => 'required|exists:proyecto,id_proyecto',
+                ]);
+                
+                // Crear solicitud para proyecto (siempre en BD principal)
+                $solicitud = new LibroProyecto();
+                $solicitud->id_libro = $libro->id_libro;
+                $solicitud->id_usuario = Auth::id();
+                $solicitud->id_proyecto = $request->id_proyecto;
+                $solicitud->precio = $request->precio;
+                $solicitud->num_ejemplares = $request->num_ejemplares;
+                $solicitud->estado = 'Pendiente Aceptación';
+                $solicitud->justificacion = $request->justificacion;
+                $solicitud->observaciones = $request->observaciones;
+                $solicitud->fecha_solicitud = Carbon::now();
+                $solicitud->save();
+                
+                $tipo = 'proyecto';
+                $bdInfo = '';
+                break;
+            
+            case 'grupo':
+                // Validación adicional para grupo de investigación
+                $request->validate([
+                    'id_grupo' => 'required',
+                ]);
+                
+                // Crear solicitud para grupo de investigación (siempre en BD principal)
+                $solicitud = new LibroGrupo();
+                $solicitud->id_libro = $libro->id_libro;
+                $solicitud->id_usuario = Auth::id();
+                $solicitud->id_grupo = $request->id_grupo;
+                $solicitud->precio = $request->precio;
+                $solicitud->num_ejemplares = $request->num_ejemplares;
+                $solicitud->estado = 'Pendiente Aceptación';
+                $solicitud->justificacion = $request->justificacion;
+                $solicitud->observaciones = $request->observaciones;
+                $solicitud->fecha_solicitud = Carbon::now();
+                $solicitud->save();
+                
+                $tipo = 'grupo';
+                $bdInfo = '';
+                break;
+            
+            case 'posgrado':
+                // Validación adicional para posgrado
+                $request->validate([
+                    'id_posgrado' => 'required',
+                ]);
+                
+                // Crear solicitud para posgrado (siempre en BD principal)
+                $solicitud = new LibroPosgrado();
+                $solicitud->id_libro = $libro->id_libro;
+                $solicitud->id_usuario = Auth::id();
+                $solicitud->id_posgrado = $request->id_posgrado;
+                $solicitud->precio = $request->precio;
+                $solicitud->num_ejemplares = $request->num_ejemplares;
+                $solicitud->estado = 'Pendiente Aceptación';
+                $solicitud->justificacion = $request->justificacion;
+                $solicitud->observaciones = $request->observaciones;
+                $solicitud->fecha_solicitud = Carbon::now();
+                $solicitud->save();
+                
+                $tipo = 'posgrado';
+                $bdInfo = '';
+                break;
+            
+            case 'otros':
+                // Validación adicional para otros
+                $request->validate([
+                    'descripcion_otros' => 'required|string',
+                ]);
+                
+                // Crear solicitud para otros (siempre en BD principal)
+                $solicitud = new LibroOtro();
+                $solicitud->id_libro = $libro->id_libro;
+                $solicitud->id_usuario = Auth::id();
+                $solicitud->descripcion_otros = $request->descripcion_otros; // Agregar este campo que faltaba
+                $solicitud->precio = $request->precio;
+                $solicitud->num_ejemplares = $request->num_ejemplares;
+                $solicitud->estado = 'Pendiente Aceptación';
+                $solicitud->justificacion = $request->justificacion;
+                $solicitud->observaciones = $request->observaciones;
+                $solicitud->fecha_solicitud = Carbon::now();
+                $solicitud->save();
+                
+                $tipo = 'otros';
+                $bdInfo = '';
+                break;
+                
+            default:
+                return back()->withInput()->withErrors(['error' => 'Tipo de solicitud no válido']);
+        }
+        
+        return redirect()->route('libros.index')
+            ->with('success', "Solicitud de libro con cargo a {$tipo} creada correctamente{$bdInfo}. Estado: Pendiente Aceptación");
+            
+    } catch (\Exception $e) {
+        // Registra el error para poder depurarlo
+        Log::error('Error al guardar la solicitud de libro: ' . $e->getMessage());
+        Log::error('Stack trace: ' . $e->getTraceAsString());
+        return back()->withInput()->withErrors(['error' => 'Ha ocurrido un error al guardar la solicitud: ' . $e->getMessage()]);
     }
+}
 
     /**
      * Aprobar una solicitud de libro

@@ -1,6 +1,40 @@
 <!-- filepath: c:\xampp\htdocs\laravel\tfg_gestion_ccia\resources\views\libros\index.blade.php -->
 <x-app-layout>
     <div class="container mx-auto p-4">
+        <!-- Header con selector de BD para admin/secretario -->
+        @role('admin|secretario')
+            <div class="mb-6">
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-4 border border-blue-200 dark:border-gray-600 shadow-sm">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <!-- Información de gestión -->
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 1.79 4 4 4h8c0-2.21-1.79-4-4-4H8c-2.21 0-4-1.79-4-4zm0 0c0-2.21 1.79-4 4-4h8c2.21 0 4 1.79 4 4v10c0 2.21-1.79 4-4 4H8c-2.21 0-4-1.79-4-4V7z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Panel de Gestión</h2>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Curso académico activo del sistema</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Selector de base de datos -->
+                        <div class="lg:w-72">
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 shadow-sm">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    Base de Datos Activa
+                                </label>
+                                <x-database-selector />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endrole
         <h1 class="text-3xl font-bold mb-4 text-indigo-800 dark:text-indigo-300 border-b-2 border-indigo-500 pb-2">
             Gestión de Solicitudes de Libros
         </h1>

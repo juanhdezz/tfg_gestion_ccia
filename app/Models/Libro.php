@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
 
-class Libro extends Model
+
+class Libro extends BaseModel
 {
     protected $table = 'libro';
     protected $primaryKey = 'id_libro';

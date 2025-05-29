@@ -52,6 +52,15 @@
                     </div>
 
                     <div>
+                        <label for="year"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Año de publicación </label>
+                        <input type="number" name="year" id="year" value="{{ old('year') }}" 
+                            min="1900" max="{{ date('Y') + 1 }}" 
+                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder="Año de publicación del libro">
+                    </div>
+
+                    <div>
                         <label for="editorial"
                             class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Editorial <span
                                 class="text-red-600">*</span></label>
@@ -174,10 +183,10 @@
                                 <span class="text-red-600">*</span></label>
                             <select name="curso_academico" id="curso_academico"
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                <option value="2023-2024"
-                                    {{ old('curso_academico') == '2023-2024' ? 'selected' : '' }}>2023-2024</option>
-                                <option value="2024-2025"
-                                    {{ old('curso_academico') == '2024-2025' ? 'selected' : '' }}>2024-2025</option>
+                                <option value="mysql"
+                                    {{ old('curso_academico') == 'mysql' ? 'selected' : '' }}>2024-2025</option>
+                                <option value="mysql_proximo"
+                                    {{ old('curso_academico') == 'mysql_proximo' ? 'selected' : '' }}>2025-2026</option>
                             </select>
                         </div>
                     </div>

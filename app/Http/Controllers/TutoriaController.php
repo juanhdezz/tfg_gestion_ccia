@@ -64,12 +64,10 @@ class TutoriaController extends Controller
         $cuatrimestreActual = ($mes >= 9 || $mes <= 2) ? 1 : 2;
 
         // Obtener el cuatrimestre seleccionado (o usar el actual)
-        $cuatrimestreSeleccionado = $request->input('cuatrimestre', $cuatrimestreActual);
-
-        // Obtener el despacho seleccionado (o usar el del usuario actual si existe)
+        $cuatrimestreSeleccionado = $request->input('cuatrimestre', $cuatrimestreActual);        // Obtener el despacho seleccionado (o usar el del usuario actual si existe)
         $despachoSeleccionado = $request->input('despacho', Auth::user()->id_despacho ?? null);
 
-        $tutorias = collect(); // Esto hará que no se muestren tutorías preseleccionadas
+        $tutorias = collect(); // Inicializar como colección vacía
 
         // Obtener todos los despachos (para el selector)
         $despachos = Despacho::all();
@@ -86,23 +84,48 @@ class TutoriaController extends Controller
             $horas[] = [
                 'inicio' => $inicio,
                 'fin' => $fin
-            ];
-        }
+            ];        }
 
         // Definir los días de la semana
-        $diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        $diasSemana = [
+            'Lunes' => 'Lunes',
+            'Martes' => 'Martes', 
+            'Miércoles' => 'Miércoles',
+            'Jueves' => 'Jueves',
+            'Viernes' => 'Viernes'
+        ];
 
         // Verificar si estamos en próximo curso según la conexión actual
         $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
         
         // Verificar si estamos dentro del plazo para editar tutorías
-        $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);
-
-        // Si hay un despacho seleccionado, cargar las tutorías existentes
+        $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);        // Si hay un despacho seleccionado, cargar las tutorías existentes
         if ($despachoSeleccionado) {
             $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
                 ->where('cuatrimestre', $cuatrimestreSeleccionado)
                 ->get();
+                
+            // Formatear las tutorías para que coincidan con el formato de la vista
+            foreach ($tutorias as $tutoria) {
+                // Asegurar formato HH:MM para las horas
+                if (strlen($tutoria->inicio) > 5) {
+                    $tutoria->inicio = substr($tutoria->inicio, 0, 5);
+                }
+                if (strlen($tutoria->fin) > 5) {
+                    $tutoria->fin = substr($tutoria->fin, 0, 5);
+                }
+                // Normalizar el nombre del día
+                $tutoria->dia = ucfirst(strtolower(trim($tutoria->dia)));
+            }
+        }
+
+        // Calcular horas totales de las tutorías existentes
+        $horasTotales = 0;
+        if ($tutorias->count() > 0) {
+            foreach ($tutorias as $tutoria) {
+                // Cada slot de tutoría es de 30 minutos (0.5 horas)
+                $horasTotales += 0.5;
+            }
         }
 
         return view('tutorias.index', compact(
@@ -113,6 +136,7 @@ class TutoriaController extends Controller
             'cuatrimestreActual',
             'cuatrimestreSeleccionado',
             'despachoSeleccionado',
+            'horasTotales', // Nueva variable para mostrar las horas totales
             'dentroDePlazo', // Nueva variable para la vista
             'estaEnProximoCurso' // También enviamos esta información a la vista
         ));
@@ -131,10 +155,30 @@ class TutoriaController extends Controller
         $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
         
         // Verificar si estamos dentro del plazo para editar tutorías
-        $dentroDePlazo = $this->dentroDePlazo($cuatrimestre, $estaEnProximoCurso);
-
-        if (!$dentroDePlazo) {
+        $dentroDePlazo = $this->dentroDePlazo($cuatrimestre, $estaEnProximoCurso);        if (!$dentroDePlazo) {
             return redirect()->back()->with('error', 'No se pueden modificar las tutorías fuera del plazo establecido');
+        }
+
+        // Contar las horas totales seleccionadas (cada slot son 30 minutos = 0.5 horas)
+        $horasSeleccionadas = 0;
+        foreach ($tutoriasData as $dia => $horarios) {
+            foreach ($horarios as $inicio => $fines) {
+                foreach ($fines as $fin => $seleccionada) {
+                    if ($seleccionada == '1') {
+                        $horasSeleccionadas += 0.5;
+                    }
+                }
+            }
+        }
+
+        // Validar que no exceda las 6 horas (12 slots de 30 minutos)
+        if ($horasSeleccionadas > 6) {
+            return redirect()->back()->with('error', 'No puede seleccionar más de 6 horas de tutorías. Ha seleccionado ' . $horasSeleccionadas . ' horas.');
+        }
+
+        // Validar que tenga exactamente 6 horas
+        if ($horasSeleccionadas != 6) {
+            return redirect()->back()->with('error', 'Debe seleccionar exactamente 6 horas de tutorías. Ha seleccionado ' . $horasSeleccionadas . ' horas.');
         }
 
         // Primero, eliminar todas las tutorías existentes para este despacho y cuatrimestre

@@ -1,7 +1,32 @@
-<x-app-layout>
-    @if($dentroDePlazo)
+<x-app-layout>    <div class="container mx-auto p-4">
+        <!-- Información del contexto actual -->
+        <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="text-blue-800 dark:text-blue-200">
+                        <span class="font-medium">
+                            @if($estaEnProximoCurso)
+                                📅 Curso 25/26 - {{ $cuatrimestreSeleccionado == 1 ? 'Primer' : 'Segundo' }} Semestre
+                            @else
+                                📅 Curso 24/25 - {{ $cuatrimestreSeleccionado == 1 ? 'Primer' : 'Segundo' }} Semestre
+                            @endif
+                        </span>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                        <span class="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
+                        Plazo abierto para edición
+                    </span>
+                </div>
+                <a href="{{ route('tutorias.gestion') }}" 
+                   class="inline-flex items-center px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Cambiar Curso/Semestre
+                </a>
+            </div>
+        </div>
 
-    <div class="container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Editar Horario de
             Tutorías</h1>
 
@@ -71,14 +96,14 @@
             </div>
 
             <!-- Debug temporal - mostrar tutorías cargadas -->
-            @if($tutorias->count() > 0)
+            {{-- @if($tutorias->count() > 0)
             <div class="mb-4 p-4 bg-gray-100 border rounded text-sm">
                 <strong>Debug - Tutorías encontradas:</strong>
                 @foreach($tutorias as $tutoria)
                     <div>{{ $tutoria->dia }} {{ $tutoria->inicio }}-{{ $tutoria->fin }}</div>
                 @endforeach
             </div>
-            @endif
+            @endif --}}
 
             <!-- Tabla de horarios -->
             <div class="relative overflow-x-auto shadow-md sm:rounded-lg mb-6">
@@ -144,17 +169,8 @@
                 <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                     Guardar cambios
                 </button>
-            </div>
-        </form>
+            </div>        </form>
     </div>
-    @else
-    <div class="mt-5 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-        <strong>Aviso:</strong> No es posible modificar las tutorías en este momento. Los plazos para
-        {{ $estaEnProximoCurso ? 'el próximo curso' : 'el curso actual' }}
-        ({{ $cuatrimestreSeleccionado == 1 ? 'primer' : 'segundo' }} cuatrimestre)
-        están cerrados.        <a href="{{ route('plazos.index') }}" class="underline text-blue-600">Ver plazos disponibles</a>
-    </div>
-@endif
 
     @push('scripts')
         <script>

@@ -11,8 +11,7 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware) {
-        // Alias para middleware personalizado
+    ->withMiddleware(function (Middleware $middleware) {        // Alias para middleware personalizado
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'impersonate' => \App\Http\Middleware\ImpersonateMiddleware::class,
@@ -21,15 +20,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // Añadir DatabaseSwitcher al middleware web
         $middleware->web([
             \App\Http\Middleware\DatabaseSwitcher::class,
+            \App\Http\Middleware\RestoreDatabaseConnection::class,
             //\App\Http\Middleware\ImpersonateMiddleware::class,
-]);
+        ]);
 
-// Asegurar que el middleware de impersonación se ejecute ANTES que el de autenticación
-    $middleware->priority([
+        // Asegurar que el middleware de impersonación se ejecute ANTES que el de autenticación
+        $middleware->priority([
             \Illuminate\Session\Middleware\StartSession::class,
             \App\Http\Middleware\ImpersonateMiddleware::class,
             \Illuminate\Auth\Middleware\Authenticate::class,
             \App\Http\Middleware\DatabaseSwitcher::class,
+            \App\Http\Middleware\RestoreDatabaseConnection::class,
         ]);
 
         // Añadir el middleware de impersonación específicamente después de StartSession

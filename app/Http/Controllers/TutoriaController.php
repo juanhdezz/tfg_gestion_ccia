@@ -11,8 +11,7 @@ use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 class TutoriaController extends Controller
-{
-    /**
+{    /**
      * Verifica si estamos dentro del plazo para editar tutorías
      * 
      * @param int $cuatrimestre El cuatrimestre (1 o 2)
@@ -40,21 +39,34 @@ class TutoriaController extends Controller
             $nombrePlazo = $nombrePlazoBase;
         }
         
-        // Buscar el plazo correspondiente
-        $plazo = Plazo::where('nombre_plazo', 'LIKE', "%$nombrePlazo%")->first();
+        // IMPORTANTE: Los plazos del curso siguiente están en la BD del curso actual
+        // Siempre buscar en la conexión 'mysql' (curso actual)
+        $conexionOriginal = config('database.default');
+        config(['database.default' => 'mysql']);
         
-        if (!$plazo) {
-            return false; // No existe el plazo
+        try {
+            // Buscar el plazo correspondiente
+            $plazo = Plazo::where('nombre_plazo', 'LIKE', "%$nombrePlazo%")->first();
+            
+            if (!$plazo) {
+                config(['database.default' => $conexionOriginal]);
+                return false; // No existe el plazo
+            }
+            
+            $fechaInicio = Carbon::parse($plazo->fecha_inicio);
+            $fechaFin = Carbon::parse($plazo->fecha_fin);
+            
+            // Verificar si la fecha actual está dentro del rango del plazo
+            $resultado = $fechaActual->between($fechaInicio, $fechaFin);
+            
+            config(['database.default' => $conexionOriginal]);
+            return $resultado;
+            
+        } catch (\Exception $e) {
+            config(['database.default' => $conexionOriginal]);
+            return false;
         }
-        
-        $fechaInicio = Carbon::parse($plazo->fecha_inicio);
-        $fechaFin = Carbon::parse($plazo->fecha_fin);
-        
-        // Verificar si la fecha actual está dentro del rango del plazo
-        return $fechaActual->between($fechaInicio, $fechaFin);
-    }
-
-    /**
+    }    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -64,7 +76,20 @@ class TutoriaController extends Controller
         $cuatrimestreActual = ($mes >= 9 || $mes <= 2) ? 1 : 2;
 
         // Obtener el cuatrimestre seleccionado (o usar el actual)
-        $cuatrimestreSeleccionado = $request->input('cuatrimestre', $cuatrimestreActual);        // Obtener el despacho seleccionado (o usar el del usuario actual si existe)
+        $cuatrimestreSeleccionado = $request->input('cuatrimestre', $cuatrimestreActual);
+
+        // Verificar si estamos en próximo curso según la conexión actual
+        $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
+        
+        // Verificar si estamos dentro del plazo para editar tutorías
+        $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);
+
+        // Si no está dentro del plazo, redirigir al panel de gestión
+        if (!$dentroDePlazo) {
+            return redirect()->route('tutorias.gestion');
+        }
+
+        // Obtener el despacho seleccionado (o usar el del usuario actual si existe)
         $despachoSeleccionado = $request->input('despacho', Auth::user()->id_despacho ?? null);
 
         $tutorias = collect(); // Inicializar como colección vacía
@@ -93,13 +118,7 @@ class TutoriaController extends Controller
             'Miércoles' => 'Miércoles',
             'Jueves' => 'Jueves',
             'Viernes' => 'Viernes'
-        ];
-
-        // Verificar si estamos en próximo curso según la conexión actual
-        $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
-        
-        // Verificar si estamos dentro del plazo para editar tutorías
-        $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);        // Si hay un despacho seleccionado, cargar las tutorías existentes
+        ];// Si hay un despacho seleccionado, cargar las tutorías existentes
         if ($despachoSeleccionado) {
             $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
                 ->where('cuatrimestre', $cuatrimestreSeleccionado)
@@ -307,5 +326,157 @@ class TutoriaController extends Controller
         }
         
         return view('tutorias.plazos', compact('plazos'));
+    }    /**
+     * Vista principal de gestión de tutorías organizadas por curso académico y semestre
+     */
+    public function gestion()
+    {
+        // Calcular cursos académicos basándose en la fecha actual
+        $cursoActual = $this->calcularCursoAcademicoActual();
+        $cursoSiguiente = $this->calcularCursoAcademicoSiguiente();
+        
+        // Crear estructura de cursos y semestres
+        $cursosDisponibles = [
+            [
+                'conexion' => 'mysql',
+                'nombre_completo' => $cursoActual['nombre_completo'],
+                'nombre_corto' => $cursoActual['nombre_corto'],
+                'semestres' => [
+                    [
+                        'numero' => 1,
+                        'nombre' => 'Primer Semestre',
+                        'plazo_nombre' => 'CAMBIAR TUTORIAS PRIMER CUATRIMESTRE',
+                        'activo' => $this->dentroDePlazo(1, false),
+                        'ruta' => route('tutorias.index', ['cuatrimestre' => 1])
+                    ],
+                    [
+                        'numero' => 2,
+                        'nombre' => 'Segundo Semestre', 
+                        'plazo_nombre' => 'CAMBIAR TUTORIAS SEGUNDO CUATRIMESTRE',
+                        'activo' => $this->dentroDePlazo(2, false),
+                        'ruta' => route('tutorias.index', ['cuatrimestre' => 2])
+                    ]
+                ]
+            ],
+            [
+                'conexion' => 'mysql_proximo',
+                'nombre_completo' => $cursoSiguiente['nombre_completo'],
+                'nombre_corto' => $cursoSiguiente['nombre_corto'],
+                'semestres' => [
+                    [
+                        'numero' => 1,
+                        'nombre' => 'Primer Semestre',
+                        'plazo_nombre' => 'CAMBIAR TUTORIAS PRIMER CUATRIMESTRE CURSO SIGUIENTE',
+                        'activo' => $this->dentroDePlazo(1, true),
+                        'ruta' => route('tutorias.index', ['cuatrimestre' => 1])
+                    ],
+                    [
+                        'numero' => 2,
+                        'nombre' => 'Segundo Semestre',
+                        'plazo_nombre' => 'CAMBIAR TUTORIAS SEGUNDO CUATRIMESTRE CURSO SIGUIENTE', 
+                        'activo' => $this->dentroDePlazo(2, true),
+                        'ruta' => route('tutorias.index', ['cuatrimestre' => 2])
+                    ]
+                ]
+            ]
+        ];
+
+        // Obtener información adicional sobre plazos
+        $plazosInfo = $this->obtenerInformacionPlazos();
+        
+        return view('tutorias.gestion', compact('cursosDisponibles', 'plazosInfo'));
+    }    /**
+     * Calcular el curso académico actual basándose en la fecha
+     */
+    private function calcularCursoAcademicoActual()
+    {
+        $fechaActual = Carbon::now();
+        $mes = $fechaActual->month;
+        $anio = $fechaActual->year;
+        
+        // Si estamos entre enero y agosto, el curso académico comenzó el año anterior
+        if ($mes >= 1 && $mes <= 8) {
+            $anioInicio = $anio - 1;
+            $anioFin = $anio;
+        } else {
+            // Si estamos entre septiembre y diciembre, el curso académico comenzó este año
+            $anioInicio = $anio;
+            $anioFin = $anio + 1;
+        }
+        
+        $anioCorto = substr($anioInicio, -2);
+        $anioSiguienteCorto = substr($anioFin, -2);
+        
+        return [
+            'nombre_completo' => "Curso " . $anioInicio . "/" . $anioFin,
+            'nombre_corto' => $anioCorto . "/" . $anioSiguienteCorto,
+            'anio_inicio' => $anioInicio,
+            'anio_fin' => $anioFin
+        ];
+    }
+
+    /**
+     * Calcular el curso académico siguiente
+     */
+    private function calcularCursoAcademicoSiguiente()
+    {
+        $cursoActual = $this->calcularCursoAcademicoActual();
+        $anioInicio = $cursoActual['anio_inicio'] + 1;
+        $anioFin = $cursoActual['anio_fin'] + 1;
+        
+        $anioCorto = substr($anioInicio, -2);
+        $anioSiguienteCorto = substr($anioFin, -2);
+        
+        return [
+            'nombre_completo' => "Curso " . $anioInicio . "/" . $anioFin,
+            'nombre_corto' => $anioCorto . "/" . $anioSiguienteCorto,
+            'anio_inicio' => $anioInicio,
+            'anio_fin' => $anioFin
+        ];
+    }    /**
+     * Obtener información sobre los plazos de tutorías
+     */
+    private function obtenerInformacionPlazos()
+    {
+        $plazos = [];
+        
+        // Guardar la conexión original
+        $conexionOriginal = config('database.default');
+        
+        // IMPORTANTE: Todos los plazos (incluidos los del curso siguiente) están en la BD del curso actual
+        config(['database.default' => 'mysql']);
+        
+        try {
+            $plazosEncontrados = Plazo::where('nombre_plazo', 'LIKE', '%TUTORIAS%')
+                ->where('nombre_plazo', 'LIKE', '%CUATRIMESTRE%')
+                ->get();
+                
+            foreach ($plazosEncontrados as $plazo) {
+                $fechaActual = Carbon::now();
+                $fechaInicio = Carbon::parse($plazo->fecha_inicio);
+                $fechaFin = Carbon::parse($plazo->fecha_fin);
+                
+                // Determinar a qué conexión/curso pertenece según el nombre del plazo
+                $conexion = str_contains($plazo->nombre_plazo, 'CURSO SIGUIENTE') ? 'mysql_proximo' : 'mysql';
+                
+                $plazos[] = [
+                    'conexion' => $conexion,
+                    'nombre' => $plazo->nombre_plazo,
+                    'fecha_inicio' => $fechaInicio->format('d/m/Y'),
+                    'fecha_fin' => $fechaFin->format('d/m/Y'),
+                    'activo' => $fechaActual->between($fechaInicio, $fechaFin),
+                    'dias_restantes' => $fechaActual->lt($fechaInicio) ? 
+                        $fechaActual->diffInDays($fechaInicio) : 
+                        ($fechaActual->lte($fechaFin) ? $fechaActual->diffInDays($fechaFin) : 0)
+                ];
+            }
+        } catch (\Exception $e) {
+            // Ignorar errores de conexión
+        }
+        
+        // Restaurar conexión original
+        config(['database.default' => $conexionOriginal]);
+        
+        return $plazos;
     }
 }

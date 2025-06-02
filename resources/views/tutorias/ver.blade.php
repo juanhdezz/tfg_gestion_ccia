@@ -1,10 +1,54 @@
-<x-app-layout>
-    <div class="container mx-auto p-4">
+<x-app-layout>    <div class="container mx-auto p-4">
+        <!-- Información del contexto actual -->
+        <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="text-blue-800 dark:text-blue-200">
+                        <span class="font-medium">
+                            @if($estaEnProximoCurso)
+                                📅 Curso 25/26 - {{ $cuatrimestreSeleccionado == 1 ? 'Primer' : 'Segundo' }} Semestre
+                            @else
+                                📅 Curso 24/25 - {{ $cuatrimestreSeleccionado == 1 ? 'Primer' : 'Segundo' }} Semestre
+                            @endif
+                        </span>
+                    </div>
+                    @if($dentroDePlazo)
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                            <span class="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
+                            Plazo abierto
+                        </span>
+                    @else
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            Solo consulta
+                        </span>
+                    @endif
+                </div>
+                <div class="flex space-x-2">
+                    @if($dentroDePlazo)
+                        <a href="{{ route('tutorias.index', ['cuatrimestre' => $cuatrimestreSeleccionado, 'despacho' => $despachoSeleccionado]) }}" 
+                           class="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Editar
+                        </a>
+                    @endif
+                    <a href="{{ route('tutorias.gestion') }}" 
+                       class="inline-flex items-center px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm transition-colors">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Cambiar Curso/Semestre
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Visualización de
             Tutorías</h1>
 
         <!-- Debug temporal -->
-        <div class="p-4 mb-4 bg-gray-100 rounded dark:bg-gray-800">
+        {{-- <div class="p-4 mb-4 bg-gray-100 rounded dark:bg-gray-800">
             <p><strong>Despacho seleccionado:</strong> {{ $despachoSeleccionado }}</p>
             <p><strong>Cuatrimestre:</strong> {{ $cuatrimestreSeleccionado }}</p>
             <p><strong>Total tutorías encontradas:</strong> {{ $tutorias->count() }}</p>
@@ -19,7 +63,7 @@
             @else
                 <p class="text-red-500">No se encontraron tutorías para este despacho y cuatrimestre.</p>
             @endif
-        </div>
+        </div> --}}
 
         <!-- Selectores -->
         <div class="flex flex-wrap gap-4 mb-6">

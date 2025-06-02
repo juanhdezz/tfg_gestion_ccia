@@ -80,17 +80,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return view('departamento');
     })->name('departamento');
 
-
-
     /**
      * TUTORÍAS
      */
     Route::prefix('tutorias')->name('tutorias.')->group(function () {
+        Route::get('/gestion', [TutoriaController::class, 'gestion'])->name('gestion');
         Route::get('/', [TutoriaController::class, 'index'])->name('index');
         Route::post('/', [TutoriaController::class, 'store'])->name('store');
         Route::delete('/{tutoria}', [TutoriaController::class, 'destroy'])->name('destroy');
         Route::post('/actualizar', [TutoriaController::class, 'actualizar'])->name('actualizar');
         Route::get('/ver', [TutoriaController::class, 'verTutorias'])->name('ver');
+        Route::get('/plazos', [TutoriaController::class, 'plazos'])->name('plazos');
     });
 
     /**
@@ -145,12 +145,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/imprimir', [LibroController::class, 'imprimir'])->name('imprimir');
     });
 
-
-
     /**
      * CAMBIO DE BASE DE DATOS
      */
     Route::post('/cambiar-base-datos', [DatabaseController::class, 'cambiarBaseDatos'])->name('cambiar.base.datos');
+    Route::post('/restaurar-base-datos', [DatabaseController::class, 'restaurarBaseDatos'])->name('restaurar.base.datos');
 
     /**
      * REASIGNACIÓN DE GRUPOS

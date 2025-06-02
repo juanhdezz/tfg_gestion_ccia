@@ -19,6 +19,11 @@ class AsignaturaController extends Controller
                 return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
             })
             ->where('estado', 'Activa')
+            ->join('titulacion', 'asignatura.id_titulacion', '=', 'titulacion.id_titulacion')
+            ->orderByRaw("CASE WHEN titulacion.nombre_titulacion LIKE 'Máster%' THEN 1 ELSE 0 END")
+            ->orderBy('titulacion.nombre_titulacion')
+            ->orderBy('asignatura.nombre_asignatura')
+            ->select('asignatura.*', 'titulacion.nombre_titulacion')
             ->get();
 
         $asignaturasExtintas = Asignatura::with(['titulacion', 'coordinador'])
@@ -26,6 +31,11 @@ class AsignaturaController extends Controller
                 return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
             })
             ->where('estado',"!=" ,'Activa')
+            ->join('titulacion', 'asignatura.id_titulacion', '=', 'titulacion.id_titulacion')
+            ->orderByRaw("CASE WHEN titulacion.nombre_titulacion LIKE 'Máster%' THEN 1 ELSE 0 END")
+            ->orderBy('titulacion.nombre_titulacion')
+            ->orderBy('asignatura.nombre_asignatura')
+            ->select('asignatura.*', 'titulacion.nombre_titulacion')
             ->get();
 
         return view('asignaturas.index', compact('asignaturas', 'asignaturasExtintas'));
@@ -49,7 +59,9 @@ class AsignaturaController extends Controller
         return view('asignaturas.show', compact('asignatura', 'distribucionGrupos'));
     }    public function create()
     {
-        $titulaciones = Titulacion::all();
+        $titulaciones = Titulacion::orderByRaw("CASE WHEN nombre_titulacion LIKE 'Máster%' THEN 1 ELSE 0 END")
+            ->orderBy('nombre_titulacion')
+            ->get();
         $usuarios = Usuario::orderBy('apellidos', 'asc')->orderBy('nombre', 'asc')->get();
         return view('asignaturas.create', compact('titulaciones', 'usuarios'));
     }
@@ -151,7 +163,9 @@ class AsignaturaController extends Controller
     }
 }    public function edit($id)
     {
-        $titulaciones = Titulacion::all();
+        $titulaciones = Titulacion::orderByRaw("CASE WHEN nombre_titulacion LIKE 'Máster%' THEN 1 ELSE 0 END")
+            ->orderBy('nombre_titulacion')
+            ->get();
         $usuarios = Usuario::orderBy('apellidos', 'asc')->orderBy('nombre', 'asc')->get();
         $asignatura = Asignatura::with('coordinador')->find($id);
         
@@ -226,15 +240,17 @@ class AsignaturaController extends Controller
         ]);
 
         return redirect()->route('asignaturas.index')->with('success', 'Asignatura eliminada exitosamente');
-    }
-
-    public function grupos(Request $request)
+    }    public function grupos(Request $request)
     {
         $search = $request->input('search');        $asignaturas = Asignatura::with(['titulacion', 'coordinador'])
             ->when($search, function ($query, $search) {
                 return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
             })
             ->where('estado', 'Activa')
+            ->join('titulacion', 'asignatura.id_titulacion', '=', 'titulacion.id_titulacion')
+            ->orderByRaw("CASE WHEN titulacion.nombre_titulacion LIKE 'Máster%' THEN 1 ELSE 0 END")
+            ->orderBy('asignatura.nombre_asignatura')
+            ->select('asignatura.*', 'titulacion.nombre_titulacion')
             ->get();
 
         // Para cada asignatura, obtener la distribución de grupos
@@ -478,16 +494,17 @@ public function eliminarEquivalencia(Request $request)
         $equivalenciasActuales = $asignatura->todasLasEquivalencias();
         
         return view('asignaturas.equivalencias', compact('asignatura', 'asignaturas', 'equivalenciasActuales'));
-    }
-
-    public function listarEquivalencias()
+    }    public function listarEquivalencias()
     {
         // Consulta para obtener todas las equivalencias únicas
         $equivalencias = DB::table('asignaturas_equivalentes')
             ->join('asignatura as a1', 'asignatura_id', '=', 'a1.id_asignatura')
             ->join('asignatura as a2', 'equivalente_id', '=', 'a2.id_asignatura')
+            ->join('titulacion as t1', 'a1.id_titulacion', '=', 't1.id_titulacion')
             ->select('a1.id_asignatura', 'a1.nombre_asignatura as asignatura1', 
-                    'a2.id_asignatura as id_equivalente', 'a2.nombre_asignatura as asignatura2')
+                    'a2.id_asignatura as id_equivalente', 'a2.nombre_asignatura as asignatura2',
+                    't1.nombre_titulacion')
+            ->orderByRaw("CASE WHEN t1.nombre_titulacion LIKE 'Máster%' THEN 1 ELSE 0 END")
             ->orderBy('a1.nombre_asignatura')
             ->get();
         

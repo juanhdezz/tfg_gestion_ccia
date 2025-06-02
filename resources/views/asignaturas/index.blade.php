@@ -1,8 +1,13 @@
 <!-- filepath: /c:/xampp/htdocs/laravel/tfg_gestion_ccia/resources/views/asignaturas/index.blade.php -->
-<x-app-layout>
-    <div class="container mx-auto p-4">
+<x-app-layout>    <div class="container mx-auto p-4">
         <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Gestión de
-            Asignaturas</h1>
+            Asignaturas</h1>        <!-- Información del ordenamiento -->
+        <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-200 dark:border-blue-700">
+            <p class="text-sm text-blue-800 dark:text-blue-200">
+                <strong>📊 Ordenamiento:</strong> Las asignaturas se muestran agrupadas por tipo: primero 📚 <strong>Grados</strong> (agrupados por titulación), luego 🎓 <strong>Másteres</strong>. 
+                Dentro de cada titulación están ordenadas alfabéticamente por nombre de asignatura.
+            </p>
+        </div>
 
         <!-- Formulario de búsqueda -->
         <form method="GET" action="{{ route('asignaturas.index') }}" class="mb-4">
@@ -41,11 +46,64 @@
                         <th scope="col" class="px-6 py-3">Total Grupos Práctica</th>
                         <th scope="col" class="px-6 py-3">Acciones</th>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach ($asignaturas as $asignatura)
-                        <tr
-                            class="border-b dark:border-gray-700 border-gray-200 {{ $asignatura->estado == 'Extinta' ? 'bg-gray-900 dark:bg-gray-800' : 'odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800' }}">
+                </thead>                <tbody>
+                    @php
+                        $currentTitulationType = null;
+                        $currentTitulacion = null;
+                        $grados = $asignaturas->filter(function($asignatura) {
+                            return !str_starts_with($asignatura->titulacion->nombre_titulacion ?? '', 'Máster');
+                        });
+                        $masters = $asignaturas->filter(function($asignatura) {
+                            return str_starts_with($asignatura->titulacion->nombre_titulacion ?? '', 'Máster');
+                        });
+                        $ordenedAsignaturas = $grados->concat($masters);
+                    @endphp
+                    
+                    @foreach ($ordenedAsignaturas as $index => $asignatura)
+                        @php
+                            $isMaster = str_starts_with($asignatura->titulacion->nombre_titulacion ?? '', 'Máster');
+                            $newTitulationType = $isMaster ? 'Máster' : 'grado';
+                            $titulacionName = $asignatura->titulacion->nombre_titulacion ?? '';
+                        @endphp
+                        
+                        {{-- Mostrar separador visual cuando cambiamos de grados a másteres --}}
+                        @if ($currentTitulationType !== $newTitulationType && $currentTitulationType !== null)
+                            <tr class="bg-blue-100 dark:bg-blue-900">
+                                <td colspan="12" class="px-6 py-3 text-center font-bold text-blue-800 dark:text-blue-200">
+                                    🎓 MÁSTERES
+                                </td>
+                            </tr>
+                        @elseif ($currentTitulationType === null && !$isMaster)
+                            <tr class="bg-green-100 dark:bg-green-900">
+                                <td colspan="12" class="px-6 py-3 text-center font-bold text-green-800 dark:text-green-200">
+                                    📚 GRADOS
+                                </td>
+                            </tr>
+                        @elseif ($currentTitulationType === null && $isMaster)
+                            <tr class="bg-blue-100 dark:bg-blue-900">
+                                <td colspan="12" class="px-6 py-3 text-center font-bold text-blue-800 dark:text-blue-200">
+                                    🎓 MÁSTERES
+                                </td>
+                            </tr>
+                        @endif
+                        
+                        {{-- Mostrar separador por titulación dentro de grados --}}
+                        @if (!$isMaster && $currentTitulacion !== $titulacionName)
+                            <tr class="bg-yellow-50 dark:bg-yellow-900">
+                                <td colspan="12" class="px-6 py-2 text-left font-semibold text-yellow-800 dark:text-yellow-200 border-l-4 border-yellow-500">
+                                    📖 {{ $titulacionName }}
+                                </td>
+                            </tr>
+                        @endif
+                        
+                        @php 
+                            $currentTitulationType = $newTitulationType;
+                            if (!$isMaster) {
+                                $currentTitulacion = $titulacionName;
+                            }
+                        @endphp
+                        
+                        <tr class="border-b dark:border-gray-700 border-gray-200 {{ $asignatura->estado == 'Extinta' ? 'bg-gray-900 dark:bg-gray-800' : 'odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800' }}">
                             <td class="px-6 py-4">
                                 {{ $asignatura->estado }}
                             </td>
@@ -124,9 +182,63 @@
                         <th scope="col" class="px-6 py-3">Total Grupos Práctica</th>
                         <th scope="col" class="px-6 py-3">Acciones</th>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach ($asignaturasExtintas as $asignatura)
+                </thead>                <tbody>
+                    @php
+                        $currentTitulationTypeExtintas = null;
+                        $currentTitulacionExtintas = null;
+                        $gradosExtintas = $asignaturasExtintas->filter(function($asignatura) {
+                            return !str_starts_with($asignatura->titulacion->nombre_titulacion ?? '', 'Máster');
+                        });
+                        $mastersExtintas = $asignaturasExtintas->filter(function($asignatura) {
+                            return str_starts_with($asignatura->titulacion->nombre_titulacion ?? '', 'Máster');
+                        });
+                        $ordenedAsignaturasExtintas = $gradosExtintas->concat($mastersExtintas);
+                    @endphp
+                    
+                    @foreach ($ordenedAsignaturasExtintas as $index => $asignatura)
+                        @php
+                            $isMasterExtinta = str_starts_with($asignatura->titulacion->nombre_titulacion ?? '', 'Máster');
+                            $newTitulationTypeExtinta = $isMasterExtinta ? 'Máster' : 'grado';
+                            $titulacionNameExtinta = $asignatura->titulacion->nombre_titulacion ?? '';
+                        @endphp
+                        
+                        {{-- Mostrar separador visual cuando cambiamos de grados a másteres --}}
+                        @if ($currentTitulationTypeExtintas !== $newTitulationTypeExtinta && $currentTitulationTypeExtintas !== null)
+                            <tr class="bg-blue-100 dark:bg-blue-900">
+                                <td colspan="12" class="px-6 py-3 text-center font-bold text-blue-800 dark:text-blue-200">
+                                    🎓 MÁSTERES EXTINTOS
+                                </td>
+                            </tr>
+                        @elseif ($currentTitulationTypeExtintas === null && !$isMasterExtinta)
+                            <tr class="bg-green-100 dark:bg-green-900">
+                                <td colspan="12" class="px-6 py-3 text-center font-bold text-green-800 dark:text-green-200">
+                                    📚 GRADOS EXTINTOS
+                                </td>
+                            </tr>
+                        @elseif ($currentTitulationTypeExtintas === null && $isMasterExtinta)
+                            <tr class="bg-blue-100 dark:bg-blue-900">
+                                <td colspan="12" class="px-6 py-3 text-center font-bold text-blue-800 dark:text-blue-200">
+                                    🎓 MÁSTERES EXTINTOS
+                                </td>
+                            </tr>
+                        @endif
+                        
+                        {{-- Mostrar separador por titulación dentro de grados extintos --}}
+                        @if (!$isMasterExtinta && $currentTitulacionExtintas !== $titulacionNameExtinta)
+                            <tr class="bg-yellow-50 dark:bg-yellow-900">
+                                <td colspan="12" class="px-6 py-2 text-left font-semibold text-yellow-800 dark:text-yellow-200 border-l-4 border-yellow-500">
+                                    📖 {{ $titulacionNameExtinta }}
+                                </td>
+                            </tr>
+                        @endif
+                        
+                        @php 
+                            $currentTitulationTypeExtintas = $newTitulationTypeExtinta;
+                            if (!$isMasterExtinta) {
+                                $currentTitulacionExtintas = $titulacionNameExtinta;
+                            }
+                        @endphp
+                        
                         <tr class="border-b dark:border-gray-700 border-gray-200 bg-gray-900 dark:bg-gray-800">
                             <td class="px-6 py-4">
                                 {{ $asignatura->estado }}

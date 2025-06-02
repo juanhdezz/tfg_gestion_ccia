@@ -19,8 +19,7 @@ class UsuarioAsignaturaController extends Controller
 
     // Obtener todas las asignaciones con sus relaciones
     $asignaciones = UsuarioAsignatura::with(['usuario', 'asignatura.titulacion'])->get();
-    
-    // Obtener todas las titulaciones con sus asignaturas y grupos
+      // Obtener todas las titulaciones con sus asignaturas y grupos ordenadas correctamente
     $titulaciones = Titulacion::with(['asignaturas' => function($query) use ($search) {
         $query->where('estado', '!=', 'Extinta')
               ->when($search, function($query) use ($search) {
@@ -28,7 +27,10 @@ class UsuarioAsignaturaController extends Controller
                   return $query->where('nombre_asignatura', 'LIKE', "%{$search}%")
                               ->orWhere('id_asignatura', 'LIKE', "%{$search}%");
               })
-              ->orderBy('nombre_asignatura');
+              ->join('titulacion', 'asignatura.id_titulacion', '=', 'titulacion.id_titulacion')
+              ->orderByRaw("CASE WHEN titulacion.nombre_titulacion LIKE 'Master%' THEN 1 ELSE 0 END")
+              ->orderBy('asignatura.nombre_asignatura')
+              ->select('asignatura.*');
     }, 'asignaturas.grupos'])
     ->when($search, function($query) use ($search) {
         // Filtrar titulaciones que tienen al menos una asignatura que coincide con la búsqueda
@@ -47,10 +49,13 @@ public function create($id_asignatura = null, $tipo = null, $grupo = null)
     // Obtener usuarios ordenados por apellido
     $usuarios = Usuario::orderBy('apellidos')->orderBy('nombre')->get();
     
-    // Obtener asignaturas con sus grupos
+    // Obtener asignaturas con sus grupos ordenadas según el patrón: grados primero, luego másteres, alfabéticamente dentro de cada grupo
     $asignaturas = Asignatura::with('grupos')
                    ->where('estado', '!=', 'Extinta')
-                   ->orderBy('nombre_asignatura')
+                   ->join('titulacion', 'asignatura.id_titulacion', '=', 'titulacion.id_titulacion')
+                   ->orderByRaw("CASE WHEN titulacion.nombre_titulacion LIKE 'Master%' THEN 1 ELSE 0 END")
+                   ->orderBy('asignatura.nombre_asignatura')
+                   ->select('asignatura.*')
                    ->get();
     
     // Si se proporcionaron parámetros, preparar preselección

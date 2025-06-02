@@ -255,8 +255,7 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
                 }
             });
         }
-        
-        // Filtrar por titulaciones usando la relación cargada
+          // Filtrar por titulaciones usando la relación cargada
         if ($perfil->titulaciones && $perfil->titulaciones->isNotEmpty()) {
             $titulacionesIds = $perfil->titulaciones->pluck('id_titulacion')->toArray();
             $query->whereIn('asignatura.id_titulacion', $titulacionesIds);
@@ -275,7 +274,7 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
             'asignatura.cuatrimestre',
             'titulacion.nombre_titulacion'
         )
-        ->orderBy('titulacion.nombre_titulacion')
+        ->orderByRaw("CASE WHEN titulacion.nombre_titulacion LIKE 'Master%' THEN 1 ELSE 0 END")
         ->orderBy('asignatura.nombre_asignatura')
         ->get();
         
@@ -753,8 +752,7 @@ if (!$usuario->categoriaDocente) {
             if (!empty($titulacionesIds)) {
                 $query->whereIn('asignatura.id_titulacion', $titulacionesIds);
             }
-            
-            // Obtener los resultados
+              // Obtener los resultados
             $asignaturas = $query->select(
                 'asignatura.nombre_asignatura',
                 'asignatura.fraccionable',
@@ -767,7 +765,7 @@ if (!$usuario->categoriaDocente) {
                 'asignatura.cuatrimestre',
                 'titulacion.nombre_titulacion'
             )
-            ->orderBy('titulacion.nombre_titulacion')
+            ->orderByRaw("CASE WHEN titulacion.nombre_titulacion LIKE 'Master%' THEN 1 ELSE 0 END")
             ->orderBy('asignatura.nombre_asignatura')
             ->get();
             

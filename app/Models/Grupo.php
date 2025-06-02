@@ -39,14 +39,96 @@ class Grupo extends BaseModel
         'web',
         'logo',
         'publicaciones'
-    ];
-
-    /**
+    ];    /**
      * Obtiene el usuario responsable del grupo.
      */
     public function responsable()
     {
         return $this->belongsTo(Usuario::class, 'id_responsable', 'id_usuario');
+    }
+
+    /**
+     * Relación con miembros.
+     * Un grupo puede tener múltiples miembros.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function miembros()
+    {
+        return $this->hasMany(Miembro::class, 'id_grupo', 'id_grupo');
+    }
+
+    /**
+     * Relación con Usuario a través de la tabla miembro.
+     * Un grupo puede tener múltiples usuarios.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function usuarios()
+    {
+        return $this->belongsToMany(
+            Usuario::class,
+            'miembro',
+            'id_grupo',
+            'id_usuario',
+            'id_grupo',
+            'id_usuario'
+        )->withPivot([
+            'id_categoria',
+            'web',
+            'numero_orden',
+            'tramos_investigacion',
+            'anio_ultimo_tramo',
+            'fecha_entrada',
+            'n_orden_becario'
+        ]);
+    }
+
+    /**
+     * Relación con CategoriaDocente a través de la tabla miembro.
+     * Un grupo puede tener múltiples categorías docentes.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function categoriasDocentes()
+    {
+        return $this->belongsToMany(
+            CategoriaDocente::class,
+            'miembro',
+            'id_grupo',
+            'id_categoria',
+            'id_grupo',
+            'id_categoria'
+        )->withPivot([
+            'id_usuario',
+            'web',
+            'numero_orden',
+            'tramos_investigacion',
+            'anio_ultimo_tramo',
+            'fecha_entrada',
+            'n_orden_becario'
+        ]);
+    }
+
+    /**
+     * Método para obtener miembros ordenados por número de orden.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function miembrosOrdenados()
+    {
+        return $this->miembros()->ordenadoPorNumero()->get();
+    }
+
+    /**
+     * Método para obtener miembros de una categoría específica.
+     *
+     * @param int $categoriaId
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function miembrosPorCategoria($categoriaId)
+    {
+        return $this->miembros()->porCategoria($categoriaId)->get();
     }
 
 

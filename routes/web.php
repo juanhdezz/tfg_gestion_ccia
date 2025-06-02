@@ -23,6 +23,7 @@ use App\Http\Controllers\ConfiguracionOrdenacionController;
 use App\Http\Controllers\LibroAsignaturaController;
 use App\Http\Controllers\ProyectoController;
 use App\Http\Controllers\ImpersonateController;
+use App\Http\Controllers\MiembroController;
 
 /**
  * ====================================
@@ -178,8 +179,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     //     Route::post('/start/{user}', [ImpersonateController::class, 'start'])->name('start');
         
     // });
-
-    /**
+        /**
      * GESTIÓN DE USUARIOS
      */
     Route::prefix('gestion-usuarios')->name('usuarios.')->group(function () {
@@ -187,10 +187,37 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/create', [UsuarioController::class, 'create'])->name('create');
         Route::post('/', [UsuarioController::class, 'store'])->name('store');
         Route::get('/exportar-usuarios', [UsuarioController::class, 'export'])->name('export');
+          // Nuevas rutas para gestión de categorías y orden
+        Route::get('/gestion-categorias', [UsuarioController::class, 'gestionCategorias'])->name('gestion-categorias');
+        Route::post('/asignar-categoria', [UsuarioController::class, 'asignarCategoria'])->name('asignar-categoria');
+        Route::post('/remover-categoria', [UsuarioController::class, 'removerCategoria'])->name('remover-categoria');
+        
+        Route::get('/seleccionar-grupo-orden', [UsuarioController::class, 'seleccionarGrupoOrden'])->name('seleccionar-grupo-orden');
+        Route::get('/gestion-orden', [UsuarioController::class, 'gestionOrdenSeleccion'])->name('gestion-orden');
+        Route::post('/actualizar-orden', [UsuarioController::class, 'actualizarOrdenSeleccion'])->name('actualizar-orden');
+        Route::get('/miembros-ajax', [UsuarioController::class, 'getMiembrosPorGrupoCategoria'])->name('miembros-ajax');
+        
         Route::get('/{id}', [UsuarioController::class, 'show'])->name('show');
-        Route::get('/{id}/edit', [UsuarioController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [UsuarioController::class, 'update'])->name('update');
+        Route::get('/{id}/categorias', [UsuarioController::class, 'verCategorias'])->name('ver-categorias');
+        Route::get('/{id}/edit', [UsuarioController::class, 'edit'])->name('edit');        Route::put('/{id}', [UsuarioController::class, 'update'])->name('update');
         Route::delete('/{id}', [UsuarioController::class, 'destroy'])->name('destroy');
+    });
+
+    /**
+     * GESTIÓN DE MIEMBROS
+     */
+    Route::prefix('gestion-miembros')->name('miembros.')->group(function () {
+        Route::get('/', [MiembroController::class, 'index'])->name('index');
+        Route::get('/create', [MiembroController::class, 'create'])->name('create');
+        Route::post('/', [MiembroController::class, 'store'])->name('store');
+        Route::get('/{miembro}', [MiembroController::class, 'show'])->name('show');
+        Route::get('/{miembro}/edit', [MiembroController::class, 'edit'])->name('edit');
+        Route::put('/{miembro}', [MiembroController::class, 'update'])->name('update');
+        Route::delete('/{miembro}', [MiembroController::class, 'destroy'])->name('destroy');
+        
+        // Rutas para gestión de orden
+        Route::post('/actualizar-orden', [MiembroController::class, 'actualizarOrden'])->name('actualizar-orden');
+        Route::get('/por-grupo-categoria', [MiembroController::class, 'porGrupoCategoria'])->name('por-grupo-categoria');
     });
 
     /**

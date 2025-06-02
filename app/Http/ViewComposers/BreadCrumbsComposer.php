@@ -153,6 +153,7 @@ class BreadcrumbsComposer
                 case 'tutorias.index':
                     $breadcrumbs = [
                         ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Tutorías', 'url' => route('tutorias.gestion')],
                         ['name' => 'Modificar Tutorías', 'url' => route('tutorias.index')]
                     ];
                     break;
@@ -162,7 +163,23 @@ class BreadcrumbsComposer
 
                     $breadcrumbs = [
                         ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Tutorías', 'url' => route('tutorias.gestion')],
                         ['name' => 'Ver Tutoría', 'url' => route('tutorias.ver', $id)]
+                    ];
+                    break;
+                
+                case 'tutorias.gestion':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Tutorías', 'url' => route('tutorias.gestion')]
+                    ];
+                    break;
+
+                case 'tutorias.plazos':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Tutorías', 'url' => route('tutorias.gestion')],
+                        ['name' => 'Plazos de Tutorías', 'url' => route('tutorias.plazos')]
                     ];
                     break;
                 

@@ -271,9 +271,7 @@
                                 <option value="Si">Si</option>
                                 <option value="No" selected>No</option>
                             </select>
-                        </div>
-
-                        <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        </div>                        <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                             <p class="text-sm text-gray-700 dark:text-gray-300 mb-1">
                                 <i class="fas fa-info-circle text-blue-500 mr-1"></i> Acerca de este formulario:
                             </p>
@@ -282,6 +280,92 @@
                                 <li>Selecciona los roles adecuados según las funciones del usuario.</li>
                                 <li>Para seleccionar múltiples roles, mantén presionada la tecla Ctrl mientras haces clic.</li>
                             </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 p-4 mt-8 mb-6">
+                    <h2 class="text-lg font-semibold text-purple-800 dark:text-purple-300">Asignación Académica</h2>
+                    <p class="text-sm text-purple-600 dark:text-purple-400 mt-1">Asignación de categoría docente y grupo (opcional)</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <div class="mb-4">
+                            <label for="id_categoria" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Categoría Docente
+                            </label>
+                            <select id="id_categoria" name="id_categoria" 
+                                class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                                <option value="">Sin categoría asignada</option>
+                                @foreach ($categorias as $categoria)
+                                    <option value="{{ $categoria->id_categoria }}" 
+                                            data-creditos="{{ $categoria->creditos_docencia ?? 0 }}"
+                                            data-siglas="{{ $categoria->siglas_categoria ?? '' }}">
+                                        {{ $categoria->nombre_categoria ?? 'Categoría ' . $categoria->id_categoria }}
+                                        @if($categoria->siglas_categoria) ({{ $categoria->siglas_categoria }}) @endif
+                                        @if($categoria->creditos_docencia) - {{ $categoria->creditos_docencia }} créditos @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Opcional: Se puede asignar después de crear el usuario
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="id_grupo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Grupo
+                            </label>
+                            <select id="id_grupo" name="id_grupo" 
+                                class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                                <option value="">Sin grupo asignado</option>
+                                @foreach ($grupos as $grupo)
+                                    <option value="{{ $grupo->id_grupo }}">
+                                        {{ $grupo->nombre_grupo }}
+                                        @if($grupo->siglas_grupo) ({{ $grupo->siglas_grupo }}) @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Opcional: Se puede asignar después de crear el usuario
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="mb-4">
+                            <label for="numero_orden" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Número de Orden
+                            </label>
+                            <input type="number" id="numero_orden" name="numero_orden" min="1" 
+                                placeholder="Orden en el proceso de selección docente"
+                                class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Opcional: Se asignará automáticamente si se deja vacío
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="web" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Web Personal
+                            </label>
+                            <input type="url" id="web" name="web" 
+                                placeholder="https://ejemplo.com"
+                                class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Opcional: Página web personal del usuario
+                            </p>
+                        </div>
+
+                        <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-800/20 rounded-lg border border-blue-200 dark:border-blue-600">
+                            <h4 class="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
+                                <i class="fas fa-graduation-cap mr-2"></i>Información sobre categorías:
+                            </h4>
+                            <p class="text-xs text-blue-700 dark:text-blue-400">
+                                Si asignas una categoría docente y un grupo, se creará automáticamente un registro de membresía 
+                                que permitirá gestionar el orden de selección docente y los créditos asignados.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -496,9 +580,7 @@
                     }
                 });
             }
-        });
-
-        // Funciones auxiliares para mostrar/ocultar errores de campo
+        });        // Funciones auxiliares para mostrar/ocultar errores de campo
         function showFieldError(field, message) {
             clearFieldError(field);
             const errorDiv = document.createElement('div');
@@ -513,6 +595,63 @@
                 existingError.remove();
             }
             field.classList.remove('border-red-500', 'border-green-500');
+        }
+
+        // Funcionalidad para categoría y grupo - mostrar información de miembro
+        const categoriaSelect = document.getElementById('id_categoria');
+        const grupoSelect = document.getElementById('id_grupo');
+        const numeroOrdenInput = document.getElementById('numero_orden');
+        
+        function updateMemberInfo() {
+            const categoriaId = categoriaSelect.value;
+            const grupoId = grupoSelect.value;
+            
+            // Limpiar mensajes anteriores
+            const existingInfo = document.getElementById('member-info');
+            if (existingInfo) {
+                existingInfo.remove();
+            }
+            
+            if (categoriaId && grupoId) {
+                // Crear elemento de información
+                const infoDiv = document.createElement('div');
+                infoDiv.id = 'member-info';
+                infoDiv.className = 'mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-md';
+                
+                const categoriaOption = categoriaSelect.options[categoriaSelect.selectedIndex];
+                const grupoOption = grupoSelect.options[grupoSelect.selectedIndex];
+                const creditos = categoriaOption.dataset.creditos || '0';
+                const siglas = categoriaOption.dataset.siglas || '';
+                
+                infoDiv.innerHTML = `
+                    <div class="flex items-center space-x-2 text-blue-700 dark:text-blue-300">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div>
+                            <p class="font-medium">Se creará registro de miembro automáticamente</p>
+                            <p class="text-sm">
+                                Categoría: <strong>${categoriaOption.text}</strong><br>
+                                Grupo: <strong>${grupoOption.text}</strong><br>
+                                Créditos docencia: <strong>${creditos}</strong>
+                                ${numeroOrdenInput.value ? `<br>Orden asignado: <strong>${numeroOrdenInput.value}</strong>` : '<br><em>Orden se asignará automáticamente</em>'}
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                // Insertar después del grupo select
+                grupoSelect.parentNode.parentNode.appendChild(infoDiv);
+            }
+        }
+        
+        // Event listeners para categoría y grupo
+        if (categoriaSelect && grupoSelect) {
+            categoriaSelect.addEventListener('change', updateMemberInfo);
+            grupoSelect.addEventListener('change', updateMemberInfo);
+            if (numeroOrdenInput) {
+                numeroOrdenInput.addEventListener('input', updateMemberInfo);
+            }
         }
     </script>
     @endpush

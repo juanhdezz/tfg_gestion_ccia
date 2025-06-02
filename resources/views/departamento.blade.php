@@ -32,7 +32,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                 </svg>
                 <h5 class="mt-4 text-xl font-bold text-gray-900 dark:text-white">Gestión de usuarios</h5>
-                <p class="text-gray-700 dark:text-gray-400 text-center">Lista, edición y eliminación de usuarios.</p>
+                <p class="text-gray-700 dark:text-gray-400 text-center">Lista, edición , eliminación e impersonación de usuarios.</p>
             </a>
             
             <!-- Gestión de asignaturas -->

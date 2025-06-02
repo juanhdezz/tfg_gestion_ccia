@@ -64,10 +64,87 @@ class Usuario extends Authenticatable
 public function getConnectionName()
     {
         return Config::get('database.default');
+    }    /**
+     * Relación con miembros.
+     * Un usuario puede tener múltiples membresías (en diferentes grupos y categorías).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function miembros()
+    {
+        return $this->hasMany(Miembro::class, 'id_usuario', 'id_usuario');
     }
 
-    public function categoriaDocente()
+    /**
+     * Relación con CategoriaDocente a través de la tabla miembro.
+     * Un usuario puede tener múltiples categorías según sus membresías.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function categoriasDocentes()
     {
-        return $this->belongsTo(CategoriaDocente::class, 'id_categoria', 'id_categoria');
+        return $this->belongsToMany(
+            CategoriaDocente::class,
+            'miembro',
+            'id_usuario',
+            'id_categoria',
+            'id_usuario',
+            'id_categoria'
+        )->withPivot([
+            'id_grupo',
+            'web',
+            'numero_orden',
+            'tramos_investigacion',
+            'anio_ultimo_tramo',
+            'fecha_entrada',
+            'n_orden_becario'
+        ]);
+    }
+
+    /**
+     * Relación con Grupo a través de la tabla miembro.
+     * Un usuario puede pertenecer a múltiples grupos.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function grupos()
+    {
+        return $this->belongsToMany(
+            Grupo::class,
+            'miembro',
+            'id_usuario',
+            'id_grupo',
+            'id_usuario',
+            'id_grupo'
+        )->withPivot([
+            'id_categoria',
+            'web',
+            'numero_orden',
+            'tramos_investigacion',
+            'anio_ultimo_tramo',
+            'fecha_entrada',
+            'n_orden_becario'
+        ]);
+    }
+
+    /**
+     * Método para obtener la membresía actual en un grupo específico.
+     *
+     * @param int $grupoId
+     * @return \App\Models\Miembro|null
+     */
+    public function miembroEnGrupo($grupoId)
+    {
+        return $this->miembros()->where('id_grupo', $grupoId)->first();
+    }
+
+    /**
+     * Método para obtener todas las membresías ordenadas por número de orden.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function miembrosOrdenados()
+    {
+        return $this->miembros()->ordenadoPorNumero()->get();
     }
 }

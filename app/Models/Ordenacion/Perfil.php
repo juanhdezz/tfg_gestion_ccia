@@ -4,6 +4,7 @@ namespace App\Models\Ordenacion;
 
 use App\Models\BaseModel;
 use App\Models\Usuario;
+use App\Models\Titulacion;
 
 class Perfil extends BaseModel
 {
@@ -28,6 +29,6 @@ class Perfil extends BaseModel
     
     public function titulaciones()
     {
-        return $this->hasMany(PerfilTitulacion::class, 'id_usuario', 'id_usuario');
+        return $this->belongsToMany(Titulacion::class, 'perfil_titulacion', 'id_usuario', 'id_titulacion');
     }
 }

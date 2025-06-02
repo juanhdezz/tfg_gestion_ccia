@@ -114,8 +114,7 @@
         
         <div>
             <h3 class="font-semibold text-lg border-b border-gray-200 pb-2 mb-3">Titulaciones de interés</h3>
-            
-            @if(is_null(optional($perfil)->titulacionesIds) || empty(optional($perfil)->titulacionesIds))
+              @if(is_null(optional($perfil)->titulaciones) || optional($perfil)->titulaciones->isEmpty())
                 <div class="mb-3 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-md">
                     <p class="text-sm text-amber-800 dark:text-amber-300">
                         ⚠️ No hay titulaciones seleccionadas en el perfil.
@@ -126,10 +125,9 @@
             <div class="mb-4 max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded p-3">
                 @forelse($titulaciones ?? [] as $titulacion)
                     <div class="flex items-start mb-2">
-                        <div class="flex items-center h-5">
-                            <input type="checkbox" name="titulaciones[]" id="titulacion_{{ optional($titulacion)->id_titulacion ?? 'unknown' }}" 
+                        <div class="flex items-center h-5">                            <input type="checkbox" name="titulaciones[]" id="titulacion_{{ optional($titulacion)->id_titulacion ?? 'unknown' }}" 
                                    value="{{ optional($titulacion)->id_titulacion ?? '' }}"
-                                   {{ (is_array(optional($perfil)->titulacionesIds) && in_array(optional($titulacion)->id_titulacion ?? '', optional($perfil)->titulacionesIds ?? [])) ? 'checked' : '' }}
+                                   {{ (optional($perfil)->titulaciones && optional($perfil)->titulaciones->contains('id_titulacion', optional($titulacion)->id_titulacion)) ? 'checked' : '' }}
                                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                         </div>
                         <label for="titulacion_{{ optional($titulacion)->id_titulacion ?? 'unknown' }}" class="ml-2 text-sm text-gray-700 dark:text-gray-300">

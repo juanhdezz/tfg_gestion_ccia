@@ -32,11 +32,16 @@
                         <div class="mb-4">
                             <label for="especialidad" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Especialidad:</label>
                             <input type="text" id="especialidad" name="especialidad" value="{{ $asignatura->especialidad }}" class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="id_coordinador" class="block text-sm font-medium text-gray-700 dark:text-gray-300">ID Coordinador:</label>
-                            <input type="text" id="id_coordinador" name="id_coordinador" value="{{ $asignatura->id_coordinador }}" required class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                        </div>                        <div class="mb-4">
+                            <label for="id_coordinador" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Coordinador:</label>
+                            <select id="id_coordinador" name="id_coordinador" class="mt-1 block w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 text-gray-900 dark:text-white">
+                                <option value="">Seleccionar coordinador...</option>
+                                @foreach ($usuarios as $usuario)
+                                    <option value="{{ $usuario->id_usuario }}" {{ $asignatura->id_coordinador == $usuario->id_usuario ? 'selected' : '' }}>
+                                        {{ $usuario->apellidos }}, {{ $usuario->nombre }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
 
                         <div class="mb-4">

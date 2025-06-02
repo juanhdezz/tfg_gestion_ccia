@@ -21,8 +21,10 @@ use App\Models\Ordenacion\CompensacionTesis;
 use App\Models\Ordenacion\CompensacionSexenio;
 use App\Models\Ordenacion\CompensacionOtros;
 use App\Models\Ordenacion\CompensacionLimite;
+use App\Models\Ordenacion\ConfiguracionOrdenacion;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+
 
 class OrdenacionDocenteController extends Controller
 {
@@ -59,19 +61,27 @@ class OrdenacionDocenteController extends Controller
             $creditos_compensacion = $this->obtenerReducciones(Auth::id());
             
             // Comprobamos si estamos en el turno del usuario
-            $esTurnoUsuario = $this->esTurnoDelUsuario(Auth::id(), $numeroTurno);
-            
-            // Obtenemos el perfil del usuario
-            $perfil = Perfil::find(Auth::id());
-            // if(!$perfil) {
-            //     return view('error.error', [
-            //         'titulo' => 'Error de perfil',
-            //         'mensaje' => 'No se ha encontrado el perfil del usuario.',
-            //         'detalles' => 'El usuario no tiene un perfil asignado.'
-            //     ]);
-            // }
-            
-            $data = [
+            $esTurnoUsuario = $this->esTurnoDelUsuario(Auth::id(), $numeroTurno);            // Obtenemos el perfil del usuario con sus titulaciones relacionadas
+            $perfil = Perfil::with('titulaciones')->find(Auth::id());
+              // Si no existe el perfil, lo creamos automáticamente
+            if (!$perfil) {
+                $perfil = Perfil::create([
+                    'id_usuario' => Auth::id(),
+                    'palabras_clave' => '',
+                    'sin_palabras_clave' => 0,
+                    'teoria' => 1,
+                    'practicas' => 1,
+                    'pasar_turno' => 0
+                ]);
+                
+                // Asignar todas las titulaciones al perfil automáticamente
+                $todasLasTitulaciones = Titulacion::pluck('id_titulacion');
+                $perfil->titulaciones()->sync($todasLasTitulaciones);
+                
+                // Cargar las titulaciones después de crear el perfil
+                $perfil = Perfil::with('titulaciones')->find(Auth::id());
+            }
+              $data = [
                 'fase' => $fase,
                 'turno' => $numeroTurno,
                 'cursos_con_preferencia' => $cursosConPreferencia,
@@ -84,10 +94,16 @@ class OrdenacionDocenteController extends Controller
                 'titulaciones' => Titulacion::orderBy('nombre_titulacion')->get(),
             ];
 
-            $fase = 1; // Para simular y ver que tal las vistas, se puede cambiar a 2 o 3
+            // Si es administrador, agregar información de gestión
+            if (Auth::user()->hasRole('admin')) {
+                $data['info_admin'] = $this->obtenerInformacionAdmin();
+                $data['profesores_cursos_anteriores'] = $this->obtenerProfesoresCursosAnteriores();
+            }            //$fase = 1; // Para simular y ver que tal las vistas, se puede cambiar a 2 o 3
             
              // Según la fase, renderizamos distintas vistas
-    if ($fase == 1) {
+    if ($fase == -1) {
+        return $this->mostrarProcesoInactivo($data);
+    } elseif ($fase == 1) {
         return $this->mostrarFase1($data);
     } elseif ($fase == 2) {
         return $this->mostrarFase2($data);
@@ -112,9 +128,7 @@ class OrdenacionDocenteController extends Controller
                 'detalles' => config('app.debug') ? $e->getMessage() : null
             ]);
         }
-    }
-
-    /**
+    }    /**
      * Muestra la vista para la primera fase
      */
     protected function mostrarFase1($data)
@@ -132,6 +146,25 @@ class OrdenacionDocenteController extends Controller
             return view('error.error', [
                 'titulo' => 'Error al mostrar la fase 1',
                 'mensaje' => 'Se ha producido un error al cargar la fase 1 de ordenación docente.',
+                'detalles' => config('app.debug') ? $e->getMessage() : null
+            ]);
+        }
+    }
+
+    /**
+     * Muestra la vista cuando el proceso está inactivo (fase -1)
+     */
+    protected function mostrarProcesoInactivo($data)
+    {
+        try {
+            return view('ordenacion.proceso_inactivo', $data);
+        } catch (\Exception $e) {
+            Log::error('Error en mostrarProcesoInactivo: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            
+            return view('error.error', [
+                'titulo' => 'Error al mostrar el estado del proceso',
+                'mensaje' => 'Se ha producido un error al cargar la información del proceso de ordenación docente.',
                 'detalles' => config('app.debug') ? $e->getMessage() : null
             ]);
         }
@@ -200,12 +233,9 @@ protected function mostrarFase3($data)
 protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
 {
     try {
-        $dbSiguiente = $this->getDbSiguiente();
-    
-        // Obtener perfil del usuario
-        $perfil = Perfil::find($idUsuario);
-        
-        // Si no existe el perfil, devolver array vacío
+        $dbSiguiente = $this->getDbSiguiente();        // Obtener perfil del usuario con sus titulaciones
+        $perfil = Perfil::with('titulaciones')->find($idUsuario);
+          // Si no existe el perfil, devolver array vacío
         if (!$perfil) {
             Log::warning("No se encontró perfil para el usuario ID {$idUsuario} en obtenerAsignaturasDisponiblesFase3");
             return [];
@@ -226,12 +256,9 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
             });
         }
         
-        // Filtrar por titulaciones
-        $titulacionesIds = PerfilTitulacion::where('id_usuario', $idUsuario)
-            ->pluck('id_titulacion')
-            ->toArray();
-            
-        if (!empty($titulacionesIds)) {
+        // Filtrar por titulaciones usando la relación cargada
+        if ($perfil->titulaciones && $perfil->titulaciones->isNotEmpty()) {
+            $titulacionesIds = $perfil->titulaciones->pluck('id_titulacion')->toArray();
             $query->whereIn('asignatura.id_titulacion', $titulacionesIds);
         }
         
@@ -340,25 +367,22 @@ protected function obtenerAsignaturasDisponiblesFase3($idUsuario)
         
         // Obtener los créditos de docencia del usuario
         $usuario = Usuario::with('categoriaDocente')
-            ->findOrFail($idUsuario);
-
-            // Verificar si el usuario tiene categoría docente asignada
+            ->findOrFail($idUsuario);            // Verificar si el usuario tiene categoría docente asignada
 if (!$usuario->categoriaDocente) {
     Log::warning("Usuario con ID {$idUsuario} no tiene categoría docente asignada. Asignando categoría simulada para continuar.");
     // Crear un objeto simulado con valores predeterminados
     $categoriaPredeterminada = new \stdClass();
     $categoriaPredeterminada->creditos_docencia = 24; // Valor predeterminado (ajustar según necesidades)
     $categoriaPredeterminada->nombre = "Categoría simulada";
+    $categoriaPredeterminada->nombre_categoria = "Categoría no asignada";
     
     // Asignar el objeto simulado
     $usuario->categoriaDocente = $categoriaPredeterminada;
 }
-            
-        $creditosDocencia = $usuario->categoriaDocente->creditos_docencia;
+              $creditosDocencia = $usuario->categoriaDocente->creditos_docencia;
         
-       $porcentajesDocencia = $this->getPorcentajesDocencia();
-$docencia25 = $creditosDocencia * $porcentajesDocencia['porcentaje_menor'];
-$docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
+        // Obtener límites configurables basados en porcentajes
+        $limitesDocentes = $this->calcularLimitesDocentes($creditosDocencia);
         
         $totalCompensacion = 0;
         
@@ -389,10 +413,9 @@ $docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
             ->sum('creditos');
             
         $creditosDocenciaPosgrado += $creditosDocenciaMaster;
-        
-        // 1.3 Aplicar la restricción: Docencia Posgrado sin TFM <= $docencia25 créditos
-        if (($creditosDocenciaPosgrado - $creditosDocenciaTFM) > $docencia25) {
-            $creditosPosgrado = $docencia25 + $creditosDocenciaTFM;
+          // 1.3 Aplicar la restricción: Docencia Posgrado sin TFM <= límite menor
+        if (($creditosDocenciaPosgrado - $creditosDocenciaTFM) > $limitesDocentes['menor']) {
+            $creditosPosgrado = $limitesDocentes['menor'] + $creditosDocenciaTFM;
         } else {
             $creditosPosgrado = $creditosDocenciaPosgrado;
         }
@@ -530,9 +553,8 @@ $docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
             ->sum('creditos_compensacion');
         
         $redLimitadas = $creditosParaLimite12 + $representacionSindical + $creditosOtros2;
-        
-        if ($redLimitadas > $docencia50) {
-            $totalCompensacion = ($totalCompensacion - $redLimitadas) + $docencia50;
+          if ($redLimitadas > $limitesDocentes['mayor']) {
+            $totalCompensacion = ($totalCompensacion - $redLimitadas) + $limitesDocentes['mayor'];
         }
         
         // Devolvemos los créditos de compensación totales
@@ -705,10 +727,8 @@ $docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
     protected function obtenerAsignaturasDisponibles($idUsuario)
     {
         try {
-            $dbSiguiente = $this->getDbSiguiente();
-        
-            // Obtener perfil del usuario
-            $perfil = Perfil::findOrFail($idUsuario);
+            $dbSiguiente = $this->getDbSiguiente();            // Obtener perfil del usuario
+            $perfil = Perfil::with('titulaciones')->findOrFail($idUsuario);
             
             // Construir la consulta según el perfil
             $query = DB::table($dbSiguiente.'.asignatura')
@@ -1079,10 +1099,9 @@ $docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
         ]);
         
         DB::beginTransaction();
-        
-        try {
+          try {
             // Actualizar perfil
-            $perfil = Perfil::findOrNew(Auth::id());
+            $perfil = Perfil::with('titulaciones')->findOrNew(Auth::id());
             $perfil->id_usuario = Auth::id();
             $perfil->palabras_clave = $request->palabras_clave ?? '';
             $perfil->sin_palabras_clave = $request->has('sin_palabras_clave') ? 1 : 0;
@@ -1122,8 +1141,7 @@ $docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
         $request->validate([
             'pasar_turno' => 'nullable|boolean'
         ]);
-        
-        $perfil = Perfil::findOrNew(Auth::id());
+          $perfil = Perfil::with('titulaciones')->findOrNew(Auth::id());
         $perfil->id_usuario = Auth::id();
         $perfil->pasar_turno = $request->has('pasar_turno') ? 1 : 0;
         $perfil->save();
@@ -1153,9 +1171,8 @@ $docencia50 = $creditosDocencia * $porcentajesDocencia['porcentaje_mayor'];
         if ($this->esTurnoDelUsuario(Auth::id(), $turno->turno)) {
             // Verificar si el usuario cumple con los requisitos para pasar turno
             $puedeAvanzar = false;
-            
-            // Obtener el perfil del usuario para verificar preferencias
-            $perfil = Perfil::findOrFail(Auth::id());
+              // Obtener el perfil del usuario para verificar preferencias
+            $perfil = Perfil::with('titulaciones')->findOrFail(Auth::id());
             
             if ($perfil->pasar_turno) {
                 $puedeAvanzar = true;
@@ -1285,8 +1302,7 @@ if (!$usuario->categoriaDocente) {
 
         // Obtenemos las compensaciones del usuario
         $creditos_compensacion = $this->obtenerReducciones(Auth::id());
-        
-        $usuario = Usuario::with('categoriaDocente')
+          $usuario = Usuario::with('categoriaDocente')
     ->findOrFail(Auth::id());
 
 // Verificar si el usuario tiene categoría docente asignada
@@ -1296,6 +1312,7 @@ if (!$usuario->categoriaDocente) {
     $categoriaPredeterminada = new \stdClass();
     $categoriaPredeterminada->creditos_docencia = 24; // Valor predeterminado
     $categoriaPredeterminada->nombre = "Categoría simulada";
+    $categoriaPredeterminada->nombre_categoria = "Categoría no asignada";
     
     // Asignar el objeto simulado
     $usuario->categoriaDocente = $categoriaPredeterminada;
@@ -1329,10 +1346,10 @@ protected function getConfiguracion($clave, $valorPredeterminado = null)
     }
 }
 
-// Reemplazar la constante con llamada al método
+// Reemplazar la constante con llamada al método del modelo
 protected function getCreditosMenosPermitidos()
 {
-    return floatval($this->getConfiguracion('creditos_menos_permitidos', 0.5));
+    return ConfiguracionOrdenacion::getCreditosMenosPermitidos();
 }
 
 /**
@@ -1351,6 +1368,18 @@ protected function getPorcentajesDocencia()
     ];
 }
 
+/**
+ * Calcula los límites de docencia basados en porcentajes configurables
+ * 
+ * @param float $creditosDocencia Créditos de docencia del usuario
+ * @return array Límites calculados [menor, mayor]
+ */
+protected function calcularLimitesDocentes($creditosDocencia)
+{
+    // Usar el método del modelo ConfiguracionOrdenacion para mantener consistencia
+    return ConfiguracionOrdenacion::calcularLimitesDocentes($creditosDocencia);
+}
+
 // Método mejorado para identificar TFMs
 protected function esTFM($posgrado)
 {
@@ -1363,4 +1392,1225 @@ protected function esTFM($posgrado)
         strpos(strtoupper($posgrado->codigo), $identificadorTFM) !== false
     );
 }
+
+/**
+     * Obtiene los datos necesarios para la validación JavaScript ValidaTurnoFase2
+     */
+    public function obtenerDatosValidacion()
+    {
+        try {
+            $idUsuario = Auth::id();
+            $turno = Turno::first();
+              // Obtener créditos de la categoría del usuario
+            $usuario = Usuario::find($idUsuario);
+            $creditosCategoria = $usuario && $usuario->categoriaDocente 
+                ? $usuario->categoriaDocente->creditos_docencia 
+                : 24; // Valor predeterminado
+            
+            // Obtener créditos impartidos actuales
+            $creditosImpartidos = $this->calcularCreditosImpartidos($idUsuario);
+            $creditosT = $creditosImpartidos['total'];
+            $creditosConPI = $creditosImpartidos['con_pi'];
+            $creditosSinPI = $creditosImpartidos['sin_pi'];
+            
+            // Calcular docencia total (incluyendo posgrado y TFM)
+            $docenciaTotal = $this->calcularDocenciaTotal($idUsuario);
+            
+            // Obtener constante CREDITOS_MENOS
+            $creditosMenos = $this->getCreditosMenosPermitidos();
+            
+            // Calcular créditos presenciales faltantes
+            $ccFaltaPresencial = $this->calcularCreditosFaltantesPresenciales($idUsuario);
+            
+            // Texto de docencia para mostrar
+            $txtDocencia = $this->generarTextoDocencia($creditosImpartidos);
+            
+            return response()->json([
+                'creditosT' => $creditosT,
+                'credCategoría' => $creditosCategoria,
+                'creditosConPI' => $creditosConPI,
+                'creditosSinPI' => $creditosSinPI,
+                'docenciaTotal' => $docenciaTotal,
+                'creditosMenos' => $creditosMenos,
+                'turno' => $turno->turno,
+                'txtDocencia' => $txtDocencia,
+                'ccFaltaPresencial' => $ccFaltaPresencial
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerDatosValidacion: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al obtener datos de validación'], 500);
+        }
+    }
+    
+    /**
+     * Calcula los créditos impartidos del usuario
+     */
+    protected function calcularCreditosImpartidos($idUsuario)
+    {
+        $dbSiguiente = $this->getDbSiguiente();
+        
+        // Obtener todas las asignaciones del usuario
+        $asignaciones = DB::table($dbSiguiente . '.ordenacion_usuario_asignatura as oua')
+            ->join($dbSiguiente . '.asignatura as a', 'oua.id_asignatura', '=', 'a.id_asignatura')
+            ->join($dbSiguiente . '.titulacion as t', 'a.id_titulacion', '=', 't.id_titulacion')
+            ->where('oua.id_usuario', $idUsuario)
+            ->select('oua.creditos', 'a.tipo', 't.id_titulacion')
+            ->get();
+            
+        $creditosTotal = 0;
+        $creditosConPI = 0; // Créditos con Proyectos de Investigación
+        $creditosSinPI = 0; // Créditos sin Proyectos de Investigación
+        
+        foreach ($asignaciones as $asignacion) {
+            $creditosTotal += $asignacion->creditos;
+            
+            // Identificar si es Proyecto Fin de Carrera
+            if (strpos(strtoupper($asignacion->tipo), 'PROYECTO') !== false) {
+                $creditosConPI += $asignacion->creditos;
+            } else {
+                $creditosSinPI += $asignacion->creditos;
+                $creditosConPI += $asignacion->creditos; // También cuenta para el total con PI
+            }
+        }
+        
+        return [
+            'total' => $creditosTotal,
+            'con_pi' => $creditosConPI,
+            'sin_pi' => $creditosSinPI
+        ];
+    }
+    
+    /**
+     * Calcula la docencia total incluyendo posgrado y TFM
+     */
+    protected function calcularDocenciaTotal($idUsuario)
+    {
+        $dbSiguiente = $this->getDbSiguiente();
+        
+        // Docencia en grado/1º ciclo
+        $docenciaGrado = DB::table($dbSiguiente . '.ordenacion_usuario_asignatura as oua')
+            ->join($dbSiguiente . '.asignatura as a', 'oua.id_asignatura', '=', 'a.id_asignatura')
+            ->join($dbSiguiente . '.titulacion as t', 'a.id_titulacion', '=', 't.id_titulacion')
+            ->where('oua.id_usuario', $idUsuario)
+            ->whereNotIn('t.id_titulacion', ['99999', '1003', '1004']) // Excluir másteres
+            ->sum('oua.creditos');
+            
+        // Docencia en posgrado (doctorado)
+        $docenciaPosgrado = DocenciaPosgrado::where('id_usuario', $idUsuario)->sum('creditos');
+        
+        // Docencia en máster profesionalizantes
+        $docenciaMaster = DB::table($dbSiguiente . '.ordenacion_usuario_asignatura as oua')
+            ->join($dbSiguiente . '.asignatura as a', 'oua.id_asignatura', '=', 'a.id_asignatura')
+            ->where('oua.id_usuario', $idUsuario)
+            ->whereIn('a.id_titulacion', ['99999', '1003', '1004'])
+            ->sum('oua.creditos');
+            
+        return $docenciaGrado + $docenciaPosgrado + $docenciaMaster;
+    }
+    
+    /**
+     * Calcula los créditos presenciales faltantes
+     */
+    protected function calcularCreditosFaltantesPresenciales($idUsuario)
+    {
+        // Implementar lógica específica para calcular créditos presenciales faltantes
+        // Esto requiere determinar qué asignaturas son presenciales vs no presenciales
+        return 0; // Por ahora retornamos 0, se debe implementar según los requisitos específicos
+    }
+    
+    /**
+     * Genera el texto de docencia para mostrar en la validación
+     */
+    protected function generarTextoDocencia($creditosImpartidos)
+    {
+        return "Créditos totales: " . $creditosImpartidos['total'] . 
+               "\nCréditos con PI: " . $creditosImpartidos['con_pi'] . 
+               "\nCréditos sin PI: " . $creditosImpartidos['sin_pi'];
+    }
+
+    /**
+     * Función AsignaDocenciaCursoAnterior - Asigna la docencia del curso anterior
+     * Traducción fiel de la función del sistema monolítico
+     */
+    protected function asignaDocenciaCursoAnterior($idUsuario, $turno)
+    {
+        try {
+            $dbActual = $this->getDbActual();
+            $dbSiguiente = $this->getDbSiguiente();
+            
+            // Actualizar el estado del turno en la tabla turno
+            DB::table($dbSiguiente . '.turno')
+                ->where('turno', $turno)
+                ->update(['estado' => '2']);
+            
+            // Comprobar que el usuario no tenga ya ninguna asignatura asignada en 2ª fase
+            $existeAsignacion = DB::table($dbSiguiente . '.ordenacion_usuario_asignatura')
+                ->where('id_usuario', $idUsuario)
+                ->where('en_primera_fase', '0')
+                ->exists();
+                
+            if (!$existeAsignacion) {
+                // Obtener asignaturas impartidas el año pasado
+                $asignacionesAnteriores = DB::table($dbActual . '.ordenacion_usuario_asignatura')
+                    ->where('id_usuario', $idUsuario)
+                    ->get();
+                    
+                $error = 0; // Variable para controlar si se puede asignar toda la docencia del curso pasado
+                
+                foreach ($asignacionesAnteriores as $asignacion) {
+                    // Verificar si la asignatura está activa
+                    $asignaturaActual = DB::table($dbSiguiente . '.asignatura')
+                        ->join($dbSiguiente . '.titulacion', 'asignatura.id_titulacion', '=', 'titulacion.id_titulacion')
+                        ->where('asignatura.id_asignatura', $asignacion->id_asignatura)
+                        ->where('titulacion.estado', 'Activa')
+                        ->first();
+                        
+                    if ($asignaturaActual) {
+                        // Obtener créditos según el tipo
+                        $creditos = 0;
+                        if ($asignacion->tipo == 'Teoría') {
+                            $creditos = $asignaturaActual->creditos_teoria;
+                        } elseif ($asignacion->tipo == 'Prácticas') {
+                            $creditos = $asignaturaActual->creditos_practicas;
+                        }
+                        
+                        $insertar = 0; // Flag para ver si esa asignación se puede hacer
+                        
+                        // Verificar si la asignatura está libre
+                        $sumaCreditos = DB::table($dbSiguiente . '.ordenacion_usuario_asignatura')
+                            ->where('id_asignatura', $asignacion->id_asignatura)
+                            ->where('tipo', $asignacion->tipo)
+                            ->where('grupo', $asignacion->grupo)
+                            ->sum('creditos');
+                            
+                        if ($sumaCreditos === null || $sumaCreditos == 0) {
+                            // No hay ninguna asignación a esa asignatura con las mismas características
+                            $insertar = 1;
+                        } else {
+                            // Existen asignaciones. Comprobar si sobran créditos
+                            $restoCreditos = $creditos - $sumaCreditos;
+                            if ($restoCreditos >= $asignacion->creditos) {
+                                $insertar = 1;
+                            } else {
+                                $error = 1; // No se puede asignar esta asignatura
+                            }
+                        }
+                        
+                        if ($insertar == 1) {
+                            // Obtener número de grupos según el tipo
+                            $nGrupos = 0;
+                            if ($asignacion->tipo == 'Teoría') {
+                                $nGrupos = $asignaturaActual->grupos_teoria;
+                            } else {
+                                $nGrupos = $asignaturaActual->grupos_practicas;
+                            }
+                            
+                            $antiguedad = $asignacion->antiguedad + 1; // Incrementar la antigüedad
+                            
+                            // Si el número de grupos es mayor o igual que el grupo que tenía
+                            if ($nGrupos >= $asignacion->grupo) {
+                                // Insertar la asignación
+                                DB::table($dbSiguiente . '.ordenacion_usuario_asignatura')->insert([
+                                    'tipo' => $asignacion->tipo,
+                                    'grupo' => $asignacion->grupo,
+                                    'id_asignatura' => $asignacion->id_asignatura,
+                                    'id_usuario' => $idUsuario,
+                                    'creditos' => $asignacion->creditos,
+                                    'antiguedad' => $antiguedad,
+                                    'en_primera_fase' => 0
+                                ]);
+                                
+                                // Registrar en el log
+                                $this->registrarLog('Asignación automática curso anterior', 
+                                    $asignacion->id_asignatura, 
+                                    $asignacion->tipo, 
+                                    $asignacion->grupo, 
+                                    $asignacion->creditos);
+                            }
+                        }
+                    }
+                }
+                
+                return $error;
+            }
+            
+            return 0; // Ya tiene asignaciones de 2ª fase
+            
+        } catch (\Exception $e) {
+            Log::error('Error en asignaDocenciaCursoAnterior: ' . $e->getMessage());
+            return 1; // Error
+        }
+    }
+      /**
+     * Función MuestraReducciones - Implementación completa del sistema monolítico
+     * Muestra todas las compensaciones docentes con restricciones y límites
+     */
+    public function muestraReducciones($bd = 'Siguiente')
+    {
+        
+            $idUsuario = Auth::id();
+            $dbSiguiente = $this->getDbSiguiente();
+            $dbActual = $this->getDbActual();
+            
+            $bd = ($bd == 'Siguiente') ? $dbSiguiente : $dbActual;
+            
+            // Obtener los límites de compensaciones
+            $limites = [];
+            
+            // Verificamos si la tabla compensacion_limite existe
+            try {
+                $limitesQuery = DB::table($bd . '.compensacion_limite')->get();
+                foreach ($limitesQuery as $limite) {
+                    $limites[$limite->concepto] = $limite->limite_creditos;
+                }
+            } catch (\Exception $e) {
+                Log::warning('No se encontró la tabla compensacion_limite: ' . $e->getMessage());
+                // Valores predeterminados si no existe la tabla
+                $limites = [
+                    'Tesis' => 6,
+                    'Proyectos' => 6,
+                    'Investigación' => 9,
+                    'Gestion+Investigacion+A.Especiales' => 12
+                ];
+            }
+        
+        $totalCompensacion = 0;
+        
+        // Obtener los créditos de docencia del usuario
+        $usuario = DB::table($bd . '.miembro')
+            ->join($bd . '.categoria', 'miembro.id_categoria', '=', 'categoria.id_categoria')
+            ->where('miembro.id_usuario', $idUsuario)
+            ->select('categoria.creditos_docencia')
+            ->first();
+              $creditosDocencia = $usuario->creditos_docencia ?? 24;
+        
+        // Calcular límites configurables basados en porcentajes
+        $limitesDocentes = $this->calcularLimitesDocentes($creditosDocencia);
+        
+        $resultado = [
+            'total_compensacion' => 0,
+            'creditos_posgrado' => 0,
+            'max_cargo' => 0,
+            'representacion_sindical' => 0,
+            'creditos_proyectos' => 0,
+            'creditos_tesis' => 0,
+            'creditos_sexenios' => 0,
+            'creditos_otros' => 0,
+            'creditos_investigacion' => 0,
+            'creditos_especiales' => 0,
+            'tablas_html' => '',
+            'restricciones' => []
+        ];
+          // 1. DOCENCIA EN POSGRADO
+        $tablaPosgrado = $this->generarTablaPosgrado($bd, $idUsuario, $limitesDocentes, $resultado);
+        
+        // 2. COMPENSACIONES POR CARGO (GESTIÓN UNIVERSITARIA)
+        $tablaCargos = $this->generarTablaCargos($bd, $idUsuario, $resultado);
+        
+        // 3. COMPENSACIONES POR REPRESENTACIÓN SINDICAL
+        $tablaRepresentacion = $this->generarTablaRepresentacion($bd, $idUsuario, $resultado);
+        
+        // 4. COMPENSACIONES POR PROYECTOS
+        $tablaProyectos = $this->generarTablaProyectos($bd, $idUsuario, $limites, $resultado);
+        
+        // 5. COMPENSACIONES POR TESIS
+        $tablaTesis = $this->generarTablaTesis($bd, $idUsuario, $limites, $resultado);
+        
+        // 6. COMPENSACIONES POR SEXENIOS
+        $tablaSexenios = $this->generarTablaSexenios($bd, $idUsuario, $resultado);
+        
+        // 7. COMPENSACIONES POR OTROS CONCEPTOS
+        $tablaOtros = $this->generarTablaOtros($bd, $idUsuario, $resultado);
+          // 8. APLICAR RESTRICCIONES GLOBALES
+        $this->aplicarRestriccionesGlobales($bd, $idUsuario, $limites, $limitesDocentes, $resultado);
+        
+        // Combinar todas las tablas
+        $resultado['tablas_html'] = $tablaPosgrado . 
+            '<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600" style="margin: 20px auto; max-width: 75%;">' .
+            '<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">' .
+            '<tr><th colspan="3" class="px-6 py-3 text-center">Compensaciones Docentes</th></tr>' .
+            '</thead><tbody>' .
+            $tablaCargos . $tablaRepresentacion . $tablaProyectos . $tablaTesis . $tablaSexenios . $tablaOtros;
+            
+        // Mensaje si no hay compensaciones
+        if ($resultado['total_compensacion'] == 0 || ($resultado['total_compensacion'] == $resultado['creditos_posgrado'])) {
+            $resultado['tablas_html'] .= '<tr><td colspan="3" class="px-6 py-4 text-center">' .
+                '<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">'.
+                'Actualmente no cuenta con ningún tipo de compensación docente'.
+                '</div></td></tr>';
+        }
+        
+        // Agregar restricciones al final de la tabla
+        foreach ($resultado['restricciones'] as $restriccion) {
+            $resultado['tablas_html'] .= '<tr><td colspan="3" class="px-6 py-4 text-right font-bold bg-red-50 dark:bg-red-900">' . $restriccion . '</td></tr>';
+        }
+        
+        $resultado['tablas_html'] .= '</tbody></table>';
+        
+        return $resultado;
+    }
+      /**
+     * Genera la tabla de docencia en posgrado
+     */
+    private function generarTablaPosgrado($bd, $idUsuario, $limitesDocentes, &$resultado)
+    {
+        try {
+            // Docencia en máster profesionalizantes ya escogida
+            $creditosDocenciaMaster = DB::table($bd . '.ordenacion_usuario_asignatura')
+                ->join($bd . '.asignatura', 'ordenacion_usuario_asignatura.id_asignatura', '=', 'asignatura.id_asignatura')
+                ->where('ordenacion_usuario_asignatura.id_usuario', $idUsuario)
+                ->whereIn('asignatura.id_titulacion', ['99999', '1003', '1004'])
+                ->sum('ordenacion_usuario_asignatura.creditos');
+                
+            // Docencia en posgrado (doctorado)
+            try {
+                $docentePosgrado = DB::table($bd . '.docencia_posgrado')
+                    ->join($bd . '.posgrado', 'docencia_posgrado.id_posgrado', '=', 'posgrado.id_posgrado')
+                    ->where('docencia_posgrado.id_usuario', $idUsuario)
+                    ->select('posgrado.nombre', 'posgrado.codigo', 'docencia_posgrado.creditos')
+                    ->get();
+            } catch (\Exception $e) {
+                // Si hay error, asumimos que no hay registros
+                $docentePosgrado = collect([]);
+                Log::warning('Error al obtener docencia de posgrado: ' . $e->getMessage());
+            }
+                
+            if ($docentePosgrado->count() > 0 || $creditosDocenciaMaster > 0) {
+                $tabla = '<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600" style="margin: 20px auto; max-width: 75%;">';
+                $tabla .= '<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">';
+                $tabla .= '<tr><th colspan="3" class="px-6 py-3 text-center">Docencia en Posgrado</th></tr>';
+                $tabla .= '<tr><th class="px-6 py-3">Posgrado</th><th class="px-6 py-3">Código</th><th class="px-6 py-3">Créditos</th></tr>';
+                $tabla .= '</thead><tbody>';
+                
+                $cont = 0;
+                $creditosDocenciaPosgrado = 0;
+                $creditosDocenciaTFM = 0;
+                
+                foreach ($docentePosgrado as $docencia) {
+                    $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                    $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
+                    $tabla .= "<td class='px-6 py-4'>{$docencia->nombre}</td>";
+                    $tabla .= "<td class='px-6 py-4'>{$docencia->codigo}</td>";
+                    $tabla .= "<td class='px-6 py-4'>{$docencia->creditos}</td>";
+                    $tabla .= "</tr>";
+                    
+                    $creditosDocenciaPosgrado += $docencia->creditos;
+                    if ($docencia->codigo == 'TFM') {
+                        $creditosDocenciaTFM += $docencia->creditos;
+                    }
+                    $cont++;
+                }
+                
+                if ($creditosDocenciaMaster) {
+                    $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                    $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
+                    $tabla .= "<td colspan='2' class='px-6 py-4'>Docencia escogida en Máster Profesionalizantes</td>";
+                    $tabla .= "<td class='px-6 py-4'>$creditosDocenciaMaster</td>";
+                    $tabla .= "</tr>";
+                    $creditosDocenciaPosgrado += $creditosDocenciaMaster;
+                }
+                  // Aplicar restricción del 25%
+                if (($creditosDocenciaPosgrado - $creditosDocenciaTFM) > $limitesDocentes['menor']) {
+                    $resultado['creditos_posgrado'] = $limitesDocentes['menor'] + $creditosDocenciaTFM;
+                } else {
+                    $resultado['creditos_posgrado'] = $creditosDocenciaPosgrado;
+                }
+                  $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
+                $tabla .= "<td colspan='2' class='px-6 py-4 text-right font-bold'>Restricción: (Docencia Posgrado sin TFM <= {$limitesDocentes['menor']} créd.) Total</td>";
+                $tabla .= "<td class='px-6 py-4 font-bold'>{$resultado['creditos_posgrado']}</td>";
+                $tabla .= "</tr>";
+                
+                $tabla .= '</tbody></table>';
+                return $tabla;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error en generarTablaPosgrado: ' . $e->getMessage());
+            return '';
+        }
+        
+        return '';
+    }
+    
+    /**
+     * Genera la tabla de compensaciones por cargo de gestión universitaria
+     */
+    private function generarTablaCargos($bd, $idUsuario, &$resultado)
+    {
+        $cargos = DB::table($bd . '.compensacion_cargo')
+            ->join($bd . '.cargo', 'compensacion_cargo.id_cargo', '=', 'cargo.id_cargo')
+            ->where('compensacion_cargo.id_usuario', $idUsuario)
+            ->where('cargo.tipo', 'Gestión Universitaria')
+            ->select('compensacion_cargo.creditos_compensacion', 'cargo.nombre_cargo', 'cargo.comision')
+            ->get();
+            
+        if ($cargos->count() > 0) {
+            $tabla = '<tr><th colspan="3" class="px-6 py-3 text-center bg-gray-100 dark:bg-gray-600">Compensaciones por Cargo</th></tr>';
+            $tabla .= '<tr class="bg-gray-50 dark:bg-gray-700"><th class="px-6 py-3">Nombre</th><th class="px-6 py-3">Comisión</th><th class="px-6 py-3">Créditos</th></tr>';
+            
+            $cont = 0;
+            foreach ($cargos as $cargo) {
+                $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                if ($cargo->creditos_compensacion > $resultado['max_cargo']) {
+                    $resultado['max_cargo'] = $cargo->creditos_compensacion;
+                }
+                
+                $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
+                $tabla .= "<td class='px-6 py-4'>{$cargo->nombre_cargo}</td>";
+                $tabla .= "<td class='px-6 py-4'>{$cargo->comision}</td>";
+                $tabla .= "<td class='px-6 py-4'>{$cargo->creditos_compensacion}</td>";
+                $tabla .= "</tr>";
+                $cont++;
+            }
+            
+            $restriccion = "Restricción: No acumulables";
+            if ($cargos->count() > 1) {
+                $restriccion .= " (Se selecciona el cargo con más créditos)";
+            }
+            
+            $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
+            $tabla .= "<td colspan='2' class='px-6 py-4 text-right font-bold'>$restriccion Total</td>";
+            $tabla .= "<td class='px-6 py-4 font-bold'>{$resultado['max_cargo']}</td>";
+            $tabla .= "</tr>";
+            
+            $resultado['total_compensacion'] += $resultado['max_cargo'];
+            return $tabla;
+        }
+        
+        return '';
+    }
+    
+    /**
+     * Genera la tabla de compensaciones por representación sindical
+     */
+    private function generarTablaRepresentacion($bd, $idUsuario, &$resultado)
+    {
+        $representacion = DB::table($bd . '.compensacion_cargo')
+            ->join($bd . '.cargo', 'compensacion_cargo.id_cargo', '=', 'cargo.id_cargo')
+            ->where('compensacion_cargo.id_usuario', $idUsuario)
+            ->where('cargo.tipo', '<>', 'Gestión Universitaria')
+            ->select('compensacion_cargo.creditos_compensacion', 'cargo.nombre_cargo', 'cargo.comision')
+            ->get();
+            
+        if ($representacion->count() > 0) {
+            $tabla = '';
+            $cont = 0;
+            
+            foreach ($representacion as $cargo) {
+                $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                $resultado['representacion_sindical'] += $cargo->creditos_compensacion;
+                
+                $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
+                $tabla .= "<td class='px-6 py-4'>{$cargo->nombre_cargo}</td>";
+                $tabla .= "<td class='px-6 py-4'>{$cargo->comision}</td>";
+                $tabla .= "<td class='px-6 py-4'>{$cargo->creditos_compensacion}</td>";
+                $tabla .= "</tr>";
+                $cont++;
+            }
+            
+            $resultado['total_compensacion'] += $resultado['representacion_sindical'];
+            return $tabla;
+        }
+        
+        return '';
+    }
+      /**
+     * Genera la tabla de compensaciones por proyectos
+     */
+    private function generarTablaProyectos($bd, $idUsuario, $limites, &$resultado)
+    {
+        
+            // Primero verificamos si la tabla existe
+            $tableExists = DB::select("SHOW TABLES LIKE '{$bd}.compensacion_proyecto'");
+            if (empty($tableExists)) {
+                return ''; // Si la tabla no existe, retornamos una cadena vacía
+            }
+            
+            $proyectos = DB::table($bd . '.compensacion_proyecto')
+                ->join($bd . '.proyecto', 'compensacion_proyecto.id_proyecto', '=', 'proyecto.id_proyecto')
+                ->where('compensacion_proyecto.id_usuario', $idUsuario)
+                ->select('compensacion_proyecto.creditos_compensacion', 'proyecto.titulo', 'proyecto.codigo')
+                ->get();
+                
+            if ($proyectos->count() > 0) {
+            $tabla = '<tr><th colspan="3" class="px-6 py-3 text-center bg-gray-100 dark:bg-gray-600">Compensaciones por Proyecto</th></tr>';
+            $tabla .= '<tr class="bg-gray-50 dark:bg-gray-700"><th class="px-6 py-3">Título</th><th class="px-6 py-3">Código</th><th class="px-6 py-3">Créditos</th></tr>';
+            
+            $cont = 0;
+            foreach ($proyectos as $proyecto) {
+                $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                
+                $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
+                $tabla .= "<td class='px-6 py-4'>{$proyecto->titulo}</td>";
+                $tabla .= "<td class='px-6 py-4'>{$proyecto->codigo}</td>";
+                $tabla .= "<td class='px-6 py-4'>{$proyecto->creditos_compensacion}</td>";
+                $tabla .= "</tr>";
+                
+                $resultado['creditos_proyectos'] += $proyecto->creditos_compensacion;
+                $cont++;
+            }
+            
+            // Aplicar límite de proyectos
+            if (isset($limites['Proyectos']) && $resultado['creditos_proyectos'] > $limites['Proyectos']) {
+                $resultado['creditos_proyectos'] = $limites['Proyectos'];
+            }
+            
+            $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
+            $tabla .= "<td colspan='2' class='px-6 py-4 text-right font-bold'>Restricción: Límite {$limites['Proyectos']} créd. Total</td>";
+            $tabla .= "<td class='px-6 py-4 font-bold'>{$resultado['creditos_proyectos']}</td>";
+            $tabla .= "</tr>";
+            
+            $resultado['total_compensacion'] += $resultado['creditos_proyectos'];
+            return $tabla;
+        }
+        
+        return '';
+    }
+      /**
+     * Genera la tabla de compensaciones por tesis
+     */
+    private function generarTablaTesis($bd, $idUsuario, $limites, &$resultado)
+    {
+        try {
+            // Verificamos si las tablas existen
+            $tableExists = DB::select("SHOW TABLES LIKE '{$bd}.compensacion_tesis'");
+            if (empty($tableExists)) {
+                return ''; // Si la tabla no existe, retornamos una cadena vacía
+            }
+            
+            $tesis = DB::table($bd . '.compensacion_tesis')
+                ->join($bd . '.tesis_dpto', 'compensacion_tesis.id_tesis', '=', 'tesis_dpto.id_tesis')
+                ->where('compensacion_tesis.id_usuario', $idUsuario)
+                ->select('compensacion_tesis.creditos_compensacion', 'tesis_dpto.doctorando', 'tesis_dpto.fecha_lectura')
+                ->get();
+            
+            if ($tesis->count() > 0) {
+                $tabla = '<tr><th colspan="3" class="px-6 py-3 text-center bg-gray-100 dark:bg-gray-600">Compensaciones por Tesis</th></tr>';
+                $tabla .= '<tr class="bg-gray-50 dark:bg-gray-700"><th class="px-6 py-3">Doctorando</th><th class="px-6 py-3">Fecha de Lectura</th><th class="px-6 py-3">Créditos</th></tr>';
+                
+                $cont = 0;
+                foreach ($tesis as $tesisItem) {
+                    $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                    $fechaFormateada = date('d/m/Y', strtotime($tesisItem->fecha_lectura));
+                    
+                    $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
+                    $tabla .= "<td class='px-6 py-4'>{$tesisItem->doctorando}</td>";
+                    $tabla .= "<td class='px-6 py-4'>$fechaFormateada</td>";
+                    $tabla .= "<td class='px-6 py-4'>{$tesisItem->creditos_compensacion}</td>";
+                    $tabla .= "</tr>";
+                    
+                    $resultado['creditos_tesis'] += $tesisItem->creditos_compensacion;
+                    $cont++;
+                }
+                
+                // Aplicar límite de tesis
+                if (isset($limites['Tesis']) && $resultado['creditos_tesis'] > $limites['Tesis']) {
+                    $resultado['creditos_tesis'] = $limites['Tesis'];
+                }
+                
+                $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
+                $tabla .= "<td colspan='2' class='px-6 py-4 text-right font-bold'>Restricción: Límite {$limites['Tesis']} créd. Total</td>";
+                $tabla .= "<td class='px-6 py-4 font-bold'>{$resultado['creditos_tesis']}</td>";
+                $tabla .= "</tr>";
+                
+                $resultado['total_compensacion'] += $resultado['creditos_tesis'];
+                return $tabla;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error en generarTablaTesis: ' . $e->getMessage());
+            return '';
+        }
+        
+        return '';
+    }
+    
+    /**
+     * Genera la tabla de compensaciones por sexenios
+     */
+    private function generarTablaSexenios($bd, $idUsuario, &$resultado)
+    {
+        try {
+            $tableExists = DB::select("SHOW TABLES LIKE '{$bd}.compensacion_sexenio'");
+            if (empty($tableExists)) {
+                return '';
+            }
+            
+            $sexenio = DB::table($bd . '.compensacion_sexenio')
+                ->where('id_usuario', $idUsuario)
+                ->first();
+                
+            if ($sexenio) {
+                $resultado['creditos_sexenios'] = $sexenio->creditos_compensacion;
+                $resultado['total_compensacion'] += $resultado['creditos_sexenios'];
+                
+                $tabla = '<tr><th colspan="3" class="px-6 py-3 text-center bg-gray-100 dark:bg-gray-600">Compensaciones por Evaluaciones Positivas</th></tr>';
+                $tabla .= '<tr class="bg-gray-50 dark:bg-gray-700"><th colspan="2" class="px-6 py-3">Concepto</th><th class="px-6 py-3">Créditos</th></tr>';
+                $tabla .= '<tr class="bg-white dark:bg-gray-800 border-b dark:border-gray-600">';
+                $tabla .= '<td colspan="2" class="px-6 py-4">Créditos de compensación por tramos reconocidos</td>';
+                $tabla .= "<td class='px-6 py-4'>{$resultado['creditos_sexenios']}</td>";
+                $tabla .= '</tr>';
+                
+                return $tabla;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error en generarTablaSexenios: ' . $e->getMessage());
+            return '';
+        }
+        
+        return '';
+    }
+    
+    /**
+     * Genera la tabla de compensaciones por otros conceptos
+     */
+    private function generarTablaOtros($bd, $idUsuario, &$resultado)
+    {
+        try {
+            $tableExists = DB::select("SHOW TABLES LIKE '{$bd}.compensacion_otros'");
+            if (empty($tableExists)) {
+                return '';
+            }
+            
+            $otros = DB::table($bd . '.compensacion_otros')
+                ->join($bd . '.compensacion_otros_concepto', 'compensacion_otros.id_concepto', '=', 'compensacion_otros_concepto.id_concepto')
+                ->where('compensacion_otros.id_usuario', $idUsuario)
+                ->where('compensacion_otros_concepto.tipo', '<>', 'Posgrado')
+                ->where('compensacion_otros_concepto.tipo', '<>', 'Evaluación')
+                ->select(DB::raw('SUM(compensacion_otros.creditos_compensacion) as cred_comp'), 'compensacion_otros_concepto.nombre_concepto')
+                ->groupBy('compensacion_otros.id_concepto', 'compensacion_otros_concepto.nombre_concepto')
+                ->get();
+                
+            if ($otros->count() > 0) {
+                $tabla = '<tr><th colspan="3" class="px-6 py-3 text-center bg-gray-100 dark:bg-gray-600">Compensaciones por otros conceptos</th></tr>';
+                $tabla .= '<tr class="bg-gray-50 dark:bg-gray-700"><th colspan="2" class="px-6 py-3">Concepto</th><th class="px-6 py-3">Créditos</th></tr>';
+                
+                $cont = 0;
+                foreach ($otros as $otro) {
+                    $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                    $creditosCompensacion = round($otro->cred_comp * 1000) / 1000;
+                    
+                    $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
+                    $tabla .= "<td colspan='2' class='px-6 py-4'>{$otro->nombre_concepto}</td>";
+                    $tabla .= "<td class='px-6 py-4'>$creditosCompensacion</td>";
+                    $tabla .= "</tr>";
+                    
+                    $resultado['creditos_otros'] += $creditosCompensacion;
+                    $cont++;
+                }
+                
+                $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
+                $tabla .= "<td colspan='2' class='px-6 py-4 text-right font-bold'>Total</td>";
+                $tabla .= "<td class='px-6 py-4 font-bold'>{$resultado['creditos_otros']}</td>";
+                $tabla .= "</tr>";
+                
+                $resultado['total_compensacion'] += $resultado['creditos_otros'];
+                return $tabla;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error en generarTablaOtros: ' . $e->getMessage());
+            return '';
+        }
+        
+        return '';
+    }
+      /**
+     * Aplica las restricciones globales del sistema
+     */
+    private function aplicarRestriccionesGlobales($bd, $idUsuario, $limites, $limitesDocentes, &$resultado)
+    {
+        // Calcular créditos de investigación
+        $resultado['creditos_investigacion'] = $resultado['creditos_tesis'] + $resultado['creditos_proyectos'] + $resultado['creditos_sexenios'];
+        
+        // Restricción de investigación
+        if (isset($limites['Investigación']) && $resultado['creditos_investigacion'] > $limites['Investigación']) {
+            $resultado['total_compensacion'] = ($resultado['total_compensacion'] - $resultado['creditos_investigacion']) + $limites['Investigación'];
+            $creditosInvestigacion = $limites['Investigación'];
+            $resultado['restricciones'][] = "Restricción: Créditos por Investigación (Proyectos + Sexenios + Tesis) <= {$limites['Investigación']} -> Se trunca a {$limites['Investigación']}";
+        }
+        
+        // Obtener créditos de acciones especiales
+        $creditosEspeciales = DB::table($bd . '.compensacion_otros')
+            ->join($bd . '.compensacion_otros_concepto', 'compensacion_otros.id_concepto', '=', 'compensacion_otros_concepto.id_concepto')
+            ->where('compensacion_otros.id_usuario', $idUsuario)
+            ->where('compensacion_otros_concepto.tipo', 'Acciones Especiales')
+            ->sum('compensacion_otros.creditos_compensacion');
+            
+        $resultado['creditos_especiales'] = round($creditosEspeciales * 1000) / 1000;
+        
+        $creditosIngles = 0; // Si es necesario, implementar cálculo específico
+        $creditosParaElLimite12 = $resultado['max_cargo'] + $resultado['creditos_investigacion'] + $creditosIngles + $resultado['creditos_especiales'];
+        
+        // Restricción de gestión + investigación + acciones especiales
+        if (isset($limites['Gestion+Investigacion+A.Especiales']) && $creditosParaElLimite12 > $limites['Gestion+Investigacion+A.Especiales']) {
+            $resultado['total_compensacion'] = ($resultado['total_compensacion'] - $creditosParaElLimite12) + $limites['Gestion+Investigacion+A.Especiales'];
+            $creditosParaElLimite12 = $limites['Gestion+Investigacion+A.Especiales'];
+            $resultado['restricciones'][] = "Restricción: (Gestión ({$resultado['max_cargo']}) + Investigación ({$resultado['creditos_investigacion']}) + (Inglés,Intercambio, Práct. Empresa ({$resultado['creditos_especiales']}))) <= {$limites['Gestion+Investigacion+A.Especiales']} -> Se trunca a {$limites['Gestion+Investigacion+A.Especiales']}";
+        }
+        
+        // Restricción del 50% de la docencia
+        $cOtros2 = DB::table($bd . '.compensacion_otros')
+            ->join($bd . '.compensacion_otros_concepto', 'compensacion_otros.id_concepto', '=', 'compensacion_otros_concepto.id_concepto')
+            ->where('compensacion_otros.id_usuario', $idUsuario)
+            ->whereHas('concepto', function($query) {
+                $query->where('tipo', '<>', 'Acciones Especiales')
+                      ->where('tipo', '<>', 'Posgrado')
+                      ->where('tipo', '<>', 'Departamento');
+            })
+            ->sum('compensacion_otros.creditos_compensacion');
+          $redLimitadas = $creditosParaElLimite12 + $resultado['representacion_sindical'] + round($cOtros2 * 1000) / 1000;
+        
+        if ($redLimitadas > $limitesDocentes['mayor']) {
+            $resultado['restricciones'][] = "Restricción: La suma de compensaciones no debe superar el 50% de la docencia ({$limitesDocentes['mayor']} Crt.) -> Se trunca a {$limitesDocentes['mayor']}";
+            $resultado['total_compensacion'] = ($resultado['total_compensacion'] - $redLimitadas) + $limitesDocentes['mayor'];
+        }
+    }
+
+    //==================== MÉTODOS ADMINISTRATIVOS ====================
+
+    /**
+     * Avanza al siguiente turno (solo administradores)
+     */
+    public function avanzarTurno(Request $request)
+    {
+        try {
+            // Verificar que el usuario sea administrador
+            if (!Auth::user()->hasRole('admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tiene permisos para realizar esta acción.'
+                ], 403);
+            }
+
+            $turno = Turno::first();
+            if (!$turno) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró información del turno.'
+                ]);
+            }
+
+            $turnoAnterior = $turno->turno;
+            $turno->turno = $turno->turno + 1;
+            
+            if (!$turno->save()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al guardar el nuevo turno.'
+                ]);
+            }
+
+            // Registrar la acción en el log
+            $this->registrarLog('Admin: Avanzar Turno', null, null, null, null, 
+                'Turno cambiado de ' . $turnoAnterior . ' a ' . $turno->turno . ' por admin');
+
+            return response()->json([
+                'success' => true,
+                'message' => "Turno avanzado exitosamente de {$turnoAnterior} a {$turno->turno}.",
+                'nuevo_turno' => $turno->turno
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en avanzarTurno (admin): ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Cambia la fase del sistema (solo administradores)
+     */
+    public function cambiarFase(Request $request)
+    {
+        try {
+            // Verificar que el usuario sea administrador
+            if (!Auth::user()->hasRole('admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tiene permisos para realizar esta acción.'
+                ], 403);
+            }
+
+            $request->validate([
+                'nueva_fase' => 'required|integer|in:-1,1,2,3'
+            ]);
+
+            $turno = Turno::first();
+            if (!$turno) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró información del turno.'
+                ]);
+            }
+
+            $faseAnterior = $turno->fase;
+            $turno->fase = $request->nueva_fase;
+            
+            if (!$turno->save()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al guardar la nueva fase.'
+                ]);
+            }
+
+            // Registrar la acción en el log
+            $this->registrarLog('Admin: Cambiar Fase', null, null, null, null, 
+                'Fase cambiada de ' . $faseAnterior . ' a ' . $request->nueva_fase . ' por admin');
+
+            $faseNombre = [
+                -1 => 'Proceso Inactivo',
+                1 => 'Primera Fase',
+                2 => 'Segunda Fase',
+                3 => 'Tercera Fase'
+            ];
+
+            return response()->json([
+                'success' => true,
+                'message' => "Fase cambiada exitosamente a {$faseNombre[$request->nueva_fase]}.",
+                'nueva_fase' => $request->nueva_fase,
+                'nueva_fase_nombre' => $faseNombre[$request->nueva_fase]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en cambiarFase (admin): ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Exporta datos del sistema (solo administradores)
+     */
+    public function exportarDatos(Request $request)
+    {
+        try {
+            // Verificar que el usuario sea administrador
+            if (!Auth::user()->hasRole('admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tiene permisos para realizar esta acción.'
+                ], 403);
+            }
+
+            $request->validate([
+                'tipo_exportacion' => 'required|string|in:asignaciones,profesores,turnos,completo'
+            ]);
+
+            $tipoExportacion = $request->tipo_exportacion;
+            $fechaHora = now()->format('Y-m-d_H-i-s');
+            $nombreArchivo = "ordenacion_docente_{$tipoExportacion}_{$fechaHora}.csv";
+
+            // Generar datos según el tipo de exportación
+            $datos = [];
+            $headers = [];
+
+            switch ($tipoExportacion) {
+                case 'asignaciones':
+                    $headers = ['Profesor', 'Asignatura', 'Titulación', 'Tipo', 'Grupo', 'Créditos'];
+                    $asignaciones = DB::table('ordenacion_usuario_asignatura as oua')
+                        ->join('usuario as u', 'oua.id_usuario', '=', 'u.id_usuario')
+                        ->join('asignatura as a', 'oua.id_asignatura', '=', 'a.id_asignatura')
+                        ->leftJoin('titulacion as t', 'a.id_titulacion', '=', 't.id_titulacion')                        ->select(
+                            DB::raw("CONCAT(u.apellidos, ', ', u.nombre) as profesor"),
+                            'a.nombre_asignatura',
+                            DB::raw("COALESCE(t.nombre_titulacion, 'Sin titulación') as titulacion"),
+                            'oua.tipo',
+                            'oua.grupo',
+                            'oua.creditos'
+                        )
+                        ->orderBy('u.apellidos', 'u.nombre')
+                        ->get();
+                    
+                    foreach ($asignaciones as $asignacion) {
+                        $datos[] = [
+                            $asignacion->profesor,
+                            $asignacion->nombre_asignatura,
+                            $asignacion->titulacion,
+                            $asignacion->tipo,
+                            $asignacion->grupo,
+                            $asignacion->creditos
+                        ];
+                    }
+                    break;
+
+                case 'profesores':
+                    $headers = ['Apellidos', 'Nombres', 'Email', 'Tiene Perfil', 'Créditos Asignados'];
+                    $profesores = Usuario::whereHas('roles', function($query) {
+                            $query->where('name', 'profesor');
+                        })
+                        ->with('perfil')
+                        ->get();
+                    
+                    foreach ($profesores as $profesor) {
+                        $creditosAsignados = OrdenacionUsuarioAsignatura::where('id_usuario', $profesor->id_usuario)
+                            ->sum('creditos');
+                          $datos[] = [
+                            $profesor->apellidos,
+                            $profesor->nombre,
+                            $profesor->email,
+                            $profesor->perfil ? 'Sí' : 'No',
+                            $creditosAsignados
+                        ];
+                    }
+                    break;
+
+                case 'turnos':
+                    $headers = ['Fecha', 'Usuario', 'Acción', 'Detalles'];
+                    // Aquí deberías tener una tabla de logs, por simplicidad uso un ejemplo
+                    $datos[] = ['Sistema no implementado completamente', '', '', ''];
+                    break;
+
+                case 'completo':
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Exportación completa no implementada aún.'
+                    ]);
+            }
+
+            // Crear contenido CSV
+            $csvContent = "\xEF\xBB\xBF"; // BOM para UTF-8
+            $csvContent .= implode(',', $headers) . "\n";
+            
+            foreach ($datos as $fila) {
+                $csvContent .= '"' . implode('","', $fila) . '"' . "\n";
+            }
+
+            // Registrar la acción en el log
+            $this->registrarLog('Admin: Exportar Datos', null, null, null, null, 
+                "Exportación tipo: {$tipoExportacion}, registros: " . count($datos));
+
+            return response($csvContent, 200, [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => "attachment; filename=\"{$nombreArchivo}\"",
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error en exportarDatos (admin): ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Reinicia el sistema de ordenación (solo administradores)
+     */
+    public function reiniciarSistema(Request $request)
+    {
+        try {
+            // Verificar que el usuario sea administrador
+            if (!Auth::user()->hasRole('admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tiene permisos para realizar esta acción.'
+                ], 403);
+            }
+
+            $request->validate([
+                'confirmacion' => 'required|string|in:REINICIAR_SISTEMA'
+            ]);
+
+            DB::beginTransaction();
+
+            // Registrar la acción antes de hacer cambios
+            $this->registrarLog('Admin: Reiniciar Sistema', null, null, null, null, 
+                'Sistema reiniciado por administrador');
+
+            // Eliminar todas las asignaciones actuales
+            $asignacionesEliminadas = OrdenacionUsuarioAsignatura::count();
+            OrdenacionUsuarioAsignatura::truncate();
+
+            // Resetear el turno a la fase -1 (inactivo) y turno 1
+            $turno = Turno::first();
+            if ($turno) {
+                $turno->fase = -1;
+                $turno->turno = 1;
+                $turno->estado = 'inactivo';
+                $turno->save();
+            }
+
+            // Resetear preferencias de pasar turno de todos los profesores
+            DB::table('ordenacion_perfil')->update(['pasar_turno' => 0]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Sistema reiniciado exitosamente. Se eliminaron {$asignacionesEliminadas} asignaciones.",
+                'detalles' => [
+                    'asignaciones_eliminadas' => $asignacionesEliminadas,
+                    'fase_actual' => -1,
+                    'turno_actual' => 1
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error en reiniciarSistema (admin): ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtiene información administrativa del sistema para mostrar en el panel de admin
+     */
+    protected function obtenerInformacionAdmin()
+    {
+        try {
+            $info = [];
+            
+            // Estadísticas generales del sistema
+            $info['total_profesores'] = Usuario::whereHas('roles', function($query) {
+                $query->where('name', 'profesor');
+            })->count();
+            
+            $info['total_asignaciones'] = OrdenacionUsuarioAsignatura::count();
+            
+            $info['profesores_con_perfil'] = Perfil::count();
+            
+            $info['asignaturas_activas'] = Asignatura::where('estado', 'Activa')->count();
+            
+            // Estadísticas por fases
+            $info['asignaciones_fase1'] = OrdenacionUsuarioAsignatura::where('en_primera_fase', 1)->count();
+            $info['asignaciones_fase2'] = OrdenacionUsuarioAsignatura::where('en_primera_fase', 0)->count();
+            
+            // Créditos totales asignados
+            $info['creditos_totales'] = OrdenacionUsuarioAsignatura::sum('creditos');
+            
+            // Profesores que han configurado pasar turno
+            $info['profesores_pasar_turno'] = Perfil::where('pasar_turno', 1)->count();
+            
+            // Última actividad del sistema (logs recientes)
+            $ultimaActividad = DB::table($this->getDbSiguiente() . '.CCIA_LOG_ORDENACION')
+                ->orderBy('acceso', 'desc')
+                ->first();
+            
+            $info['ultima_actividad'] = $ultimaActividad ? $ultimaActividad->acceso : 'Sin actividad registrada';
+              // Estado actual del turno
+            $turno = Turno::first();
+            $info['turno_actual'] = $turno;
+            $info['fase_actual'] = $turno ? $turno->fase : 'No configurado';
+            $info['estado_turno'] = $turno ? $turno->estado : 'No configurado';
+            
+            // Usuario actual en turno (si existe)
+            $info['usuario_actual'] = null;
+            if ($turno && $turno->id_usuario) {
+                $info['usuario_actual'] = Usuario::find($turno->id_usuario);
+            }
+            
+            // Recomendaciones para el admin
+            $info['recomendaciones'] = [];
+            
+            if ($info['profesores_con_perfil'] < $info['total_profesores']) {
+                $faltantes = $info['total_profesores'] - $info['profesores_con_perfil'];
+                $info['recomendaciones'][] = "Hay {$faltantes} profesores sin perfil configurado";
+            }
+            
+            if ($info['total_asignaciones'] == 0 && $turno && $turno->fase > 0) {
+                $info['recomendaciones'][] = "El sistema está activo pero no hay asignaciones registradas";
+            }
+            
+            if ($turno && $turno->fase == -1) {
+                $info['recomendaciones'][] = "El proceso está inactivo. Considere cambiar a fase 1 para iniciar la ordenación";
+            }
+            
+            return $info;
+            
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerInformacionAdmin: ' . $e->getMessage());
+            return [
+                'error' => 'Error al obtener información administrativa',
+                'detalles' => config('app.debug') ? $e->getMessage() : null
+            ];
+        }
+    }
+
+    /**
+     * Obtiene información de profesores y asignaturas de cursos anteriores para administradores
+     */
+    protected function obtenerProfesoresCursosAnteriores()
+    {
+        try {
+            $dbActual = $this->getDbActual();
+            $info = [];
+            
+            // Total de asignaciones del curso anterior
+            $info['total_asignaciones'] = DB::table($dbActual . '.ordenacion_usuario_asignatura')->count();
+              // Profesores con más asignaciones en el curso anterior
+            $profesoresConMasAsignaciones = DB::table($dbActual . '.ordenacion_usuario_asignatura as oua')
+                ->join($dbActual . '.usuario as u', 'oua.id_usuario', '=', 'u.id_usuario')
+                ->select('u.nombre', 'u.apellidos', DB::raw('COUNT(*) as total_asignaciones'), 
+                         DB::raw('SUM(oua.creditos) as total_creditos'))
+                ->groupBy('oua.id_usuario', 'u.nombre', 'u.apellidos')
+                ->orderBy('total_asignaciones', 'desc')
+                ->limit(5)
+                ->get();
+            
+            $info['profesores_top'] = $profesoresConMasAsignaciones;
+            
+            // Asignaturas más solicitadas del curso anterior
+            $asignaturasMasSolicitadas = DB::table($dbActual . '.ordenacion_usuario_asignatura as oua')
+                ->join($dbActual . '.asignatura as a', 'oua.id_asignatura', '=', 'a.id_asignatura')
+                ->join($dbActual . '.titulacion as t', 'a.id_titulacion', '=', 't.id_titulacion')
+                ->select('a.nombre_asignatura', 't.nombre_titulacion', 
+                         DB::raw('COUNT(DISTINCT oua.id_usuario) as num_profesores'))
+                ->groupBy('a.id_asignatura', 'a.nombre_asignatura', 't.nombre_titulacion')
+                ->orderBy('num_profesores', 'desc')
+                ->limit(10)
+                ->get();
+            
+            $info['asignaturas_mas_solicitadas'] = $asignaturasMasSolicitadas;
+            
+            // Estadísticas de tipos de asignación
+            $estadisticasTipos = DB::table($dbActual . '.ordenacion_usuario_asignatura')
+                ->select('tipo', DB::raw('COUNT(*) as total'), DB::raw('SUM(creditos) as creditos_total'))
+                ->groupBy('tipo')
+                ->get();
+            
+            $info['estadisticas_tipos'] = $estadisticasTipos;
+            
+            // Profesores sin asignaciones en el curso anterior
+            $profesoresSinAsignaciones = DB::table($dbActual . '.usuario as u')
+                ->leftJoin($dbActual . '.ordenacion_usuario_asignatura as oua', 'u.id_usuario', '=', 'oua.id_usuario')
+                ->join($dbActual . '.roles_usuario as ru', 'u.id_usuario', '=', 'ru.id_usuario')
+                ->join($dbActual . '.roles as r', 'ru.id_rol', '=', 'r.id_rol')
+                ->where('r.nombre', 'profesor')
+                ->whereNull('oua.id_usuario')
+                ->select('u.nombres', 'u.apellidos', 'u.email')
+                ->get();
+            
+            $info['profesores_sin_asignaciones'] = $profesoresSinAsignaciones;
+            $info['total_profesores_sin_asignaciones'] = $profesoresSinAsignaciones->count();
+            
+            // Distribución por titulaciones
+            $distribucionTitulaciones = DB::table($dbActual . '.ordenacion_usuario_asignatura as oua')
+                ->join($dbActual . '.asignatura as a', 'oua.id_asignatura', '=', 'a.id_asignatura')
+                ->join($dbActual . '.titulacion as t', 'a.id_titulacion', '=', 't.id_titulacion')
+                ->select('t.nombre_titulacion', 
+                         DB::raw('COUNT(*) as num_asignaciones'),
+                         DB::raw('SUM(oua.creditos) as creditos_total'))
+                ->groupBy('t.id_titulacion', 't.nombre_titulacion')
+                ->orderBy('num_asignaciones', 'desc')
+                ->get();
+            
+            $info['distribucion_titulaciones'] = $distribucionTitulaciones;
+            
+            return $info;
+            
+        } catch (\Exception $e) {
+            Log::error('Error en obtenerProfesoresCursosAnteriores: ' . $e->getMessage());
+            return [
+                'error' => 'Error al obtener información de cursos anteriores',
+                'detalles' => config('app.debug') ? $e->getMessage() : null,
+                'total_asignaciones' => 0
+            ];
+        }
+    }
 }

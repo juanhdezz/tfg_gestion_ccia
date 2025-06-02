@@ -171,7 +171,7 @@
                                 @foreach ($asignaturas as $asignatura)
                                     <option value="{{ $asignatura->id_asignatura }}"
                                         {{ old('id_asignatura') == $asignatura->id_asignatura ? 'selected' : '' }}>
-                                        {{ $asignatura->nombre_asignatura }} ({{ $asignatura->codigo_asignatura }})
+                                        {{ $asignatura->nombre_asignatura }} ({{ $asignatura->id_asignatura }})
                                     </option>
                                 @endforeach
                             </select>

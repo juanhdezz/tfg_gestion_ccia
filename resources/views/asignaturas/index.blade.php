@@ -69,9 +69,8 @@
                             </td>
                             <td class="px-6 py-4">
                                 {{ $asignatura->ects_teoria + $asignatura->ects_practicas }}
-                            </td>
-                            <td class="px-6 py-4">
-                                {{ $asignatura->id_coordinador }}
+                            </td>                            <td class="px-6 py-4">
+                                {{ $asignatura->coordinador ? $asignatura->coordinador->nombre . ' ' . $asignatura->coordinador->apellidos : 'No asignado' }}
                             </td>
                             <td class="px-6 py-4">
                                 {{ $asignatura->grupos_teoria }}
@@ -152,9 +151,8 @@
                             </td>
                             <td class="px-6 py-4">
                                 {{ $asignatura->ects_teoria + $asignatura->ects_practicas }}
-                            </td>
-                            <td class="px-6 py-4">
-                                {{ $asignatura->id_coordinador }}
+                            </td>                            <td class="px-6 py-4">
+                                {{ $asignatura->coordinador ? $asignatura->coordinador->nombre . ' ' . $asignatura->coordinador->apellidos : 'No asignado' }}
                             </td>
                             <td class="px-6 py-4">
                                 {{ $asignatura->grupos_teoria }}

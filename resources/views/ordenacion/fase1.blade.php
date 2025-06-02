@@ -30,9 +30,31 @@
         @if (session('error'))
             <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
                 {{ session('error') }}
-            </div>
-        @endif
+            </div>        @endif
 
+        @role('admin')
+            <!-- Panel de Administración -->
+            <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg mb-6 overflow-hidden">
+                <div class="bg-blue-50 dark:bg-blue-700 px-4 py-2 border-b border-blue-200 dark:border-blue-600">
+                    <h2 class="text-xl font-semibold text-blue-800 dark:text-white">Panel de Administración</h2>
+                </div>
+                <div class="p-4">
+                    @include('ordenacion.partials.admin_panel')
+                </div>
+            </div>
+
+            <!-- Lista de Profesores y Asignaturas de Cursos Anteriores -->
+            <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg mb-6 overflow-hidden">
+                <div class="bg-green-50 dark:bg-green-700 px-4 py-2 border-b border-green-200 dark:border-green-600">
+                    <h2 class="text-xl font-semibold text-green-800 dark:text-white">Histórico de Asignaciones ({{ $profesores_cursos_anteriores['total_asignaciones'] ?? 0 }} registros)</h2>
+                </div>
+                <div class="p-4">
+                    @include('ordenacion.partials.profesores_historicos')
+                </div>
+            </div>
+        @endrole
+
+        @role('profesor')
         <!-- Sección de reducciones -->
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg mb-6 overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
@@ -41,8 +63,7 @@
             <div class="p-4">
                 @include('ordenacion.partials.reducciones')
             </div>
-        </div>
-        
+        </div>        
         <!-- Sección de asignaciones actuales -->
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg mb-6 overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
@@ -202,10 +223,10 @@
                         </button>
                     </form>
                 @endif
-            </div>
-        </div>
-        
-        <!-- Resumen -->
+            </div>        </div>
+        @endrole
+
+        <!-- Resumen (disponible para todos) -->
         <div class="flex justify-center mt-6">
             <a href="{{ route('ordenacion.resumen') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Ver Resumen de Ordenación Docente

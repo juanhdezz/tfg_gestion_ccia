@@ -13,9 +13,7 @@ class LibroProyecto extends Model
     //protected $primaryKey = ['id_libro', 'id_usuario', 'fecha_solicitud'];
     protected $primaryKey = null; // Cambia esto si es necesario
     public $incrementing = false;
-    public $timestamps = false;
-
-    protected $fillable = [
+    public $timestamps = false;    protected $fillable = [
         'id_libro',
         'id_usuario',
         'id_proyecto',
@@ -28,9 +26,7 @@ class LibroProyecto extends Model
         'fecha_pedido',
         'fecha_recepcion',
         'justificacion'
-    ];
-
-    protected $casts = [
+    ];    protected $casts = [
         'fecha_solicitud' => 'date',
         'fecha_aceptado_denegado' => 'date',
         'fecha_pedido' => 'date',

@@ -165,13 +165,15 @@ class LibroController extends Controller
         // Ordenar y paginar
         $queryPosgrado->orderBy('fecha_solicitud', 'desc');
         $librosPosgrado = $queryPosgrado->paginate(10)->appends(request()->query());
-        
-        // Obtener todos los estados posibles para el filtro
+          // Obtener todos los estados posibles para el filtro
         $estados = [
             'Pendiente Aceptación',
+            'Pedido',
             'Aceptado',
             'Denegado',
-            'Recibido'
+            'Recibido',
+            'Biblioteca',
+            'Agotado/Descatalogado'
         ];
 
         // Verificar si el usuario actual es de dirección
@@ -679,7 +681,7 @@ public function store(Request $request)
                         'fecha_aceptado_denegado' => Carbon::now(),
                         'observaciones' => $request->observaciones
                     ]);
-                    
+                
                 $tipoSolicitud = 'asignatura';
             }
 
@@ -846,7 +848,7 @@ public function store(Request $request)
                         'estado' => 'Recibido',
                         'fecha_recepcion' => Carbon::now()
                     ]);
-                    
+                
                 $tipoSolicitud = 'posgrado';
             } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
                 $actualizado = LibroOtro::where('id_libro', $id_libro)
@@ -856,7 +858,7 @@ public function store(Request $request)
                         'estado' => 'Recibido',
                         'fecha_recepcion' => Carbon::now()
                     ]);
-                    
+                
                 $tipoSolicitud = 'otros fondos';
             } else {
                 // Si no se especifica tipo o es 'asignatura', intentar primero con asignatura
@@ -867,7 +869,7 @@ public function store(Request $request)
                         'estado' => 'Recibido',
                         'fecha_recepcion' => Carbon::now()
                     ]);
-                    
+                
                 $tipoSolicitud = 'asignatura';
             }
 
@@ -964,6 +966,360 @@ public function store(Request $request)
             
             return view('error.error', [
                 'errorMessage' => 'No se pudo marcar el libro como recibido.'
+            ]);
+        }
+    }
+
+    /**
+     * Marcar un libro como disponible en biblioteca
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id_libro
+     * @param  int  $id_usuario
+     * @param  string  $fecha_solicitud
+     * @param  string  $tipo
+     * @return \Illuminate\Http\Response
+     */
+    public function marcarComoBiblioteca(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
+    {
+        try {
+            $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
+            $id_libro = (int) $id_libro;
+            $id_usuario = (int) $id_usuario;
+            
+            Log::debug('Intentando marcar como biblioteca', [
+                'id_libro' => $id_libro,
+                'id_usuario' => $id_usuario,
+                'fecha' => $fecha,
+                'tipo' => $tipo
+            ]);
+            
+            $actualizado = 0;
+            $tipoSolicitud = '';            // Si se especifica el tipo, intentar actualizar ese tipo primero
+            if ($tipo === 'proyecto' || ($request->has('tipo') && $request->tipo === 'proyecto')) {
+                $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Biblioteca'
+                    ]);
+                $tipoSolicitud = 'proyecto';
+            } elseif ($tipo === 'grupo' || ($request->has('tipo') && $request->tipo === 'grupo')) {
+                $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Biblioteca'
+                    ]);
+                $tipoSolicitud = 'grupo';
+            } elseif ($tipo === 'posgrado' || ($request->has('tipo') && $request->tipo === 'posgrado')) {
+                $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Biblioteca'
+                    ]);
+                $tipoSolicitud = 'posgrado';
+            } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
+                $actualizado = LibroOtro::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Biblioteca'
+                    ]);
+                $tipoSolicitud = 'otros fondos';
+            } else {
+                // Si no se especifica tipo, intentar primero con asignatura
+                $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Biblioteca'
+                    ]);
+                $tipoSolicitud = 'asignatura';
+            }            // Si no se actualizó ningún registro, intentar con los otros tipos
+            if ($actualizado === 0) {
+                if ($tipoSolicitud !== 'proyecto') {
+                    $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Biblioteca'
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'proyecto';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'grupo') {
+                    $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Biblioteca'
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'grupo de investigación';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'posgrado') {
+                    $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Biblioteca'
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'posgrado';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'otros fondos') {
+                    $actualizado = LibroOtro::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Biblioteca'
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'otros fondos';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'asignatura') {
+                    $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Biblioteca'
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'asignatura';
+                    }
+                }
+                
+                if ($actualizado === 0) {
+                    Log::warning('Intento de marcar como biblioteca una solicitud inexistente', [
+                        'id_libro' => $id_libro,
+                        'id_usuario' => $id_usuario,
+                        'fecha_solicitud' => $fecha_solicitud
+                    ]);
+                    
+                    return redirect()->route('libros.index')
+                        ->with('error', 'No se encontró la solicitud para marcar como disponible en biblioteca');
+                }
+            }
+
+            // Enviar correo de notificación
+            $usuario = Usuario::find($id_usuario);
+
+            if ($usuario) {
+                $libro = Libro::find($id_libro);
+
+                try {
+                    Mail::to('jhernandezsanchezagesta@gmail.com')->send(new Notification($usuario, $libro, 'Biblioteca'));
+                    Log::info("Correo de notificación biblioteca enviado exitosamente a {$usuario->email} para libro con ID: {$id_libro}");
+                } catch (\Exception $e) {
+                    Log::error("Error al enviar correo de notificación biblioteca a {$usuario->email}: " . $e->getMessage());
+                }
+            }
+
+            return redirect()->route('libros.index')
+                ->with('success', "Libro con cargo a {$tipoSolicitud} marcado como disponible en biblioteca");
+                
+        } catch (\Exception $e) {
+            Log::error('Error al marcar libro como biblioteca: ' . $e->getMessage());
+            
+            return view('error.error', [
+                'errorMessage' => 'No se pudo marcar el libro como disponible en biblioteca.'
+            ]);
+        }
+    }
+
+    /**
+     * Marcar un libro como agotado/descatalogado
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id_libro
+     * @param  int  $id_usuario
+     * @param  string  $fecha_solicitud
+     * @param  string  $tipo
+     * @return \Illuminate\Http\Response
+     */
+    public function marcarComoAgotado(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
+    {
+        try {
+            $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
+            $id_libro = (int) $id_libro;
+            $id_usuario = (int) $id_usuario;
+            
+            Log::debug('Intentando marcar como agotado/descatalogado', [
+                'id_libro' => $id_libro,
+                'id_usuario' => $id_usuario,
+                'fecha' => $fecha,
+                'tipo' => $tipo
+            ]);
+            
+            $actualizado = 0;
+            $tipoSolicitud = '';
+
+            // Si se especifica el tipo, intentar actualizar ese tipo primero
+            if ($tipo === 'proyecto' || ($request->has('tipo') && $request->tipo === 'proyecto')) {
+                $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Agotado/Descatalogado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                $tipoSolicitud = 'proyecto';
+            } elseif ($tipo === 'grupo' || ($request->has('tipo') && $request->tipo === 'grupo')) {
+                $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Agotado/Descatalogado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                $tipoSolicitud = 'grupo';
+            } elseif ($tipo === 'posgrado' || ($request->has('tipo') && $request->tipo === 'posgrado')) {
+                $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Agotado/Descatalogado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                $tipoSolicitud = 'posgrado';
+            } elseif ($tipo === 'otros' || ($request->has('tipo') && $request->tipo === 'otros')) {
+                $actualizado = LibroOtro::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Agotado/Descatalogado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                $tipoSolicitud = 'otros fondos';
+            } else {
+                // Si no se especifica tipo, intentar primero con asignatura
+                $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                    ->where('id_usuario', $id_usuario)
+                    ->whereDate('fecha_solicitud', $fecha)
+                    ->update([
+                        'estado' => 'Agotado/Descatalogado',
+                        'fecha_aceptado_denegado' => Carbon::now(),
+                        'observaciones' => $request->observaciones
+                    ]);
+                $tipoSolicitud = 'asignatura';
+            }
+
+            // Si no se actualizó ningún registro, intentar con los otros tipos
+            if ($actualizado === 0) {
+                if ($tipoSolicitud !== 'proyecto') {
+                    $actualizado = LibroProyecto::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Agotado/Descatalogado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'proyecto';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'grupo') {
+                    $actualizado = LibroGrupo::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Agotado/Descatalogado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'grupo';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'posgrado') {
+                    $actualizado = LibroPosgrado::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Agotado/Descatalogado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'posgrado';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'otros fondos') {
+                    $actualizado = LibroOtro::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Agotado/Descatalogado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'otros fondos';
+                    }
+                }
+                
+                if ($actualizado === 0 && $tipoSolicitud !== 'asignatura') {
+                    $actualizado = LibroAsignatura::where('id_libro', $id_libro)
+                        ->where('id_usuario', $id_usuario)
+                        ->whereDate('fecha_solicitud', $fecha)
+                        ->update([
+                            'estado' => 'Agotado/Descatalogado',
+                            'fecha_aceptado_denegado' => Carbon::now(),
+                            'observaciones' => $request->observaciones
+                        ]);
+                        
+                    if ($actualizado > 0) {
+                        $tipoSolicitud = 'asignatura';
+                    }
+                }
+                
+                if ($actualizado === 0) {
+                    Log::warning('Intento de marcar como agotado/descatalogado una solicitud inexistente', [
+                        'id_libro' => $id_libro,
+                        'id_usuario' => $id_usuario,
+                        'fecha_solicitud' => $fecha_solicitud
+                    ]);
+                    
+                    return redirect()->route('libros.index')
+                        ->with('error', 'No se encontró la solicitud para marcar como agotado/descatalogado');
+                }
+            }
+
+            return redirect()->route('libros.index')
+                ->with('success', "Libro con cargo a {$tipoSolicitud} marcado como agotado/descatalogado");
+                
+        } catch (\Exception $e) {
+            Log::error('Error al marcar libro como agotado/descatalogado: ' . $e->getMessage());
+            
+            return view('error.error', [
+                'errorMessage' => 'No se pudo marcar el libro como agotado/descatalogado.'
             ]);
         }
     }

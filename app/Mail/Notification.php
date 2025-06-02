@@ -27,10 +27,9 @@ class Notification extends Mailable
 
     /**
      * Create a new message instance.
-     *
-     * @param Usuario $usuario El usuario que realizó la solicitud
+     *     * @param Usuario $usuario El usuario que realizó la solicitud
      * @param mixed $entidad La entidad relacionada (ReservaSala o Libro)
-     * @param string $estado Estado de la solicitud ('Validada', 'Rechazada', 'Aceptado', 'Denegado', etc.)
+     * @param string $estado Estado de la solicitud ('Validada', 'Rechazada', 'Aceptado', 'Denegado', 'Biblioteca', etc.)
      */
     public function __construct(Usuario $usuario, $entidad, string $estado)
     {
@@ -40,16 +39,19 @@ class Notification extends Mailable
         
         // Determinar el tipo de entidad
         $this->tipoEntidad = $entidad instanceof ReservaSala ? 'reserva' : 'libro';
-        
-        // Configurar el asunto según el tipo de entidad y estado
+          // Configurar el asunto según el tipo de entidad y estado
         if ($this->tipoEntidad === 'reserva') {
             $this->subject = $estado === 'Validada' 
                 ? 'Su reserva de sala ha sido aprobada' 
                 : 'Su reserva de sala ha sido rechazada';
         } else {
-            $this->subject = $estado === 'Aceptado' 
-                ? 'Su solicitud de libro ha sido aprobada' 
-                : 'Su solicitud de libro ha sido denegada';
+            if ($estado === 'Aceptado') {
+                $this->subject = 'Su solicitud de libro ha sido aprobada';
+            } elseif ($estado === 'Biblioteca') {
+                $this->subject = 'Su libro está disponible en biblioteca';
+            } else {
+                $this->subject = 'Su solicitud de libro ha sido denegada';
+            }
         }
     }
 

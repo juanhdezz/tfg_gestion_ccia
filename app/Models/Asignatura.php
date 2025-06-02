@@ -40,6 +40,12 @@ class Asignatura extends BaseModel
         return $this->belongsTo(Titulacion::class, 'id_titulacion', 'id_titulacion');
     }
 
+    // Relación con el coordinador
+    public function coordinador()
+    {
+        return $this->belongsTo(Usuario::class, 'id_coordinador', 'id_usuario');
+    }
+
     // Relación con los grupos de teoría y práctica
     public function grupos()
     {

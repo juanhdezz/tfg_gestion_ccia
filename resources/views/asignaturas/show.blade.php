@@ -19,12 +19,12 @@
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Especialidad</h3>
                     <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->especialidad }}</p>
-                </div>
-
-                <!-- ID Coordinador -->
+                </div>                <!-- Coordinador -->
                 <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 shadow-md">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">ID Coordinador</h3>
-                    <p class="mt-1 text-gray-900 dark:text-white">{{ $asignatura->id_coordinador }}</p>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Coordinador</h3>
+                    <p class="mt-1 text-gray-900 dark:text-white">
+                        {{ $asignatura->coordinador ? $asignatura->coordinador->nombre . ' ' . $asignatura->coordinador->apellidos : 'No asignado' }}
+                    </p>
                 </div>
 
                 <!-- Nombre Asignatura -->

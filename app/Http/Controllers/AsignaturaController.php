@@ -8,20 +8,20 @@ use App\Models\GrupoTeoriaPractica;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use App\Models\Usuario;
 
 class AsignaturaController extends Controller
-{
-    public function index(Request $request)
+{    public function index(Request $request)
     {
         $search = $request->input('search');
-        $asignaturas = Asignatura::with(['titulacion'])
+        $asignaturas = Asignatura::with(['titulacion', 'coordinador'])
             ->when($search, function ($query, $search) {
                 return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
             })
             ->where('estado', 'Activa')
             ->get();
 
-        $asignaturasExtintas = Asignatura::with(['titulacion'])
+        $asignaturasExtintas = Asignatura::with(['titulacion', 'coordinador'])
             ->when($search, function ($query, $search) {
                 return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
             })
@@ -30,11 +30,10 @@ class AsignaturaController extends Controller
 
         return view('asignaturas.index', compact('asignaturas', 'asignaturasExtintas'));
     }
-    
-    public function show($id)
+      public function show($id)
     {
-        // Cargar la asignatura con la titulación asociada
-        $asignatura = Asignatura::with(['titulacion'])->find($id);
+        // Cargar la asignatura con la titulación y coordinador asociados
+        $asignatura = Asignatura::with(['titulacion', 'coordinador'])->find($id);
         if (is_null($asignatura)) {
             return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
         }
@@ -48,21 +47,20 @@ class AsignaturaController extends Controller
 
         // Devolvemos la vista con los datos
         return view('asignaturas.show', compact('asignatura', 'distribucionGrupos'));
-    }
-
-    public function create()
+    }    public function create()
     {
-        $titulaciones = Titulacion::all(); 
-        return view('asignaturas.create', compact('titulaciones'));
+        $titulaciones = Titulacion::all();
+        $usuarios = Usuario::orderBy('apellidos', 'asc')->orderBy('nombre', 'asc')->get();
+        return view('asignaturas.create', compact('titulaciones', 'usuarios'));
     }
 
     public function store(Request $request)
 {
-    try {
-        // Validación de datos con mensajes personalizados
+    try {        // Validación de datos con mensajes personalizados
         $validated = $request->validate([
             'id_asignatura' => 'required|string|max:8|unique:asignatura',
             'id_titulacion' => 'required|exists:titulacion,id_titulacion',
+            'id_coordinador' => 'nullable|exists:usuario,id_usuario',
             'nombre_asignatura' => 'required|string|max:128',
             'siglas_asignatura' => 'required|string|max:8',
             'grupos_teoria' => 'required|integer|min:1',
@@ -75,6 +73,7 @@ class AsignaturaController extends Controller
             'ects_practicas' => 'nullable|numeric|min:0',
         ], [
             'id_titulacion.exists' => 'La titulación seleccionada no existe en la base de datos',
+            'id_coordinador.exists' => 'El coordinador seleccionado no existe en la base de datos',
             'id_asignatura.unique' => 'El ID de asignatura ya está en uso',
             'grupos_teoria.min' => 'Debe especificar al menos un grupo de teoría'
         ]);
@@ -150,12 +149,11 @@ class AsignaturaController extends Controller
             ->with('error', 'Error inesperado: ' . $e->getMessage())
             ->withInput();
     }
-}
-
-    public function edit($id)
+}    public function edit($id)
     {
         $titulaciones = Titulacion::all();
-        $asignatura = Asignatura::find($id);
+        $usuarios = Usuario::orderBy('apellidos', 'asc')->orderBy('nombre', 'asc')->get();
+        $asignatura = Asignatura::with('coordinador')->find($id);
         
         if (is_null($asignatura)) {
             return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
@@ -167,9 +165,7 @@ class AsignaturaController extends Controller
             ->groupBy('grupo_teoria')
             ->orderBy('grupo_teoria')
             ->get()
-            ->keyBy('grupo_teoria');
-
-        return view('asignaturas.edit', compact('asignatura', 'titulaciones', 'distribucionGrupos'));
+            ->keyBy('grupo_teoria');        return view('asignaturas.edit', compact('asignatura', 'titulaciones', 'distribucionGrupos', 'usuarios'));
     }
 
     public function update(Request $request, $id)
@@ -177,11 +173,10 @@ class AsignaturaController extends Controller
         $asignatura = Asignatura::find($id);
         if (is_null($asignatura)) {
             return redirect()->route('asignaturas.index')->with('error', 'Asignatura no encontrada');
-        }
-
-        // Validamos los datos
+        }        // Validamos los datos
         $validated = $request->validate([
             'id_titulacion' => 'required|exists:titulacion,id_titulacion',
+            'id_coordinador' => 'nullable|exists:usuario,id_usuario',
             'nombre_asignatura' => 'required|string|max:128',
             'siglas_asignatura' => 'required|string|max:8',
             'grupos_teoria' => 'required|integer|min:1',
@@ -235,8 +230,7 @@ class AsignaturaController extends Controller
 
     public function grupos(Request $request)
     {
-        $search = $request->input('search');
-        $asignaturas = Asignatura::with(['titulacion'])
+        $search = $request->input('search');        $asignaturas = Asignatura::with(['titulacion', 'coordinador'])
             ->when($search, function ($query, $search) {
                 return $query->where('nombre_asignatura', 'LIKE', "%{$search}%");
             })

@@ -167,15 +167,113 @@
         Ver Resumen de Ordenación Docente
     </a>
 </div>
-                        
-                        <a href="{{ route('ordenacion.pasar-turno') }}" 
-                           class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-                           onclick="return confirm('¿Está seguro de que desea pasar el turno sin realizar asignaciones?')">
+                          <button type="button" id="btnPasarTurno"
+                                class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                                onclick="validarYPasarTurno()">
                             Pasar Turno
-                        </a>
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        // Función para evitar el envío de formularios al pulsar la tecla enter
+        function stopRKey(evt) {
+            var evt = (evt) ? evt : ((event) ? event : null);
+            var node = (evt.target) ? evt.target : ((evt.srcElement) ? evt.srcElement : null);
+            if ((evt.keyCode == 13) && (node.type == "text")) {
+                return false;
+            }
+        }
+        document.onkeypress = stopRKey;
+
+        // Función ValidaTurnoFase2 traducida del sistema monolítico
+        function ValidaTurnoFase2(T, CrCat, CrConPI, CrSinPI, docenciaTotal, CREDITOS_MENOS, Turno, txt_docencia, cc_falta_presencial) {
+            var respuesta = true;
+            
+            // Lógica de validación idéntica al sistema monolítico
+            if ((Turno >= 73 && T <= CrCat) || 
+                (Turno < 73 && cc_falta_presencial <= 0 && T >= (CrCat - CREDITOS_MENOS) && 
+                 CrConPI <= (CrCat + 3) && (CrSinPI >= 7.5) && 
+                 ((CrConPI - CrSinPI) <= 3.0) && (docenciaTotal >= 12))) {
+                
+                respuesta = confirm(txt_docencia + "\n\nEl turno se va a pasar al siguiente miembro del departamento. ¿Está seguro de haber terminado su elección de asignaturas?");
+            } else {
+                if (cc_falta_presencial > 0) {
+                    alert(" Te faltan por escoger " + cc_falta_presencial + " créditos presenciales");
+                }
+                if (T < (CrCat - CREDITOS_MENOS)) {
+                    alert(" El número de créditos elegido " + T + " no alcanza el mínimo requerido " + (CrCat - CREDITOS_MENOS));
+                }
+                if (CrConPI > (CrCat + 3)) {
+                    alert(" El número de créditos elegido excede el máximo de créditos establecido " + (CrCat + 3));
+                }
+                if (CrSinPI < 7.5) {
+                    alert(" Número de créditos de primer y segundo ciclo insuficiente (menor de 9) " + (CrSinPI));
+                }
+                if ((CrConPI - CrSinPI) > 3.0) {
+                    alert(" El número de créditos (" + (CrConPI - CrSinPI) + ") en proyectos fin de carrera es mayor de 3");
+                }
+                if (docenciaTotal < 12) {
+                    alert(" El número de créditos de docencia, (docencia en grado/1º ciclo, docencia en posgrado y Trabajos Fin de máster) (" + docenciaTotal + " crt) es menor que 12");
+                }
+                respuesta = false;
+            }
+            return respuesta;
+        }
+
+        // Función para validar y pasar turno
+        function validarYPasarTurno() {
+            // Obtener los datos necesarios del backend
+            fetch('{{ route("ordenacion.datos-validacion") }}')
+                .then(response => response.json())
+                .then(data => {
+                    const resultado = ValidaTurnoFase2(
+                        data.creditosT,
+                        data.credCategoría,
+                        data.creditosConPI,
+                        data.creditosSinPI,
+                        data.docenciaTotal,
+                        data.creditosMenos,
+                        data.turno,
+                        data.txtDocencia,
+                        data.ccFaltaPresencial
+                    );
+                    
+                    if (resultado) {
+                        // Si la validación es exitosa, redirigir para pasar turno
+                        window.location.href = '{{ route("ordenacion.pasar-turno") }}';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al validar los datos. Por favor, inténtelo de nuevo.');
+                });
+        }
+
+        // Validación de créditos fraccionables en tiempo real
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input[type="number"]');
+            
+            inputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    const max = parseFloat(this.getAttribute('max'));
+                    const value = parseFloat(this.value);
+                    
+                    if (value > max) {
+                        this.value = max;
+                        alert('El número de créditos no puede exceder el máximo permitido (' + max + ')');
+                    }
+                    
+                    if (value < 0) {
+                        this.value = 0;
+                    }
+                });
+            });
+        });
+    </script>
+    @endpush
 </x-app-layout>

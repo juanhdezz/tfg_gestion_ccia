@@ -136,10 +136,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/aprobar', [LibroController::class, 'aprobar'])
             ->name('aprobar');
         Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/denegar', [LibroController::class, 'denegar'])
-            ->name('denegar');
-        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/recibir', [LibroController::class, 'recibir'])
+            ->name('denegar');        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/recibir', [LibroController::class, 'recibir'])
             ->name('recibir');
-            Route::get('/imprimir', [LibroController::class, 'imprimir'])->name('imprimir');
+        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/biblioteca', [LibroController::class, 'marcarComoBiblioteca'])
+            ->name('biblioteca');
+        Route::post('/{id_libro}/{id_usuario}/{fecha_solicitud}/agotado', [LibroController::class, 'marcarComoAgotado'])
+            ->name('agotado');
+        Route::get('/imprimir', [LibroController::class, 'imprimir'])->name('imprimir');
     });
 
 
@@ -225,9 +228,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('despachos/create', [DespachoController::class, 'create'])->name('despachos.create');
     Route::post('despachos', [DespachoController::class, 'store'])->name('despachos.store');
     Route::get('despachos/{id}', [DespachoController::class, 'show'])->name('despachos.show');
-    Route::get('despachos/{id}/edit', [DespachoController::class, 'edit'])->name('despachos.edit');
-    Route::put('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
-    Route::patch('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
+    Route::get('despachos/{id}/edit', [DespachoController::class, 'edit'])->name('despachos.edit');    Route::put('despachos/{id}', [DespachoController::class, 'update'])->name('despachos.update');
+    Route::patch('despachos/{id}', [DespachoController::class, 'update']);
     Route::delete('despachos/{id}', [DespachoController::class, 'destroy'])->name('despachos.destroy');
     Route::get('despachos/{id}/usuarios', [DespachoController::class, 'usuariosAsignados'])
         ->name('despachos.usuarios');
@@ -313,22 +315,30 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/ordenacion/eliminar', [App\Http\Controllers\OrdenacionDocenteController::class, 'eliminarAsignacion'])->name('ordenacion.eliminar');
 
     // Cambiar grupo
-    Route::post('/ordenacion/cambiar-grupo', [App\Http\Controllers\OrdenacionDocenteController::class, 'cambiarGrupo'])->name('ordenacion.cambiar-grupo');
-
-    // Segunda fase - asignar asignaturas en turno
+    Route::post('/ordenacion/cambiar-grupo', [App\Http\Controllers\OrdenacionDocenteController::class, 'cambiarGrupo'])->name('ordenacion.cambiar-grupo');    // Segunda fase - asignar asignaturas en turno
     Route::post('/ordenacion/asignar', [App\Http\Controllers\OrdenacionDocenteController::class, 'asignarAsignaturas'])->name('ordenacion.asignar');
+
+    // Tercera fase - asignar asignaturas adicionales
+    Route::post('/ordenacion/asignar-fase3', [App\Http\Controllers\OrdenacionDocenteController::class, 'asignarAsignaturasFase3'])->name('ordenacion.asignar-fase3');
+    Route::post('/ordenacion/finalizar-turno', [App\Http\Controllers\OrdenacionDocenteController::class, 'finalizarTurno'])->name('ordenacion.finalizar-turno');
 
     // Actualizar perfil
     Route::post('/ordenacion/actualizar-perfil', [App\Http\Controllers\OrdenacionDocenteController::class, 'actualizarPerfil'])->name('ordenacion.actualizar-perfil');
 
     // Preferencia de pasar turno
-    Route::post('/ordenacion/pasar-turno-preferencia', [App\Http\Controllers\OrdenacionDocenteController::class, 'actualizarPasarTurno'])->name('ordenacion.pasar-turno-preferencia');
-
-    // Pasar turno
-    Route::get('/ordenacion/pasar-turno', [App\Http\Controllers\OrdenacionDocenteController::class, 'pasarTurno'])->name('ordenacion.pasar-turno');
+    Route::post('/ordenacion/pasar-turno-preferencia', [App\Http\Controllers\OrdenacionDocenteController::class, 'actualizarPasarTurno'])->name('ordenacion.pasar-turno-preferencia');    // Pasar turno
+    Route::get('/ordenacion/pasar-turno', [App\Http\Controllers\OrdenacionDocenteController::class, 'pasarTurno'])->name('ordenacion.pasar-turno');    // Datos para validación JavaScript
+    Route::get('/ordenacion/datos-validacion', [App\Http\Controllers\OrdenacionDocenteController::class, 'obtenerDatosValidacion'])->name('ordenacion.datos-validacion');    // Detalle de compensaciones para AJAX
+    Route::get('/ordenacion/detalle-compensaciones', [App\Http\Controllers\OrdenacionDocenteController::class, 'detalleCompensaciones'])->name('ordenacion.detalle-compensaciones');
 
     // Resumen de ordenación docente
-    Route::get('/ordenacion/resumen', [App\Http\Controllers\OrdenacionDocenteController::class, 'resumen'])->name('ordenacion.resumen');
+    Route::get('/ordenacion/resumen', [App\Http\Controllers\OrdenacionDocenteController::class, 'resumen'])->name('ordenacion.resumen');    // Rutas administrativas para ordenación docente (solo administradores)
+    Route::middleware(['admin'])->group(function () {
+        Route::post('/ordenacion/admin/avanzar-turno', [App\Http\Controllers\OrdenacionDocenteController::class, 'avanzarTurno'])->name('ordenacion.admin.avanzar-turno');
+        Route::post('/ordenacion/admin/cambiar-fase', [App\Http\Controllers\OrdenacionDocenteController::class, 'cambiarFase'])->name('ordenacion.admin.cambiar-fase');
+        Route::get('/ordenacion/admin/exportar-datos', [App\Http\Controllers\OrdenacionDocenteController::class, 'exportarDatos'])->name('ordenacion.admin.exportar-datos');
+        Route::post('/ordenacion/admin/reiniciar-sistema', [App\Http\Controllers\OrdenacionDocenteController::class, 'reiniciarSistema'])->name('ordenacion.admin.reiniciar-sistema');
+    });
 
     // Rutas de configuración de ordenación docente (reordenadas para evitar conflictos)
     Route::get('/configuracion-ordenacion', [ConfiguracionOrdenacionController::class, 'index'])

@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $estado == 'Aceptado' ? 'Solicitud de libro aprobada' : 'Solicitud de libro denegada' }}</title>
+    <title>
+        @if($estado == 'Aceptado')
+            Solicitud de libro aprobada
+        @elseif($estado == 'Biblioteca')
+            Libro disponible en biblioteca
+        @else
+            Solicitud de libro denegada
+        @endif
+    </title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,9 +20,16 @@
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-        }
-        .header {
-            background-color: {{ $estado == 'Aceptado' ? '#4CAF50' : '#F44336' }};
+        }        .header {
+            background-color: 
+                @if($estado == 'Aceptado')
+                    #4CAF50
+                @elseif($estado == 'Biblioteca')
+                    #2196F3
+                @else
+                    #F44336
+                @endif
+            ;
             color: white;
             padding: 10px;
             text-align: center;
@@ -38,17 +53,31 @@
         }
     </style>
 </head>
-<body>
-    <div class="header">
-        <h1>{{ $estado == 'Aceptado' ? 'Su solicitud de libro ha sido aprobada' : 'Su solicitud de libro ha sido denegada' }}</h1>
+<body>    <div class="header">
+        <h1>
+            @if($estado == 'Aceptado')
+                Su solicitud de libro ha sido aprobada
+            @elseif($estado == 'Biblioteca')
+                Su libro está disponible en biblioteca
+            @else
+                Su solicitud de libro ha sido denegada
+            @endif
+        </h1>
     </div>
     
     <div class="content">
         <p>Estimado/a {{ $usuario->nombre }} {{ $usuario->apellidos }},</p>
-        
-        <p>
+          <p>
             Le informamos que su solicitud para el libro <strong>"{{ $libro->titulo }}"</strong> ha sido 
-            <strong>{{ $estado == 'Aceptado' ? 'APROBADA' : 'DENEGADA' }}</strong>.
+            <strong>
+                @if($estado == 'Aceptado')
+                    APROBADA
+                @elseif($estado == 'Biblioteca')
+                    PROCESADA y el libro está DISPONIBLE EN BIBLIOTECA
+                @else
+                    DENEGADA
+                @endif
+            </strong>.
         </p>
         
         <div class="book-details">
@@ -58,10 +87,17 @@
             <p><strong>Editorial:</strong> {{ $libro->editorial }}</p>
             <p><strong>ISBN:</strong> {{ $libro->isbn }}</p>
         </div>
-        
-        @if ($estado == 'Aceptado')
+          @if ($estado == 'Aceptado')
             <p>
                 El libro ha sido solicitado y se le notificará cuando esté disponible para su recogida.
+            </p>
+        @elseif ($estado == 'Biblioteca')
+            <p>
+                <strong>¡Buenas noticias!</strong> El libro que solicitó ya está disponible en la biblioteca del departamento 
+                y puede pasar a recogerlo cuando guste durante el horario de atención.
+            </p>
+            <p>
+                Recuerde traer su identificación para poder retirar el libro.
             </p>
         @else
             <p>

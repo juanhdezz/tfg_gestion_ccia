@@ -23,9 +23,16 @@
                         </span>
                     @endif
                 </div>
-                <div class="flex space-x-2">
-                    @if($dentroDePlazo)
-                        <a href="{{ route('tutorias.index', ['cuatrimestre' => $cuatrimestreSeleccionado, 'despacho' => $despachoSeleccionado]) }}" 
+                <div class="flex space-x-2">                    @if($dentroDePlazo)
+                        @php
+                            $editParams = ['cuatrimestre' => $cuatrimestreSeleccionado];
+                            if($esAdmin && $miembroSeleccionado) {
+                                $editParams['miembro'] = $miembroSeleccionado;
+                            } else {
+                                $editParams['despacho'] = $despachoSeleccionado;
+                            }
+                        @endphp
+                        <a href="{{ route('tutorias.index', $editParams) }}" 
                            class="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -63,21 +70,39 @@
             @else
                 <p class="text-red-500">No se encontraron tutorías para este despacho y cuatrimestre.</p>
             @endif
-        </div> --}}
-
-        <!-- Selectores -->
+        </div> --}}        <!-- Selectores -->
         <div class="flex flex-wrap gap-4 mb-6">
-            <div class="flex-1 min-w-[250px]">
-                <label for="despacho" class="block mb-1">Despacho:</label>
-                <select id="despacho" name="despacho" class="w-full px-4 py-2 border rounded">
-                    @foreach ($despachos as $despacho)
-                        <option value="{{ $despacho->id_despacho }}"
-                            {{ $despachoSeleccionado == $despacho->id_despacho ? 'selected' : '' }}>
-                            {{ $despacho->nombre_despacho }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+            @if($esAdmin)                <!-- Selector de miembro para administradores -->
+                <div class="flex-1 min-w-[250px]">
+                    <label for="miembro" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Usuario:</label>
+                    <select id="miembro" name="miembro" class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="">-- Seleccione un usuario --</option>
+                        @foreach ($miembros as $usuario)
+                            <option value="{{ $usuario->id_usuario }}" 
+                                {{ $miembroSeleccionado == $usuario->id_usuario ? 'selected' : '' }}
+                                data-despacho="{{ $usuario->id_despacho }}">
+                                {{ $usuario->apellidos }}, {{ $usuario->nombre }}
+                                @if($usuario->despacho)
+                                    ({{ $usuario->despacho->nombre_despacho }})
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @else
+                <!-- Selector de despacho para usuarios normales -->
+                <div class="flex-1 min-w-[250px]">
+                    <label for="despacho" class="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Despacho:</label>
+                    <select id="despacho" name="despacho" class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        @foreach ($despachos as $despacho)
+                            <option value="{{ $despacho->id_despacho }}"
+                                {{ $despachoSeleccionado == $despacho->id_despacho ? 'selected' : '' }}>
+                                {{ $despacho->nombre_despacho }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
 
             <div class="flex-1 min-w-[250px]">
                 <label for="cuatrimestre" class="block mb-1">Cuatrimestre:</label>
@@ -204,14 +229,25 @@
 
                 // También verificar todas las tutorías desde JavaScript para depuración
                 console.log('Todas las celdas:', document.querySelectorAll('[data-dia]').length);
-            });
-
-            // Añadir comportamiento al botón de actualizar vista
+            });            // Añadir comportamiento al botón de actualizar vista
             document.getElementById('actualizar-vista').addEventListener('click', function() {
-                const despacho = document.getElementById('despacho').value;
                 const cuatrimestre = document.getElementById('cuatrimestre').value;
+                const url = new URL('{{ route('tutorias.ver') }}', window.location.origin);
+                url.searchParams.set('cuatrimestre', cuatrimestre);
 
-                window.location.href = `{{ route('tutorias.ver') }}?despacho=${despacho}&cuatrimestre=${cuatrimestre}`;
+                @if($esAdmin)
+                const miembro = document.getElementById('miembro').value;
+                if (miembro) {
+                    url.searchParams.set('miembro', miembro);
+                }
+                @else
+                const despacho = document.getElementById('despacho').value;
+                if (despacho) {
+                    url.searchParams.set('despacho', despacho);
+                }
+                @endif
+
+                window.location.href = url.toString();
             });
         </script>
     @endpush

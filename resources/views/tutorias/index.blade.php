@@ -42,26 +42,48 @@
                 role="alert">
                 <p>{{ session('error') }}</p>
             </div>
-        @endif
-
-        <form id="tutorias-form" method="POST" action="{{ route('tutorias.actualizar') }}" class="mb-6">
+        @endif        <form id="tutorias-form" method="POST" action="{{ route('tutorias.actualizar') }}" class="mb-6">
             @csrf
-            <!-- Selector de despacho -->
+            
+            @if($esAdmin && $miembroSeleccionado)
+                <input type="hidden" name="miembro" value="{{ $miembroSeleccionado }}">
+            @endif<!-- Selector de despacho o miembro (según el rol) -->
             <div class="flex flex-wrap gap-4 mb-6">
-                <div class="flex-1 min-w-[250px]">
-                    <label for="despacho"
-                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seleccione un
-                        despacho:</label>
-                    <select id="despacho" name="id_despacho"
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        @foreach ($despachos as $despacho)
-                            <option value="{{ $despacho->id_despacho }}"
-                                {{ $despachoSeleccionado == $despacho->id_despacho ? 'selected' : '' }}>
-                                {{ $despacho->nombre_despacho }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                @if($esAdmin)
+                    <!-- Selector de miembro para administradores -->
+                    <div class="flex-1 min-w-[250px]">                        <label for="miembro" 
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seleccione un usuario:</label><select id="miembro" name="miembro"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <option value="">-- Seleccione un usuario --</option>
+                            @foreach ($miembros as $usuario)
+                                <option value="{{ $usuario->id_usuario }}" 
+                                    {{ $miembroSeleccionado == $usuario->id_usuario ? 'selected' : '' }}
+                                    data-despacho="{{ $usuario->id_despacho }}">
+                                    {{ $usuario->apellidos }}, {{ $usuario->nombre }}
+                                    @if($usuario->despacho)
+                                        ({{ $usuario->despacho->nombre_despacho }})
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @else
+                    <!-- Selector de despacho para usuarios normales -->
+                    <div class="flex-1 min-w-[250px]">
+                        <label for="despacho"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seleccione un
+                            despacho:</label>
+                        <select id="despacho" name="id_despacho"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            @foreach ($despachos as $despacho)
+                                <option value="{{ $despacho->id_despacho }}"
+                                    {{ $despachoSeleccionado == $despacho->id_despacho ? 'selected' : '' }}>
+                                    {{ $despacho->nombre_despacho }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
 
                 <div class="flex-1 min-w-[250px]">
                     <label for="cuatrimestre"
@@ -246,10 +268,57 @@
                         alert(`Debe seleccionar exactamente 6 horas de tutorías. Ha seleccionado ${horasSeleccionadas} horas.`);
                         return false;
                     }
-                });
-
-                // Inicializar contador con las tutorías ya existentes
+                });                // Inicializar contador con las tutorías ya existentes
                 actualizarContadorHoras();
+
+                @if($esAdmin)
+                // Manejar cambios en el selector de miembros para administradores
+                document.getElementById('miembro').addEventListener('change', function() {
+                    const form = document.getElementById('tutorias-form');
+                    const cuatrimestre = document.getElementById('cuatrimestre').value;
+                    
+                    if (this.value) {
+                        // Redireccionar con el miembro seleccionado
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('miembro', this.value);
+                        url.searchParams.set('cuatrimestre', cuatrimestre);
+                        window.location.href = url.toString();
+                    }
+                });
+                @else
+                // Manejar cambios en el selector de despachos para usuarios normales
+                document.getElementById('despacho').addEventListener('change', function() {
+                    const cuatrimestre = document.getElementById('cuatrimestre').value;
+                    
+                    if (this.value) {
+                        // Redireccionar con el despacho seleccionado
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('despacho', this.value);
+                        url.searchParams.set('cuatrimestre', cuatrimestre);
+                        window.location.href = url.toString();
+                    }
+                });
+                @endif
+
+                // Manejar cambios en el selector de cuatrimestre
+                document.getElementById('cuatrimestre').addEventListener('change', function() {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('cuatrimestre', this.value);
+                    
+                    @if($esAdmin)
+                    const miembro = document.getElementById('miembro').value;
+                    if (miembro) {
+                        url.searchParams.set('miembro', miembro);
+                    }
+                    @else
+                    const despacho = document.getElementById('despacho').value;
+                    if (despacho) {
+                        url.searchParams.set('despacho', despacho);
+                    }
+                    @endif
+                    
+                    window.location.href = url.toString();
+                });
             });
         </script>
     @endpush

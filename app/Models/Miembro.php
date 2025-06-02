@@ -145,9 +145,7 @@ class Miembro extends Model
     public function getFechaEntradaFormateadaAttribute()
     {
         return $this->fecha_entrada ? $this->fecha_entrada : null;
-    }
-
-    /**
+    }    /**
      * Método para obtener el nombre completo del usuario.
      *
      * @return string
@@ -155,5 +153,18 @@ class Miembro extends Model
     public function getNombreCompletoAttribute()
     {
         return $this->usuario ? $this->usuario->nombre . ' ' . $this->usuario->apellidos : '';
+    }
+
+    /**
+     * Scope para obtener miembros con despacho asignado (para selección de admin).
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeConDespacho($query)
+    {
+        return $query->whereHas('usuario', function($q) {
+            $q->whereNotNull('id_despacho');
+        });
     }
 }

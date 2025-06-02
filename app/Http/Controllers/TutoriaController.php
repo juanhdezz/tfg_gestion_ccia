@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Tutoria;
 use App\Models\Despacho;
 use App\Models\Plazo; // Añadimos el modelo Plazo
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -68,8 +69,7 @@ class TutoriaController extends Controller
         }
     }    /**
      * Display a listing of the resource.
-     */
-    public function index(Request $request)
+     */    public function index(Request $request)
     {
         // Determinar el cuatrimestre actual basado en la fecha
         $mes = Carbon::now()->month;
@@ -89,13 +89,36 @@ class TutoriaController extends Controller
             return redirect()->route('tutorias.gestion');
         }
 
-        // Obtener el despacho seleccionado (o usar el del usuario actual si existe)
-        $despachoSeleccionado = $request->input('despacho', Auth::user()->id_despacho ?? null);
-
+        // Verificar si el usuario es administrador
+        $esAdmin = Auth::user()->hasRole('admin');
+        
         $tutorias = collect(); // Inicializar como colección vacía
-
-        // Obtener todos los despachos (para el selector)
-        $despachos = Despacho::all();
+        $despachos = collect(); // Para usuarios normales
+        $miembros = collect(); // Para administradores
+        $despachoSeleccionado = null;
+        $miembroSeleccionado = null;        if ($esAdmin) {
+            // Para administradores: obtener todos los usuarios con despacho asignado
+            $miembros = Usuario::with('despacho')
+                ->whereNotNull('id_despacho')
+                ->orderBy('apellidos')
+                ->orderBy('nombre')
+                ->get();
+            
+            // Obtener el usuario seleccionado
+            $miembroSeleccionado = $request->input('miembro');
+            
+            if ($miembroSeleccionado) {
+                $usuario = Usuario::find($miembroSeleccionado);
+                if ($usuario && $usuario->id_despacho) {
+                    $despachoSeleccionado = $usuario->id_despacho;
+                }
+            }
+        } else {
+            // Para usuarios normales: obtener todos los despachos
+            $despachos = Despacho::all();
+            // Obtener el despacho seleccionado (o usar el del usuario actual si existe)
+            $despachoSeleccionado = $request->input('despacho', Auth::user()->id_despacho ?? null);
+        }
 
         // Definir las horas del día (de 08:00 a 21:30 en intervalos de 30 min)
         $horas = [];
@@ -109,7 +132,8 @@ class TutoriaController extends Controller
             $horas[] = [
                 'inicio' => $inicio,
                 'fin' => $fin
-            ];        }
+            ];
+        }
 
         // Definir los días de la semana
         $diasSemana = [
@@ -118,7 +142,9 @@ class TutoriaController extends Controller
             'Miércoles' => 'Miércoles',
             'Jueves' => 'Jueves',
             'Viernes' => 'Viernes'
-        ];// Si hay un despacho seleccionado, cargar las tutorías existentes
+        ];
+
+        // Si hay un despacho seleccionado, cargar las tutorías existentes
         if ($despachoSeleccionado) {
             $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
                 ->where('cuatrimestre', $cuatrimestreSeleccionado)
@@ -145,36 +171,42 @@ class TutoriaController extends Controller
                 // Cada slot de tutoría es de 30 minutos (0.5 horas)
                 $horasTotales += 0.5;
             }
-        }
-
-        return view('tutorias.index', compact(
+        }        return view('tutorias.index', compact(
             'tutorias',
             'despachos',
+            'miembros',
             'horas',
             'diasSemana',
-            'cuatrimestreActual',
             'cuatrimestreSeleccionado',
             'despachoSeleccionado',
-            'horasTotales', // Nueva variable para mostrar las horas totales
-            'dentroDePlazo', // Nueva variable para la vista
-            'estaEnProximoCurso' // También enviamos esta información a la vista
+            'miembroSeleccionado',
+            'horasTotales',
+            'estaEnProximoCurso',
+            'esAdmin'
         ));
     }
 
     /**
      * Actualizar todas las tutorías de una vez
-     */
-    public function actualizar(Request $request)
+     */    public function actualizar(Request $request)
     {
         $idDespacho = $request->input('id_despacho');
         $cuatrimestre = $request->input('cuatrimestre');
-        $tutoriasData = $request->input('tutorias', []);
+        $tutoriasData = $request->input('tutorias', []);        // Para administradores, obtener el ID de despacho desde el usuario seleccionado
+        if (Auth::user()->hasRole('admin') && $request->has('miembro')) {
+            $usuario = Usuario::find($request->input('miembro'));
+            if ($usuario && $usuario->id_despacho) {
+                $idDespacho = $usuario->id_despacho;
+            }
+        }
 
         // Verificar si estamos en próximo curso según la conexión actual
         $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
         
         // Verificar si estamos dentro del plazo para editar tutorías
-        $dentroDePlazo = $this->dentroDePlazo($cuatrimestre, $estaEnProximoCurso);        if (!$dentroDePlazo) {
+        $dentroDePlazo = $this->dentroDePlazo($cuatrimestre, $estaEnProximoCurso);
+
+        if (!$dentroDePlazo) {
             return redirect()->back()->with('error', 'No se pueden modificar las tutorías fuera del plazo establecido');
         }
 
@@ -223,17 +255,25 @@ class TutoriaController extends Controller
             }
         }
 
-        // Redirigir a la vista de visualización
-        return redirect()->route('tutorias.ver', [
+        // Preparar parámetros para la redirección
+        $parametros = [
             'despacho' => $idDespacho,
             'cuatrimestre' => $cuatrimestre
-        ])->with('success', 'Horario de tutorías actualizado correctamente');
+        ];
+        
+        // Si es admin, agregar el parámetro del miembro
+        if (Auth::user()->hasRole('admin') && $request->has('miembro')) {
+            $parametros['miembro'] = $request->input('miembro');
+        }
+
+        // Redirigir a la vista de visualización
+        return redirect()->route('tutorias.ver', $parametros)
+            ->with('success', 'Horario de tutorías actualizado correctamente');
     }
 
     /**
      * Ver las tutorías guardadas (vista de solo lectura)
-     */
-    public function verTutorias(Request $request)
+     */    public function verTutorias(Request $request)
     {
         // Determinar el cuatrimestre actual basado en la fecha
         $mes = Carbon::now()->month;
@@ -242,8 +282,37 @@ class TutoriaController extends Controller
         // Obtener el cuatrimestre seleccionado (o usar el actual)
         $cuatrimestreSeleccionado = $request->input('cuatrimestre', $cuatrimestreActual);
 
-        // Obtener el despacho seleccionado (o usar el del usuario actual si existe)
-        $despachoSeleccionado = $request->input('despacho', Auth::user()->id_despacho ?? null);
+        // Verificar si el usuario es administrador
+        $esAdmin = Auth::user()->hasRole('admin');
+        
+        $despachos = collect();
+        $miembros = collect();
+        $despachoSeleccionado = null;
+        $miembroSeleccionado = null;        if ($esAdmin) {
+            // Para administradores: obtener todos los usuarios con despacho asignado
+            $miembros = Usuario::with('despacho')
+                ->whereNotNull('id_despacho')
+                ->orderBy('apellidos')
+                ->orderBy('nombre')
+                ->get();
+            
+            // Obtener el usuario seleccionado
+            $miembroSeleccionado = $request->input('miembro');
+            
+            if ($miembroSeleccionado) {
+                $usuario = Usuario::find($miembroSeleccionado);
+                if ($usuario && $usuario->id_despacho) {
+                    $despachoSeleccionado = $usuario->id_despacho;
+                }
+            } else {
+                // Si no hay miembro seleccionado pero hay despacho (para redirecciones)
+                $despachoSeleccionado = $request->input('despacho');
+            }
+        } else {
+            // Para usuarios normales
+            $despachos = Despacho::all();
+            $despachoSeleccionado = $request->input('despacho', Auth::user()->id_despacho ?? null);
+        }
 
         // Verificar si estamos en próximo curso según la conexión actual
         $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
@@ -252,26 +321,26 @@ class TutoriaController extends Controller
         $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);
 
         // Obtener tutorias para el despacho y cuatrimestre seleccionados
-        $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
-            ->where('cuatrimestre', $cuatrimestreSeleccionado)
-            ->get();
+        $tutorias = collect();
+        if ($despachoSeleccionado) {
+            $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
+                ->where('cuatrimestre', $cuatrimestreSeleccionado)
+                ->get();
 
-        // Formatear las horas y normalizar los nombres de los días
-        foreach ($tutorias as $tutoria) {
-            // Si la hora tiene formato HH:MM:SS, quitar los segundos
-            if (strlen($tutoria->inicio) > 5) {
-                $tutoria->inicio = substr($tutoria->inicio, 0, 5);
-            }
-            if (strlen($tutoria->fin) > 5) {
-                $tutoria->fin = substr($tutoria->fin, 0, 5);
-            }
+            // Formatear las horas y normalizar los nombres de los días
+            foreach ($tutorias as $tutoria) {
+                // Si la hora tiene formato HH:MM:SS, quitar los segundos
+                if (strlen($tutoria->inicio) > 5) {
+                    $tutoria->inicio = substr($tutoria->inicio, 0, 5);
+                }
+                if (strlen($tutoria->fin) > 5) {
+                    $tutoria->fin = substr($tutoria->fin, 0, 5);
+                }
 
-            // Normalizar el nombre del día
-            $tutoria->dia = ucfirst(strtolower(trim($tutoria->dia)));
+                // Normalizar el nombre del día
+                $tutoria->dia = ucfirst(strtolower(trim($tutoria->dia)));
+            }
         }
-
-        // Obtener todos los despachos (para el selector)
-        $despachos = Despacho::all();
 
         // Definir las horas del día (de 08:00 a 21:30 en intervalos de 30 min)
         $horas = [];
@@ -289,18 +358,18 @@ class TutoriaController extends Controller
         }
 
         // Definir los días de la semana
-        $diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-
-        return view('tutorias.ver', compact(
+        $diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];        return view('tutorias.ver', compact(
             'tutorias',
             'despachos',
+            'miembros',
             'horas',
             'diasSemana',
-            'cuatrimestreActual',
-            'cuatrimestreSeleccionado',
+            'cuatrimestreActual',            'cuatrimestreSeleccionado',
             'despachoSeleccionado',
-            'dentroDePlazo', // Nueva variable para la vista
-            'estaEnProximoCurso' // También enviamos esta información a la vista
+            'miembroSeleccionado',
+            'dentroDePlazo',
+            'estaEnProximoCurso',
+            'esAdmin'
         ));
     }
 

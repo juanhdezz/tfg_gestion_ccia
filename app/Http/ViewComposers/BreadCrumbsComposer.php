@@ -16,11 +16,7 @@ class BreadcrumbsComposer
 
             // Define breadcrumbs basados en la ruta actual
             switch ($route) {
-                case 'dashboard':
-                    $breadcrumbs = [
-                        ['name' => 'Dashboard', 'url' => route('dashboard')]
-                    ];
-                    break;
+                
 
                 case 'departamento':
                     $breadcrumbs = [
@@ -366,7 +362,11 @@ class BreadcrumbsComposer
                     ];
                     break;
 
-                
+                case 'ordenacion.index':
+                    $breadcrumbs = [
+                        ['name' => 'Ordenación Docente', 'url' => route('ordenacion.index')]
+                    ];
+                    break;
 
 
 

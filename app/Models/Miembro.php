@@ -17,7 +17,7 @@ class Miembro extends Model
      *
      * @var string|null
      */
-    protected $primaryKey = null;
+    protected $primaryKey = 'id_usuario';
 
     /**
      * Indica que la clave primaria no es auto-incremental

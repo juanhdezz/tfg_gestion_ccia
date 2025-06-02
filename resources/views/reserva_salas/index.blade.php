@@ -71,7 +71,7 @@
         <div class="flex flex-wrap justify-between items-center mb-4">
             <div class="flex items-center">
                 @if (auth()->user()->hasRole('admin|secretario'))
-                    @php 
+                    @php
                         $pendientesCount = \App\Models\ReservaSala::where('estado', 'Pendiente Validación')->count();
                     @endphp
                     @if ($pendientesCount > 0)
@@ -81,26 +81,30 @@
                         </div>
                     @endif
                 @endif
-            </div>
-            
-            <div class="flex flex-wrap mt-2 sm:mt-0">
+            </div>            <div class="flex flex-wrap mt-2 sm:mt-0">
                 @if (auth()->user()->hasRole('admin|secretario'))
                     <a href="{{ route('reserva_salas.pendientes') }}"
                         class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
                         <i class="fas fa-clock mr-1"></i> Reservas Pendientes
                         @if ($pendientesCount > 0)
-                            <span class="bg-white text-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ml-1">
+                            <span
+                                class="bg-white text-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold ml-1">
                                 {{ $pendientesCount }}
                             </span>
                         @endif
                     </a>
+
+                    <a href="{{ route('salas.index') }}"
+                        class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
+                        <i class="fas fa-door-open mr-1"></i> Gestión de Salas
+                    </a>
                 @endif
-                
+
                 <a href="{{ route('reserva_salas.calendario') }}"
                     class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
                     <i class="fas fa-calendar-alt mr-1"></i> Ver Calendario
                 </a>
-                
+
                 <a href="{{ route('reserva_salas.create') }}"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center">
                     <i class="fas fa-plus mr-1"></i> Realizar Reserva
@@ -171,18 +175,32 @@
                                         class="font-medium text-green-600 dark:text-green-500 hover:underline">
                                         Ver &#128270;
                                     </a>
-                            
+
                                     @role('admin|secretario')
-                                        <a href="{{ route('reserva_salas.edit', [
-                                            'id_sala' => $reserva->id_sala,
-                                            'fecha' => $reserva->fecha->format('Y-m-d'),
-                                            'hora_inicio' => $reserva->hora_inicio->format('H:i:s'),
-                                            'estado' => $reserva->estado,
-                                        ]) }}"
-                                            class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                            Editar &#9999;
-                                        </a>
-                                        
+                                        <!-- Botones de validación directa para reservas pendientes -->
+                                        @if ($reserva->estado == 'Pendiente Validación')
+                                            <button type="button"
+                                                class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                                                onclick="openValidarModal('{{ $reserva->id_sala }}', '{{ $reserva->fecha->format('Y-m-d') }}', '{{ $reserva->hora_inicio->format('H-i') }}')">
+                                                &#9989; Validar
+                                            </button>
+                                            <button type="button"
+                                                class="font-medium text-orange-600 dark:text-orange-500 hover:underline"
+                                                onclick="openRechazarModal('{{ $reserva->id_sala }}', '{{ $reserva->fecha->format('Y-m-d') }}', '{{ $reserva->hora_inicio->format('H-i') }}')">
+                                                &#10060; Rechazar
+                                            </button>
+                                        @else
+                                            <a href="{{ route('reserva_salas.edit', [
+                                                'id_sala' => $reserva->id_sala,
+                                                'fecha' => $reserva->fecha->format('Y-m-d'),
+                                                'hora_inicio' => $reserva->hora_inicio->format('H:i:s'),
+                                                'estado' => $reserva->estado,
+                                            ]) }}"
+                                                class="font-medium text-blue-600 dark:text-blue-500 hover:underline">
+                                                Editar &#9999;
+                                            </a>
+                                        @endif
+
                                         @if ($reserva->estado != 'Cancelada' && $reserva->estado != 'Rechazada')
                                             <form class="change-status-form"
                                                 action="{{ route('reserva_salas.cambiar-estado', [
@@ -201,7 +219,7 @@
                                                 </button>
                                             </form>
                                         @endif
-                                        
+
                                         <form class="delete-form"
                                             action="{{ route('reserva_salas.destroy', [
                                                 'id_sala' => $reserva->id_sala,
@@ -246,55 +264,181 @@
             </table>
         </div>
 
-        <!-- Paginación -->
-        <div class="mt-4">
-            {{ $reservas->links() }}
-        </div>
+       <!-- Paginación -->
+    <div class="mt-4">
+        {{ $reservas->links() }}
     </div>
+</div>
 
-    @push('scripts')
-        <script>
-            // Confirmación para eliminar reservas
-            document.querySelectorAll('.delete-form').forEach(form => {
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    Swal.fire({
-                        title: "¿Estás seguro?",
-                        text: "Esta acción no se puede deshacer.",
-                        icon: "warning",
-                        showCancelButton: true,
-                        confirmButtonColor: "#3085d6",
-                        cancelButtonColor: "#d33",
-                        confirmButtonText: "Sí, eliminar",
-                        cancelButtonText: "Cancelar"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            form.submit();
-                        }
-                    });
+<!-- Modales de validación y rechazo -->
+@role('admin|secretario')
+    @foreach ($reservas as $reserva)
+        @if($reserva->estado == 'Pendiente Validación')
+            <!-- Modal Validar -->
+            <div id="validarModal{{ $reserva->id_sala }}_{{ $reserva->fecha->format('Y-m-d') }}_{{ $reserva->hora_inicio->format('H-i') }}" 
+                 class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Validar Reserva</h3>
+                    </div>
+                    <form action="{{ route('reserva_salas.procesar', ['id_sala' => $reserva->id_sala, 'fecha' => $reserva->fecha->format('Y-m-d'), 'hora_inicio' => $reserva->hora_inicio->format('H:i:s'), 'estado' => $reserva->estado]) }}" method="POST">
+                        @csrf
+                        <div class="px-6 py-4">
+                            <p class="mb-3 text-gray-700 dark:text-gray-300">¿Está seguro que desea validar la siguiente reserva?</p>
+                            <ul class="list-disc list-inside mb-4 text-gray-700 dark:text-gray-300">
+                                <li><span class="font-semibold">Sala:</span> {{ $reserva->sala->nombre }}</li>
+                                <li><span class="font-semibold">Fecha:</span> {{ $reserva->fecha->format('d/m/Y') }}</li>
+                                <li><span class="font-semibold">Horario:</span> {{ $reserva->hora_inicio->format('H:i') }} - {{ $reserva->hora_fin->format('H:i') }}</li>
+                                <li><span class="font-semibold">Usuario:</span> {{ $reserva->usuario->nombre }} {{ $reserva->usuario->apellidos }}</li>
+                                <li><span class="font-semibold">Motivo:</span> {{ $reserva->motivo->descripcion }}</li>
+                            </ul>
+                            <input type="hidden" name="decision" value="validar">
+                            <div class="mb-4">
+                                <label for="observaciones_validar_{{ $reserva->id_sala }}_{{ $reserva->fecha->format('Y-m-d') }}_{{ $reserva->hora_inicio->format('H-i') }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Observaciones (opcional):</label>
+                                <textarea class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white" 
+                                          name="observaciones" 
+                                          id="observaciones_validar_{{ $reserva->id_sala }}_{{ $reserva->fecha->format('Y-m-d') }}_{{ $reserva->hora_inicio->format('H-i') }}"
+                                          rows="3">{{ $reserva->observaciones }}</textarea>
+                            </div>
+                        </div>
+                        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-3 rounded-b-lg">
+                            <button type="button" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md"
+                                    onclick="closeModal('validarModal{{ $reserva->id_sala }}_{{ $reserva->fecha->format('Y-m-d') }}_{{ $reserva->hora_inicio->format('H-i') }}')">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md">
+                                Validar Reserva
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Modal Rechazar -->
+            <div id="rechazarModal{{ $reserva->id_sala }}_{{ $reserva->fecha->format('Y-m-d') }}_{{ $reserva->hora_inicio->format('H-i') }}" 
+                 class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Rechazar Reserva</h3>
+                    </div>
+                    <form action="{{ route('reserva_salas.procesar', ['id_sala' => $reserva->id_sala, 'fecha' => $reserva->fecha->format('Y-m-d'), 'hora_inicio' => $reserva->hora_inicio->format('H:i:s'), 'estado' => $reserva->estado]) }}" method="POST">
+                        @csrf
+                        <div class="px-6 py-4">
+                            <p class="mb-3 text-gray-700 dark:text-gray-300">¿Está seguro que desea rechazar la siguiente reserva?</p>
+                            <ul class="list-disc list-inside mb-4 text-gray-700 dark:text-gray-300">
+                                <li><span class="font-semibold">Sala:</span> {{ $reserva->sala->nombre }}</li>
+                                <li><span class="font-semibold">Fecha:</span> {{ $reserva->fecha->format('d/m/Y') }}</li>
+                                <li><span class="font-semibold">Horario:</span> {{ $reserva->hora_inicio->format('H:i') }} - {{ $reserva->hora_fin->format('H:i') }}</li>
+                                <li><span class="font-semibold">Usuario:</span> {{ $reserva->usuario->nombre }} {{ $reserva->usuario->apellidos }}</li>
+                                <li><span class="font-semibold">Motivo:</span> {{ $reserva->motivo->descripcion }}</li>
+                            </ul>
+                            <input type="hidden" name="decision" value="rechazar">
+                            <div class="mb-4">
+                                <label for="observaciones_rechazar_{{ $reserva->id_sala }}_{{ $reserva->fecha->format('Y-m-d') }}_{{ $reserva->hora_inicio->format('H-i') }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Motivo del rechazo (requerido):</label>
+                                <textarea class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white" 
+                                          name="observaciones" 
+                                          id="observaciones_rechazar_{{ $reserva->id_sala }}_{{ $reserva->fecha->format('Y-m-d') }}_{{ $reserva->hora_inicio->format('H-i') }}"
+                                          rows="3" required>{{ $reserva->observaciones }}</textarea>
+                            </div>
+                        </div>
+                        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-3 rounded-b-lg">
+                            <button type="button" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md"
+                                    onclick="closeModal('rechazarModal{{ $reserva->id_sala }}_{{ $reserva->fecha->format('Y-m-d') }}_{{ $reserva->hora_inicio->format('H-i') }}')">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md">
+                                Rechazar Reserva
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endif
+    @endforeach
+@endrole
+
+@push('scripts')
+    <script>
+        // Confirmación para eliminar reservas
+        document.querySelectorAll('.delete-form').forEach(form => {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                Swal.fire({
+                    title: "¿Estás seguro?",
+                    text: "Esta acción no se puede deshacer.",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Sí, eliminar",
+                    cancelButtonText: "Cancelar"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
                 });
             });
+        });
 
-            // Confirmación para cancelar reservas
-            document.querySelectorAll('.change-status-form').forEach(form => {
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    Swal.fire({
-                        title: "¿Cancelar reserva?",
-                        text: "La reserva será marcada como cancelada.",
-                        icon: "question",
-                        showCancelButton: true,
-                        confirmButtonColor: "#3085d6",
-                        cancelButtonColor: "#d33",
-                        confirmButtonText: "Sí, cancelar reserva",
-                        cancelButtonText: "No"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            form.submit();
-                        }
-                    });
+        // Confirmación para cancelar reservas
+        document.querySelectorAll('.change-status-form').forEach(form => {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                Swal.fire({
+                    title: "¿Cancelar reserva?",
+                    text: "La reserva será marcada como cancelada.",
+                    icon: "question",
+                    showCancelButton: true,
+                    confirmButtonColor: "#3085d6",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Sí, cancelar reserva",
+                    cancelButtonText: "No"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
                 });
             });
-        </script>
-    @endpush
+        });
+
+        // Funciones para los modales de validación
+        function openValidarModal(idSala, fecha, horaInicio) {
+            const modalId = `validarModal${idSala}_${fecha}_${horaInicio}`;
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                console.error('Modal no encontrado:', modalId);
+            }
+        }
+        
+        function openRechazarModal(idSala, fecha, horaInicio) {
+            const modalId = `rechazarModal${idSala}_${fecha}_${horaInicio}`;
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                console.error('Modal no encontrado:', modalId);
+            }
+        }
+        
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+        
+        // Cerrar modales al hacer clic fuera
+        document.addEventListener('click', function(event) {
+            const modals = document.querySelectorAll('[id^="validarModal"], [id^="rechazarModal"]');
+            modals.forEach(function(modal) {
+                if (event.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+@endpush
+
 </x-app-layout>

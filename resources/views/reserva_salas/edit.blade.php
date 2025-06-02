@@ -101,7 +101,7 @@
                     </div>
 
                     <!-- Estado -->
-                    <div class="col-span-1">
+                    {{-- <div class="col-span-1">
                         <label for="estado" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado:</label>
                         <select name="estado" id="estado" required
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white @error('estado') border-red-500 @enderror">
@@ -113,7 +113,7 @@
                         @error('estado')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
-                    </div>
+                    </div> --}}
 
                     <!-- Observaciones -->
                     <div class="col-span-2">

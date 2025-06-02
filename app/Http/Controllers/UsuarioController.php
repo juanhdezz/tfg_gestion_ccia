@@ -359,8 +359,15 @@ private function gestionarMembresia($usuario, $request)
         'grupo_nuevo' => $request->id_grupo
     ]);
 
-    // Obtener miembro actual si existe
-    $miembroActual = $usuario->miembros()->first();
+    // CORRECCIÓN: Buscar el miembro de forma más específica
+    $miembroActual = Miembro::where('id_usuario', $usuario->id_usuario)->first();
+    
+    Log::info('Miembro actual encontrado', [
+        'miembro_existe' => $miembroActual ? true : false,
+        'miembro_id' => $miembroActual ? $miembroActual->id_usuario : null,
+        'categoria_actual' => $miembroActual ? $miembroActual->id_categoria : null,
+        'grupo_actual' => $miembroActual ? $miembroActual->id_grupo : null
+    ]);
     
     // Caso 1: No hay categoría ni grupo - eliminar membresía si existe
     if (!$request->filled('id_categoria') && !$request->filled('id_grupo')) {
@@ -388,41 +395,64 @@ private function gestionarMembresia($usuario, $request)
         $maxOrden = Miembro::where('id_categoria', $categoriaId)
                           ->where('id_grupo', $grupoId)
                           ->when($miembroActual, function($query) use ($miembroActual) {
-                              return $query->where('id_miembro', '!=', $miembroActual->id_miembro);
+                              return $query->where('id_usuario', '!=', $miembroActual->id_usuario);
                           })
                           ->max('numero_orden');
         $numeroOrden = ($maxOrden ?? 0) + 1;
         Log::info('Número de orden calculado automáticamente', ['numero_orden' => $numeroOrden]);
     }
 
-    $miembroData = [
-        'id_usuario' => $usuario->id_usuario,
-        'id_categoria' => $categoriaId,
-        'id_grupo' => $grupoId,
-        'numero_orden' => $numeroOrden,
-        'web' => $web
-    ];
-
     if ($miembroActual) {
-        // Actualizar miembro existente
+        // CORRECCIÓN: Actualizar usando where específico con validación adicional
         Log::info('Actualizando miembro existente', [
-            'miembro_id' => $miembroActual->id_miembro,
-            'datos_nuevos' => $miembroData
+            'miembro_id' => $miembroActual->id_usuario,
+            'datos_nuevos' => [
+                'id_categoria' => $categoriaId,
+                'id_grupo' => $grupoId,
+                'numero_orden' => $numeroOrden,
+                'web' => $web
+            ]
         ]);
         
-        $miembroActual->update($miembroData);
+        // Usar actualización con WHERE específico para evitar afectar otros registros
+        $affected = Miembro::where('id_usuario', $miembroActual->id_usuario)
+                           ->where('id_usuario', $usuario->id_usuario) // Doble verificación
+                           ->update([
+                               'id_categoria' => $categoriaId,
+                               'id_grupo' => $grupoId,
+                               'numero_orden' => $numeroOrden,
+                               'web' => $web
+                           ]);
         
-        Log::info('Miembro actualizado exitosamente');
+        Log::info('Miembro actualizado', [
+            'registros_afectados' => $affected,
+            'miembro_id' => $miembroActual->id_usuario
+        ]);
+        
+        if ($affected === 0) {
+            Log::warning('No se actualizó ningún registro - posible problema');
+        }
+        
     } else {
         // Crear nuevo miembro
-        Log::info('Creando nuevo miembro', $miembroData);
+        Log::info('Creando nuevo miembro');
         
-        // Agregar fecha de entrada para nuevos miembros
-        $miembroData['fecha_entrada'] = now()->format('Y-m-d');
+        $miembroData = [
+            'id_usuario' => $usuario->id_usuario,
+            'id_categoria' => $categoriaId,
+            'id_grupo' => $grupoId,
+            'numero_orden' => $numeroOrden,
+            'web' => $web,
+            'fecha_entrada' => now()->format('Y-m-d')
+        ];
         
-        Miembro::create($miembroData);
+        Log::info('Datos del nuevo miembro', $miembroData);
         
-        Log::info('Miembro creado exitosamente');
+        $nuevoMiembro = Miembro::create($miembroData);
+        
+        Log::info('Miembro creado exitosamente', [
+            'nuevo_miembro_id' => $nuevoMiembro->id_usuario
+        ]);
     }
 }
 
@@ -731,5 +761,133 @@ public function checkUniqueness(Request $request)
         $categorias = CategoriaDocente::visibles()->ordenadoPorOrden()->get();
 
         return view('usuarios.seleccionar-grupo-orden', compact('grupos', 'categorias'));
+    }
+
+    public function actualizarUsuario(Request $request)
+    {
+        try {
+            DB::beginTransaction();
+            
+            $usuario_id = $request->input('usuario_id');
+            $categoria_nueva = $request->input('categoria_nueva');
+            $grupo_nuevo = $request->input('grupo_nuevo');
+            
+            Log::info('=== Gestionando membresía académica ===', [
+                'usuario_id' => $usuario_id,
+                'categoria_nueva' => $categoria_nueva,
+                'grupo_nuevo' => $grupo_nuevo
+            ]);
+            
+            // Verificar si el usuario ya es miembro
+            $miembro_actual = DB::table('miembro')
+                ->where('id_usuario', $usuario_id)
+                ->first();
+            
+            if ($miembro_actual) {
+                Log::info('Miembro actual encontrado', [
+                    'miembro_existe' => true,
+                    'id_usuario' => $miembro_actual->id_usuario,
+                    'categoria_actual' => $miembro_actual->id_categoria,
+                    'grupo_actual' => $miembro_actual->id_grupo
+                ]);
+                
+                // Obtener el siguiente número de orden para la nueva categoría
+                $siguiente_orden = $this->obtenerSiguienteNumeroOrden($categoria_nueva);
+                
+                // Actualizar el miembro existente
+                $datos_actualizacion = [
+                    'id_categoria' => $categoria_nueva,
+                    'id_grupo' => $grupo_nuevo,
+                    'numero_orden' => $siguiente_orden,
+                    'web' => null
+                ];
+                
+                Log::info('Actualizando miembro existente', [
+                    'id_usuario' => $miembro_actual->id_usuario,
+                    'datos_nuevos' => $datos_actualizacion
+                ]);
+                
+                DB::table('miembro')
+                    ->where('id_usuario', $usuario_id) // Cambio aquí: usar id_usuario en lugar de id_usuario
+                    ->update($datos_actualizacion);
+                
+                Log::info('Miembro actualizado correctamente', [
+                    'id_usuario' => $usuario_id
+                ]);
+                
+            } else {
+                Log::info('Usuario no es miembro, creando nueva membresía');
+                
+                // Obtener el siguiente número de orden para la nueva categoría
+                $siguiente_orden = $this->obtenerSiguienteNumeroOrden($categoria_nueva);
+                
+                // Crear nuevo miembro
+                $datos_nuevo_miembro = [
+                    'id_usuario' => $usuario_id,
+                    'id_categoria' => $categoria_nueva,
+                    'id_grupo' => $grupo_nuevo,
+                    'numero_orden' => $siguiente_orden,
+                    'web' => null
+                ];
+                
+                Log::info('Creando nuevo miembro', [
+                    'datos' => $datos_nuevo_miembro
+                ]);
+                
+                DB::table('miembro')->insert($datos_nuevo_miembro);
+                
+                Log::info('Nuevo miembro creado correctamente', [
+                    'id_usuario' => $usuario_id
+                ]);
+            }
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario actualizado correctamente',
+                'data' => [
+                    'usuario_id' => $usuario_id,
+                    'categoria' => $categoria_nueva,
+                    'grupo' => $grupo_nuevo,
+                    'accion' => $miembro_actual ? 'actualizado' : 'creado'
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('Error al actualizar usuario: ' . $e->getMessage(), [
+                'usuario_id' => $usuario_id ?? null,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    private function obtenerSiguienteNumeroOrden($categoria_id)
+    {
+        try {
+            $max_orden = DB::table('miembro')
+                ->where('id_categoria', $categoria_id)
+                ->max('numero_orden');
+            
+            $siguiente_orden = ($max_orden ?? 0) + 1;
+            
+            Log::info('Número de orden calculado', [
+                'categoria_id' => $categoria_id,
+                'max_orden_actual' => $max_orden,
+                'siguiente_orden' => $siguiente_orden
+            ]);
+            
+            return $siguiente_orden;
+            
+        } catch (\Exception $e) {
+            Log::error('Error al obtener número de orden: ' . $e->getMessage());
+            return 1; // Valor por defecto
+        }
     }
 }

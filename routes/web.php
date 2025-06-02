@@ -17,6 +17,7 @@ use App\Http\Controllers\TutoriaController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\DespachoController;
 use App\Http\Controllers\ReservaSalaController;
+use App\Http\Controllers\SalaController;
 use App\Http\Controllers\PlazoController;
 use App\Http\Controllers\LibroController;
 use App\Http\Controllers\ConfiguracionOrdenacionController;
@@ -128,10 +129,11 @@ Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('p
             ->name('procesar');
 
         // Calendario de reservas
-        Route::get('/calendario', [ReservaSalaController::class, 'calendario'])->name('calendario');
-        Route::get('/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
+        Route::get('/calendario', [ReservaSalaController::class, 'calendario'])->name('calendario');        Route::get('/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
             ->name('obtener-eventos-calendario');
     });
+
+    
 
     /**
      * GESTIÓN DE LIBROS
@@ -176,6 +178,20 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin', function () {
         return "Bienvenido admin";
     })->name('admin');
+
+    /**
+     * GESTIÓN DE SALAS
+     */
+    Route::prefix('salas')->name('salas.')->group(function () {
+        // CRUD principal para gestión de salas (solo administradores)
+        Route::get('/', [SalaController::class, 'index'])->name('index');
+        Route::get('/create', [SalaController::class, 'create'])->name('create');
+        Route::post('/', [SalaController::class, 'store'])->name('store');
+        Route::get('/{sala}', [SalaController::class, 'show'])->name('show');
+        Route::get('/{sala}/edit', [SalaController::class, 'edit'])->name('edit');
+        Route::put('/{sala}', [SalaController::class, 'update'])->name('update');
+        Route::delete('/{sala}', [SalaController::class, 'destroy'])->name('destroy');
+    });
 
     // /**
     //  * IMPERSONACIÓN DE USUARIOS

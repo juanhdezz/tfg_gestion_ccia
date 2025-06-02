@@ -142,13 +142,21 @@ class TutoriaController extends Controller
             'Miércoles' => 'Miércoles',
             'Jueves' => 'Jueves',
             'Viernes' => 'Viernes'
-        ];
-
-        // Si hay un despacho seleccionado, cargar las tutorías existentes
+        ];        // Si hay un despacho seleccionado, cargar las tutorías existentes
         if ($despachoSeleccionado) {
             $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
                 ->where('cuatrimestre', $cuatrimestreSeleccionado)
                 ->get();
+
+            // Si no hay tutorías para este cuatrimestre, intentar copiar de otro cuatrimestre
+            if ($tutorias->isEmpty()) {
+                $this->copiarTutoriasDeOtroCuatrimestre($despachoSeleccionado, $cuatrimestreSeleccionado, $estaEnProximoCurso);
+                
+                // Recargar las tutorías después de la copia
+                $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
+                    ->where('cuatrimestre', $cuatrimestreSeleccionado)
+                    ->get();
+            }
                 
             // Formatear las tutorías para que coincidan con el formato de la vista
             foreach ($tutorias as $tutoria) {
@@ -318,14 +326,22 @@ class TutoriaController extends Controller
         $estaEnProximoCurso = Session::get('db_connection') === 'mysql_proximo';
         
         // Verificar si estamos dentro del plazo para editar tutorías
-        $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);
-
-        // Obtener tutorias para el despacho y cuatrimestre seleccionados
+        $dentroDePlazo = $this->dentroDePlazo($cuatrimestreSeleccionado, $estaEnProximoCurso);        // Obtener tutorias para el despacho y cuatrimestre seleccionados
         $tutorias = collect();
         if ($despachoSeleccionado) {
             $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
                 ->where('cuatrimestre', $cuatrimestreSeleccionado)
                 ->get();
+
+            // Si no hay tutorías para este cuatrimestre, intentar copiar de otro cuatrimestre
+            if ($tutorias->isEmpty()) {
+                $this->copiarTutoriasDeOtroCuatrimestre($despachoSeleccionado, $cuatrimestreSeleccionado, $estaEnProximoCurso);
+                
+                // Recargar las tutorías después de la copia
+                $tutorias = Tutoria::where('id_despacho', $despachoSeleccionado)
+                    ->where('cuatrimestre', $cuatrimestreSeleccionado)
+                    ->get();
+            }
 
             // Formatear las horas y normalizar los nombres de los días
             foreach ($tutorias as $tutoria) {
@@ -542,10 +558,90 @@ class TutoriaController extends Controller
         } catch (\Exception $e) {
             // Ignorar errores de conexión
         }
-        
-        // Restaurar conexión original
+          // Restaurar conexión original
         config(['database.default' => $conexionOriginal]);
         
         return $plazos;
+    }
+
+    /**
+     * Copiar tutorías de otro cuatrimestre cuando no existan para el cuatrimestre actual
+     * 
+     * @param int $idDespacho El ID del despacho
+     * @param int $cuatrimestreActual El cuatrimestre que no tiene tutorías
+     * @param bool $estaEnProximoCurso Si estamos en el próximo curso
+     */
+    private function copiarTutoriasDeOtroCuatrimestre($idDespacho, $cuatrimestreActual, $estaEnProximoCurso)
+    {
+        // Prioridad de búsqueda:
+        // 1. Mismo curso, otro cuatrimestre
+        // 2. Curso anterior/siguiente, mismo cuatrimestre
+        // 3. Curso anterior/siguiente, otro cuatrimestre
+
+        $conexionActual = config('database.default');
+        $tutoriasParaCopiar = null;
+        $origenCopiado = '';
+
+        try {
+            // 1. Buscar en el mismo curso, otro cuatrimestre
+            $otroCuatrimestre = $cuatrimestreActual == 1 ? 2 : 1;
+            $tutoriasParaCopiar = Tutoria::where('id_despacho', $idDespacho)
+                ->where('cuatrimestre', $otroCuatrimestre)
+                ->get();
+
+            if ($tutoriasParaCopiar->isNotEmpty()) {
+                $origenCopiado = "mismo curso, cuatrimestre $otroCuatrimestre";
+            } else {
+                // 2. Buscar en el otro curso, mismo cuatrimestre
+                $otraConexion = $estaEnProximoCurso ? 'mysql' : 'mysql_proximo';
+                
+                // Cambiar temporalmente la conexión
+                config(['database.default' => $otraConexion]);
+                
+                $tutoriasParaCopiar = Tutoria::where('id_despacho', $idDespacho)
+                    ->where('cuatrimestre', $cuatrimestreActual)
+                    ->get();
+
+                if ($tutoriasParaCopiar->isNotEmpty()) {
+                    $nombreCurso = $estaEnProximoCurso ? 'curso anterior' : 'próximo curso';
+                    $origenCopiado = "$nombreCurso, cuatrimestre $cuatrimestreActual";
+                } else {
+                    // 3. Buscar en el otro curso, otro cuatrimestre
+                    $tutoriasParaCopiar = Tutoria::where('id_despacho', $idDespacho)
+                        ->where('cuatrimestre', $otroCuatrimestre)
+                        ->get();
+
+                    if ($tutoriasParaCopiar->isNotEmpty()) {
+                        $nombreCurso = $estaEnProximoCurso ? 'curso anterior' : 'próximo curso';
+                        $origenCopiado = "$nombreCurso, cuatrimestre $otroCuatrimestre";
+                    }
+                }
+
+                // Restaurar la conexión original
+                config(['database.default' => $conexionActual]);
+            }
+
+            // Si encontramos tutorías para copiar, crear las nuevas
+            if ($tutoriasParaCopiar && $tutoriasParaCopiar->isNotEmpty()) {
+                foreach ($tutoriasParaCopiar as $tutoriaOriginal) {
+                    Tutoria::create([
+                        'id_usuario' => $tutoriaOriginal->id_usuario,
+                        'id_despacho' => $idDespacho,
+                        'cuatrimestre' => $cuatrimestreActual,
+                        'dia' => $tutoriaOriginal->dia,
+                        'inicio' => $tutoriaOriginal->inicio,
+                        'fin' => $tutoriaOriginal->fin
+                    ]);
+                }
+
+                // Guardar información de la copia en la sesión para mostrar al usuario
+                Session::flash('info', "Se han copiado automáticamente las tutorías del $origenCopiado. Puede modificarlas según sus necesidades.");
+            }
+
+        } catch (\Exception $e) {
+            // Si hay cualquier error, simplemente no hacer nada
+            // El usuario verá que no hay tutorías y podrá configurarlas manualmente
+            config(['database.default' => $conexionActual]);
+        }
     }
 }

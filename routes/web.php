@@ -57,6 +57,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return view('dashboard');
     })->name('dashboard');
 
+    Route::get('/proyectos/{proyecto}/compensaciones', [ProyectoController::class, 'mostrarCompensaciones'])->name('proyectos.compensaciones');
+    Route::post('/proyectos/{proyecto}/asignar-compensacion', [ProyectoController::class, 'asignarCompensacion'])->name('proyectos.asignarCompensacion');
+
     Route::post('/usuarios/check-uniqueness', [UsuarioController::class, 'checkUniqueness'])->name('usuarios.check-uniqueness');
 
     /**
@@ -93,6 +96,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/ver', [TutoriaController::class, 'verTutorias'])->name('ver');
         Route::get('/plazos', [TutoriaController::class, 'plazos'])->name('plazos');
     });
+
+    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
+Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
 
     /**
      * RESERVA DE SALAS
@@ -315,10 +321,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
      * GESTIÓN DE PROYECTOS
      */
     // Rutas de recurso para CRUD completo
-    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
+    //Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
     Route::get('proyectos/create', [ProyectoController::class, 'create'])->name('proyectos.create');
     Route::post('proyectos', [ProyectoController::class, 'store'])->name('proyectos.store');
-    Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
+    //Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
     Route::get('proyectos/{proyecto}/edit', [ProyectoController::class, 'edit'])->name('proyectos.edit');
     Route::put('proyectos/{proyecto}', [ProyectoController::class, 'update'])->name('proyectos.update');
     Route::delete('proyectos/{proyecto}', [ProyectoController::class, 'destroy'])->name('proyectos.destroy');

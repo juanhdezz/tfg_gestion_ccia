@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Config;
+use App\Models\Ordenacion\CompensacionProyecto;
 
 
 class Usuario extends Authenticatable
@@ -147,4 +148,9 @@ public function getConnectionName()
     {
         return $this->miembros()->ordenadoPorNumero()->get();
     }
+
+    public function compensacionesProyecto()
+{
+    return $this->hasMany(CompensacionProyecto::class, 'id_usuario', 'id_usuario');
+}
 }

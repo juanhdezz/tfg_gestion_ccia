@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Ordenacion\CompensacionProyecto;
 
 class Proyecto extends BaseModel
 {
@@ -39,6 +40,14 @@ class Proyecto extends BaseModel
     }
 
     /**
+ * Obtiene todas las compensaciones asociadas a este proyecto
+ */
+public function compensaciones()
+{
+    return $this->hasMany(CompensacionProyecto::class, 'id_proyecto', 'id_proyecto');
+}
+
+    /**
      * Obtiene todos los usuarios vinculados al proyecto
      */
     public function usuarios()
@@ -70,6 +79,17 @@ class Proyecto extends BaseModel
     {
         return $this->id_responsable == $idUsuario;
     }
+
+    public function responsableTieneCompensacion()
+{
+    if (!$this->id_responsable) {
+        return false;
+    }
+    
+    return $this->compensaciones()
+                ->where('id_usuario', $this->id_responsable)
+                ->exists();
+}
 
     /**
      * Comprueba si un usuario es miembro del proyecto
@@ -115,4 +135,11 @@ class Proyecto extends BaseModel
         }
         return null;
     }
+
+    // Obtiene numero de creditos de compensación asignados al proyecto
+    public function getCreditosCompensacionAttribute()
+    {
+        return $this->creditos_compensacion_proyecto;
+    }
+    
 }

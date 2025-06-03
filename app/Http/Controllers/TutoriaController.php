@@ -32,7 +32,12 @@ class TutoriaController extends Controller
         if ($miembro && $miembro->categoriaDocente && $miembro->categoriaDocente->creditos_docencia) {
             // Calcular horas como créditos_docencia / 3, con un máximo de 6 horas
             $horasCalculadas = $miembro->categoriaDocente->creditos_docencia / 3;
-            return min($horasCalculadas, 6.0);
+            $horasLimitadas = min($horasCalculadas, 6.0);
+            
+            // Redondear a números enteros o x.5
+            $horasRedondeadas = round($horasLimitadas * 2) / 2;
+            
+            return $horasRedondeadas;
         }
         
         // Si no tiene registro en miembro o categoría docente, usar 6 horas por defecto

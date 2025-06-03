@@ -646,38 +646,18 @@ public function checkUniqueness(Request $request)
                 'message' => 'Error al remover la categoría'
             ], 500);
         }
-    }
-
-    /**
+    }    /**
      * Mostrar página de gestión del orden de selección docente
      */
     public function gestionOrdenSeleccion(Request $request)
     {
-        $grupoId = $request->input('grupo');
-        $categoriaId = $request->input('categoria');
+        // Obtener todos los miembros ordenados por numero_orden
+        $miembros = Miembro::with(['usuario', 'categoriaDocente', 'grupo'])
+                          ->orderBy('numero_orden')
+                          ->get();
         
-        if (!$grupoId) {
-            $grupos = Grupo::all();
-            $categorias = CategoriaDocente::all();
-            return view('usuarios.seleccionar-grupo-orden', compact('grupos', 'categorias'));
-        }
-        
-        $grupo = Grupo::findOrFail($grupoId);
-        
-        $query = Miembro::with(['usuario', 'categoriaDocente'])
-                       ->where('id_grupo', $grupoId);
-        
-        if ($categoriaId) {
-            $query->where('id_categoria', $categoriaId);
-        }
-        
-        $miembros = $query->orderBy('numero_orden')->get();
-        $categorias = CategoriaDocente::all();
-        
-        return view('usuarios.gestion-orden', compact('miembros', 'grupo', 'categorias', 'categoriaId'));
-    }
-
-    /**
+        return view('usuarios.gestion-orden', compact('miembros'));
+    }    /**
      * Actualizar el orden de selección docente
      */
     public function actualizarOrdenSeleccion(Request $request)
@@ -685,17 +665,20 @@ public function checkUniqueness(Request $request)
         $request->validate([
             'miembros' => 'required|array',
             'miembros.*.id_usuario' => 'required|exists:usuario,id_usuario',
-            'miembros.*.id_grupo' => 'required|exists:grupo,id_grupo',
-            'miembros.*.id_categoria' => 'required|exists:categoria,id_categoria',
             'miembros.*.numero_orden' => 'required|integer|min:1'
         ]);
 
         try {
             DB::transaction(function () use ($request) {
+                // Verificar que no haya números de orden duplicados
+                $numerosOrden = array_column($request->miembros, 'numero_orden');
+                if (count($numerosOrden) !== count(array_unique($numerosOrden))) {
+                    throw new \Exception('No se permiten números de orden duplicados');
+                }
+
+                // Actualizar cada miembro
                 foreach ($request->miembros as $miembroData) {
                     Miembro::where('id_usuario', $miembroData['id_usuario'])
-                          ->where('id_grupo', $miembroData['id_grupo'])
-                          ->where('id_categoria', $miembroData['id_categoria'])
                           ->update(['numero_orden' => $miembroData['numero_orden']]);
                 }
             });
@@ -710,7 +693,7 @@ public function checkUniqueness(Request $request)
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar el orden'
+                'message' => $e->getMessage()
             ], 500);
         }
     }

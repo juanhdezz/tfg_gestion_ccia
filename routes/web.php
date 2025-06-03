@@ -16,8 +16,8 @@ use App\Http\Controllers\UsuarioAsignaturaController;
 use App\Http\Controllers\TutoriaController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\DespachoController;
-use App\Http\Controllers\ReservaSalaController;
 use App\Http\Controllers\SalaController;
+use App\Http\Controllers\ReservaSalaController;
 use App\Http\Controllers\PlazoController;
 use App\Http\Controllers\LibroController;
 use App\Http\Controllers\ConfiguracionOrdenacionController;
@@ -96,10 +96,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/actualizar', [TutoriaController::class, 'actualizar'])->name('actualizar');
         Route::get('/ver', [TutoriaController::class, 'verTutorias'])->name('ver');
         Route::get('/plazos', [TutoriaController::class, 'plazos'])->name('plazos');
-    });
-
-    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
+    });    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
 Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
+
+    /**
+     * GESTIÓN DE SALAS
+     */
+    Route::prefix('salas')->name('salas.')->group(function () {
+        // CRUD principal
+        Route::get('/', [SalaController::class, 'index'])->name('index');
+        Route::get('/create', [SalaController::class, 'create'])->name('create');
+        Route::post('/', [SalaController::class, 'store'])->name('store');
+        Route::get('/{id_sala}', [SalaController::class, 'show'])->name('show');
+        Route::get('/{id_sala}/edit', [SalaController::class, 'edit'])->name('edit');
+        Route::put('/{id_sala}', [SalaController::class, 'update'])->name('update');
+        Route::delete('/{id_sala}', [SalaController::class, 'destroy'])->name('destroy');
+    });
 
     /**
      * RESERVA DE SALAS
@@ -129,11 +141,10 @@ Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('p
             ->name('procesar');
 
         // Calendario de reservas
-        Route::get('/calendario', [ReservaSalaController::class, 'calendario'])->name('calendario');        Route::get('/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
+        Route::get('/calendario', [ReservaSalaController::class, 'calendario'])->name('calendario');
+        Route::get('/calendario/eventos', [ReservaSalaController::class, 'obtenerEventosCalendario'])
             ->name('obtener-eventos-calendario');
     });
-
-    
 
     /**
      * GESTIÓN DE LIBROS
@@ -179,26 +190,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
         return "Bienvenido admin";
     })->name('admin');
 
-    /**
-     * GESTIÓN DE SALAS
-     */
-    Route::prefix('salas')->name('salas.')->group(function () {
-        // CRUD principal para gestión de salas (solo administradores)
-        Route::get('/', [SalaController::class, 'index'])->name('index');
-        Route::get('/create', [SalaController::class, 'create'])->name('create');
-        Route::post('/', [SalaController::class, 'store'])->name('store');
-        Route::get('/{sala}', [SalaController::class, 'show'])->name('show');
-        Route::get('/{sala}/edit', [SalaController::class, 'edit'])->name('edit');
-        Route::put('/{sala}', [SalaController::class, 'update'])->name('update');
-        Route::delete('/{sala}', [SalaController::class, 'destroy'])->name('destroy');
-    });
-
     // /**
     //  * IMPERSONACIÓN DE USUARIOS
     //  */
     // Route::prefix('impersonate')->name('impersonate.')->group(function () {
     //     Route::post('/stop', [ImpersonateController::class, 'stop'])->name('stop');
     //     Route::post('/start/{user}', [ImpersonateController::class, 'start'])->name('start');
+
+
+
+
         
     // });
         /**

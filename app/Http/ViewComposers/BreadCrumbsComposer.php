@@ -59,6 +59,22 @@ class BreadcrumbsComposer
                     ];
                     break;
 
+                case 'usuarios.gestion-orden':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Usuarios', 'url' => route('usuarios.index')],
+                        ['name' => 'Gestión de Numero de orden', 'url' => route('usuarios.gestion-orden')]
+                    ];
+                    break;
+
+                case 'usuarios.gestion-categorias':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Usuarios', 'url' => route('usuarios.index')],
+                        ['name' => 'Gestión de Categorías Docentes', 'url' => route('usuarios.gestion-categorias')]
+                    ];
+                    break;
+
                 case 'asignaturas.index':
                     $breadcrumbs = [
                         ['name' => 'Departamento', 'url' => route('departamento')],
@@ -268,25 +284,80 @@ class BreadcrumbsComposer
                     ];
                     break;
 
-                // case 'reserva_salas.edit':
-                //     $id = request()->route('id_sala');
+                case 'reserva_salas.edit':
+                    $id = request()->route('id_sala');
+                    $fecha = request()->route('fecha');
+                    $hora_inicio = request()->route('hora_inicio');
+                    $estado = request()->route('estado');
 
-                //     $breadcrumbs = [
-                //         ['name' => 'Departamento', 'url' => route('departamento')],
-                //         ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
-                //         ['name' => 'Editar reserva', 'url' => route('reserva_salas.edit', $id)]
-                //     ];
-                //     break;
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Editar reserva', 'url' => route('reserva_salas.edit', [
+                            'id_sala' => $id,
+                            'fecha' => $fecha,
+                            'hora_inicio' => $hora_inicio,
+                            'estado' => $estado
+                        ])]
+                    ];
+                    break;                
+                    
+                case 'reserva_salas.show':
+                    $id_sala = request()->route('id_sala');
+                    $fecha = request()->route('fecha');
+                    $hora_inicio = request()->route('hora_inicio');
+                    $estado = request()->route('estado');
 
-                // case 'reserva_salas.show':
-                //     $id = request()->route('id');
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Ver reserva', 'url' => route('reserva_salas.show', [
+                            'id_sala' => $id_sala,
+                            'fecha' => $fecha,
+                            'hora_inicio' => $hora_inicio,
+                            'estado' => $estado
+                        ])]
+                    ];
+                    break;
 
-                //     $breadcrumbs = [
-                //         ['name' => 'Departamento', 'url' => route('departamento')],
-                //         ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
-                //         ['name' => 'Ver reserva', 'url' => route('reserva_salas.show', $id)]
-                //     ];
-                //     break;
+                case 'salas.index':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Gestión de Salas', 'url' => route('salas.index')]
+                    ];
+                    break;
+
+                case 'salas.create':
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Gestión de Salas', 'url' => route('salas.index')],
+                        ['name' => 'Nueva sala', 'url' => route('salas.create')]
+                    ];
+                    break;
+
+                case 'salas.edit':
+                    $id = request()->route('id_sala');
+
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Gestión de Salas', 'url' => route('salas.index')],
+                        ['name' => 'Editar sala', 'url' => route('salas.edit', $id)]
+                    ];
+                    break;
+                
+                case 'salas.show':
+                    $id = request()->route('id_sala');
+
+                    $breadcrumbs = [
+                        ['name' => 'Departamento', 'url' => route('departamento')],
+                        ['name' => 'Gestión de Reservas de Salas', 'url' => route('reserva_salas.index')],
+                        ['name' => 'Gestión de Salas', 'url' => route('salas.index')],
+                        ['name' => 'Ver sala', 'url' => route('salas.show', $id)]
+                    ];
+                    break;
 
                 case 'reserva_salas.pendientes':
                     $breadcrumbs = [

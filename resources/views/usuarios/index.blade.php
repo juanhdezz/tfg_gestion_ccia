@@ -39,7 +39,7 @@
         </form>        <div class="flex justify-end mb-4 space-x-2">
             <a href="{{ route('usuarios.gestion-categorias') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
                 Gestionar Categorías
-            </a>            <a href="{{ route('usuarios.seleccionar-grupo-orden') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+            </a>            <a href="{{ route('usuarios.gestion-orden') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
                 Orden de Selección
             </a>
             <a href="{{ route('usuarios.export') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">

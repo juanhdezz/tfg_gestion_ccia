@@ -52,6 +52,20 @@
         </div>        <h1 class="text-3xl font-bold mb-4 text-gray-900 dark:text-white underline decoration-blue-500">Visualización de
             Tutorías</h1>
 
+        <!-- Información sobre las horas de tutorías -->
+        @if(isset($horasTotales) && isset($horasMaximasPermitidas))
+            <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300">
+                <p><strong>Horas configuradas:</strong> {{ $horasTotales ?? 0 }} / {{ $horasMaximasPermitidas }} horas</p>
+                @if($horasTotales > 0)
+                    <div class="mt-2">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                            <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ min(($horasTotales / $horasMaximasPermitidas) * 100, 100) }}%"></div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         @if (session('success'))
             <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 dark:bg-green-800 dark:text-green-100"
                 role="alert">

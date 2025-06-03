@@ -147,12 +147,13 @@
                     </svg>
                     Información Importante
                 </h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700 dark:text-gray-300">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700 dark:text-gray-300">
                     <div class="space-y-2">
                         <h4 class="font-medium text-gray-900 dark:text-white">📋 Requisitos para las Tutorías:</h4>
                         <ul class="space-y-1 list-disc list-inside ml-4">
-                            <li>Exactamente 6 horas semanales por semestre</li>
+                            <li>Horas semanales por semestre según categoría docente</li>
+                            <li>Cálculo: (créditos_docencia ÷ 3) con máximo 6 horas</li>
+                            <li>Por defecto: 6 horas si no hay categoría asignada</li>
                             <li>Horarios en intervalos de 30 minutos</li>
                             <li>Solo durante el plazo establecido</li>
                             <li>Despacho debe estar asignado</li>

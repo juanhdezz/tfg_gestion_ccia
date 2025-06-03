@@ -6,13 +6,40 @@ use App\Models\Tutoria;
 use App\Models\Despacho;
 use App\Models\Plazo; // Añadimos el modelo Plazo
 use App\Models\Usuario;
+use App\Models\Miembro;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 
 class TutoriaController extends Controller
-{    /**
+{
+    /**
+     * Calcular las horas de tutorías permitidas para un usuario
+     * 
+     * @param int|null $userId ID del usuario (si es null, usa el usuario autenticado)
+     * @return float Número de horas permitidas
+     */
+    private function calcularHorasTutoriasPermitidas($userId = null)
+    {
+        $userId = $userId ?: Auth::id();
+        
+        // Buscar si el usuario tiene registro en la tabla miembro
+        $miembro = Miembro::with('categoriaDocente')
+            ->where('id_usuario', $userId)
+            ->first();
+        
+        if ($miembro && $miembro->categoriaDocente && $miembro->categoriaDocente->creditos_docencia) {
+            // Calcular horas como créditos_docencia / 3, con un máximo de 6 horas
+            $horasCalculadas = $miembro->categoriaDocente->creditos_docencia / 3;
+            return min($horasCalculadas, 6.0);
+        }
+        
+        // Si no tiene registro en miembro o categoría docente, usar 6 horas por defecto
+        return 6.0;
+    }
+
+    /**
      * Verifica si estamos dentro del plazo para editar tutorías
      * 
      * @param int $cuatrimestre El cuatrimestre (1 o 2)
@@ -170,16 +197,20 @@ class TutoriaController extends Controller
                 // Normalizar el nombre del día
                 $tutoria->dia = ucfirst(strtolower(trim($tutoria->dia)));
             }
-        }
-
-        // Calcular horas totales de las tutorías existentes
+        }        // Calcular horas totales de las tutorías existentes
         $horasTotales = 0;
         if ($tutorias->count() > 0) {
             foreach ($tutorias as $tutoria) {
                 // Cada slot de tutoría es de 30 minutos (0.5 horas)
                 $horasTotales += 0.5;
             }
-        }        return view('tutorias.index', compact(
+        }
+
+        // Calcular las horas máximas permitidas para el usuario actual o seleccionado
+        $userIdParaCalculo = $esAdmin && $miembroSeleccionado ? $miembroSeleccionado : Auth::id();
+        $horasMaximasPermitidas = $this->calcularHorasTutoriasPermitidas($userIdParaCalculo);
+
+        return view('tutorias.index', compact(
             'tutorias',
             'despachos',
             'miembros',
@@ -189,6 +220,7 @@ class TutoriaController extends Controller
             'despachoSeleccionado',
             'miembroSeleccionado',
             'horasTotales',
+            'horasMaximasPermitidas',
             'estaEnProximoCurso',
             'esAdmin'
         ));
@@ -216,9 +248,7 @@ class TutoriaController extends Controller
 
         if (!$dentroDePlazo) {
             return redirect()->back()->with('error', 'No se pueden modificar las tutorías fuera del plazo establecido');
-        }
-
-        // Contar las horas totales seleccionadas (cada slot son 30 minutos = 0.5 horas)
+        }        // Contar las horas totales seleccionadas (cada slot son 30 minutos = 0.5 horas)
         $horasSeleccionadas = 0;
         foreach ($tutoriasData as $dia => $horarios) {
             foreach ($horarios as $inicio => $fines) {
@@ -230,14 +260,19 @@ class TutoriaController extends Controller
             }
         }
 
-        // Validar que no exceda las 6 horas (12 slots de 30 minutos)
-        if ($horasSeleccionadas > 6) {
-            return redirect()->back()->with('error', 'No puede seleccionar más de 6 horas de tutorías. Ha seleccionado ' . $horasSeleccionadas . ' horas.');
+        // Calcular las horas máximas permitidas para el usuario actual o seleccionado
+        $userIdParaCalculo = Auth::user()->hasRole('admin') && $request->has('miembro') ? 
+            $request->input('miembro') : Auth::id();
+        $horasMaximasPermitidas = $this->calcularHorasTutoriasPermitidas($userIdParaCalculo);
+
+        // Validar que no exceda las horas máximas permitidas
+        if ($horasSeleccionadas > $horasMaximasPermitidas) {
+            return redirect()->back()->with('error', 'No puede seleccionar más de ' . $horasMaximasPermitidas . ' horas de tutorías. Ha seleccionado ' . $horasSeleccionadas . ' horas.');
         }
 
-        // Validar que tenga exactamente 6 horas
-        if ($horasSeleccionadas != 6) {
-            return redirect()->back()->with('error', 'Debe seleccionar exactamente 6 horas de tutorías. Ha seleccionado ' . $horasSeleccionadas . ' horas.');
+        // Validar que tenga exactamente las horas permitidas
+        if ($horasSeleccionadas != $horasMaximasPermitidas) {
+            return redirect()->back()->with('error', 'Debe seleccionar exactamente ' . $horasMaximasPermitidas . ' horas de tutorías. Ha seleccionado ' . $horasSeleccionadas . ' horas.');
         }
 
         // Primero, eliminar todas las tutorías existentes para este despacho y cuatrimestre
@@ -371,10 +406,23 @@ class TutoriaController extends Controller
                 'inicio' => $inicio,
                 'fin' => $fin
             ];
+        }        // Definir los días de la semana
+        $diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+        // Calcular las horas máximas permitidas para el usuario actual o seleccionado
+        $userIdParaCalculo = $esAdmin && $miembroSeleccionado ? $miembroSeleccionado : Auth::id();
+        $horasMaximasPermitidas = $this->calcularHorasTutoriasPermitidas($userIdParaCalculo);
+
+        // Calcular horas totales de las tutorías existentes
+        $horasTotales = 0;
+        if ($tutorias->count() > 0) {
+            foreach ($tutorias as $tutoria) {
+                // Cada slot de tutoría es de 30 minutos (0.5 horas)
+                $horasTotales += 0.5;
+            }
         }
 
-        // Definir los días de la semana
-        $diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];        return view('tutorias.ver', compact(
+        return view('tutorias.ver', compact(
             'tutorias',
             'despachos',
             'miembros',
@@ -383,6 +431,8 @@ class TutoriaController extends Controller
             'cuatrimestreActual',            'cuatrimestreSeleccionado',
             'despachoSeleccionado',
             'miembroSeleccionado',
+            'horasMaximasPermitidas',
+            'horasTotales',
             'dentroDePlazo',
             'estaEnProximoCurso',
             'esAdmin'

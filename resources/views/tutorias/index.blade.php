@@ -113,13 +113,12 @@
                     cuatrimestre seleccionados.</p>
                 <p>Para ver las tutorías actuales, use el botón <b>"Ver tutorías actuales"</b> que encontrará al final
                     del formulario.</p>
-                <p class="font-bold mt-2">Debe seleccionar exactamente 6 horas de tutorías (12 slots de 30 minutos).</p>
+                <p class="font-bold mt-2">Debe seleccionar exactamente {{ $horasMaximasPermitidas }} horas de tutorías ({{ $horasMaximasPermitidas * 2 }} slots de 30 minutos).</p>
             </div>
 
             <!-- Contador de horas seleccionadas -->
-            <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300">
-                <p><strong>Horas actuales:</strong> <span id="horas-actuales">{{ $horasTotales ?? 0 }}</span> / 6 horas</p>
-                <p><strong>Horas seleccionadas:</strong> <span id="horas-seleccionadas">0</span> / 6 horas</p>
+            <div class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-800 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300">                <p><strong>Horas actuales:</strong> <span id="horas-actuales">{{ $horasTotales ?? 0 }}</span> / {{ $horasMaximasPermitidas }} horas</p>
+                <p><strong>Horas seleccionadas:</strong> <span id="horas-seleccionadas">0</span> / {{ $horasMaximasPermitidas }} horas</p>
                 <div class="mt-2">
                     <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                         <div id="barra-progreso" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
@@ -206,23 +205,23 @@
 
     @push('scripts')
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Función para actualizar el contador de horas
+            document.addEventListener('DOMContentLoaded', function() {                // Función para actualizar el contador de horas
                 function actualizarContadorHoras() {
                     const celdasSeleccionadas = document.querySelectorAll('.celda-horario[data-seleccionada="true"]');
                     const horasSeleccionadas = celdasSeleccionadas.length * 0.5; // Cada celda son 30 minutos
+                    const horasMaximas = {{ $horasMaximasPermitidas }};
                     
                     document.getElementById('horas-seleccionadas').textContent = horasSeleccionadas;
                     
                     // Actualizar barra de progreso
-                    const porcentaje = (horasSeleccionadas / 6) * 100;
+                    const porcentaje = (horasSeleccionadas / horasMaximas) * 100;
                     const barraProgreso = document.getElementById('barra-progreso');
                     barraProgreso.style.width = porcentaje + '%';
                     
                     // Cambiar color según las horas
-                    if (horasSeleccionadas === 6) {
+                    if (horasSeleccionadas === horasMaximas) {
                         barraProgreso.className = 'bg-green-600 h-2.5 rounded-full';
-                    } else if (horasSeleccionadas > 6) {
+                    } else if (horasSeleccionadas > horasMaximas) {
                         barraProgreso.className = 'bg-red-600 h-2.5 rounded-full';
                     } else {
                         barraProgreso.className = 'bg-blue-600 h-2.5 rounded-full';
@@ -267,18 +266,17 @@
                         // Actualizar contador de horas
                         actualizarContadorHoras();
                     });
-                });
-
-                // Validación antes del envío del formulario
+                });                // Validación antes del envío del formulario
                 document.getElementById('tutorias-form').addEventListener('submit', function(e) {
                     const horasSeleccionadas = parseFloat(document.getElementById('horas-seleccionadas').textContent);
+                    const horasMaximas = {{ $horasMaximasPermitidas }};
                     
-                    if (horasSeleccionadas !== 6) {
+                    if (horasSeleccionadas !== horasMaximas) {
                         e.preventDefault();
-                        alert(`Debe seleccionar exactamente 6 horas de tutorías. Ha seleccionado ${horasSeleccionadas} horas.`);
+                        alert(`Debe seleccionar exactamente ${horasMaximas} horas de tutorías. Ha seleccionado ${horasSeleccionadas} horas.`);
                         return false;
                     }
-                });                // Inicializar contador con las tutorías ya existentes
+                });// Inicializar contador con las tutorías ya existentes
                 actualizarContadorHoras();
 
                 @if($esAdmin)

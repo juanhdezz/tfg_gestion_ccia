@@ -92,12 +92,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/gestion', [TutoriaController::class, 'gestion'])->name('gestion');
         Route::get('/', [TutoriaController::class, 'index'])->name('index');
         Route::post('/', [TutoriaController::class, 'store'])->name('store');
-        Route::delete('/{tutoria}', [TutoriaController::class, 'destroy'])->name('destroy');
-        Route::post('/actualizar', [TutoriaController::class, 'actualizar'])->name('actualizar');
+        Route::delete('/{tutoria}', [TutoriaController::class, 'destroy'])->name('destroy');        Route::post('/actualizar', [TutoriaController::class, 'actualizar'])->name('actualizar');
         Route::get('/ver', [TutoriaController::class, 'verTutorias'])->name('ver');
         Route::get('/plazos', [TutoriaController::class, 'plazos'])->name('plazos');
-    });    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
-Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
+    });
 
     /**
      * GESTIÓN DE SALAS
@@ -332,16 +330,14 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::delete('/{id}', [PlazoController::class, 'destroy'])->name('destroy');
     });
 
-
-
     /**
      * GESTIÓN DE PROYECTOS
      */
     // Rutas de recurso para CRUD completo
-    //Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
+    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
     Route::get('proyectos/create', [ProyectoController::class, 'create'])->name('proyectos.create');
     Route::post('proyectos', [ProyectoController::class, 'store'])->name('proyectos.store');
-    //Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
+    Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
     Route::get('proyectos/{proyecto}/edit', [ProyectoController::class, 'edit'])->name('proyectos.edit');
     Route::put('proyectos/{proyecto}', [ProyectoController::class, 'update'])->name('proyectos.update');
     Route::delete('proyectos/{proyecto}', [ProyectoController::class, 'destroy'])->name('proyectos.destroy');

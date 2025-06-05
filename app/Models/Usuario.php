@@ -7,7 +7,10 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\Config;
 use App\Models\Ordenacion\CompensacionProyecto;
-
+use App\Models\Despacho;
+use App\Models\Miembro;
+use App\Models\CategoriaDocente;
+use App\Models\Grupo;
 
 class Usuario extends Authenticatable
 {
@@ -74,9 +77,7 @@ public function getConnectionName()
     public function miembros()
     {
         return $this->hasMany(Miembro::class, 'id_usuario', 'id_usuario');
-    }
-
-    /**
+    }    /**
      * Relación con CategoriaDocente a través de la tabla miembro.
      * Un usuario puede tener múltiples categorías según sus membresías.
      *
@@ -100,6 +101,24 @@ public function getConnectionName()
             'fecha_entrada',
             'n_orden_becario'
         ]);
+    }
+
+    /**
+     * Relación con la categoría docente principal del usuario.
+     * Esta relación devuelve la primera categoría del usuario (para compatibilidad con el código existente).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOneThrough
+     */
+    public function categoriaDocente()
+    {
+        return $this->hasOneThrough(
+            CategoriaDocente::class,
+            Miembro::class,
+            'id_usuario',        // Foreign key en miembro table
+            'id_categoria',      // Foreign key en categoria table
+            'id_usuario',        // Local key en usuario table
+            'id_categoria'       // Local key en miembro table
+        )->orderBy('miembro.numero_orden', 'asc'); // Ordenar por número de orden para obtener la principal
     }
 
     /**

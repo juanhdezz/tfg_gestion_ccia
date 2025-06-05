@@ -9,10 +9,12 @@ use Illuminate\View\View;
 class DatabaseSelector extends Component
 {
     public $currentConnection;
+    public $context;
 
-    public function __construct()
+    public function __construct($context = 'general')
     {
         $this->currentConnection = Session::get('db_connection', 'mysql');
+        $this->context = $context;
     }
 
     public function render(): View

@@ -11,11 +11,10 @@ class DatabaseController extends Controller
     {
         $connection = $request->input('connection');
         $context = $request->input('context', 'general'); // Contexto del cambio
-        
-        // Validar que la conexión sea válida
+          // Validar que la conexión sea válida
         if (in_array($connection, ['mysql', 'mysql_proximo'])) {
-            // Si estamos cambiando desde la gestión de tutorías, guardar la conexión original
-            if ($context === 'tutorias' && !Session::has('db_connection_original')) {
+            // Si estamos cambiando desde contextos específicos, guardar la conexión original
+            if (in_array($context, ['tutorias', 'libros']) && !Session::has('db_connection_original')) {
                 Session::put('db_connection_original', Session::get('db_connection', 'mysql'));
             }
             

@@ -28,7 +28,7 @@
                                     </svg>
                                     Base de Datos Activa
                                 </label>
-                                <x-database-selector />
+                                <x-database-selector context="libros" />
                             </div>
                         </div>
                     </div>

@@ -15,8 +15,7 @@ class RestoreDatabaseConnection
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
-    {
-        // Lista de rutas que pertenecen al contexto de tutorías
+    {        // Lista de rutas que pertenecen al contexto de tutorías
         $tutoriasRoutes = [
             'tutorias.gestion',
             'tutorias.index', 
@@ -25,8 +24,24 @@ class RestoreDatabaseConnection
             'tutorias.actualizar'
         ];
         
-        // Si no estamos en una ruta de tutorías y tenemos una conexión original guardada
-        if (!in_array($request->route()->getName(), $tutoriasRoutes) && Session::has('db_connection_original')) {
+        // Lista de rutas que pertenecen al contexto de libros
+        $librosRoutes = [
+            'libros.index',
+            'libros.create',
+            'libros.store',
+            'libros.aprobar',
+            'libros.denegar',
+            'libros.recibir',
+            'libros.biblioteca',
+            'libros.agotado',
+            'libros.imprimir'
+        ];
+        
+        // Combinar todas las rutas de contextos específicos
+        $contextRoutes = array_merge($tutoriasRoutes, $librosRoutes);
+        
+        // Si no estamos en una ruta de contexto específico y tenemos una conexión original guardada
+        if (!in_array($request->route()->getName(), $contextRoutes) && Session::has('db_connection_original')) {
             // Solo restaurar si no estamos hacbiando la base de datos explícitamente
             if ($request->route()->getName() !== 'cambiar.base.datos') {
                 $conexionOriginal = Session::get('db_connection_original');

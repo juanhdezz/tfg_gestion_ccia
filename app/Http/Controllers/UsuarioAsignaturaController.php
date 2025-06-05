@@ -15,9 +15,7 @@ class UsuarioAsignaturaController extends Controller
     public function index(Request $request)
 {
     // Obtener el término de búsqueda desde la solicitud
-    $search = $request->input('search');
-
-    // Obtener todas las asignaciones con sus relaciones
+    $search = $request->input('search');    // Obtener todas las asignaciones con sus relaciones
     $asignaciones = UsuarioAsignatura::with(['usuario', 'asignatura.titulacion'])->get();
       // Obtener todas las titulaciones con sus asignaturas y grupos ordenadas correctamente
     $titulaciones = Titulacion::with(['asignaturas' => function($query) use ($search) {
@@ -32,12 +30,17 @@ class UsuarioAsignaturaController extends Controller
               ->orderBy('asignatura.nombre_asignatura')
               ->select('asignatura.*');
     }, 'asignaturas.grupos'])
-    ->when($search, function($query) use ($search) {
-        // Filtrar titulaciones que tienen al menos una asignatura que coincide con la búsqueda
-        return $query->whereHas('asignaturas', function($query) use ($search) {
-            return $query->where('nombre_asignatura', 'LIKE', "%{$search}%")
-                        ->orWhere('id_asignatura', 'LIKE', "%{$search}%");
-        });
+    ->whereHas('asignaturas', function($query) use ($search) {
+        // Solo mostrar titulaciones que tienen al menos una asignatura (no extinta)
+        $query->where('estado', '!=', 'Extinta');
+        
+        // Si hay búsqueda, filtrar también por el término de búsqueda
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('nombre_asignatura', 'LIKE', "%{$search}%")
+                  ->orWhere('id_asignatura', 'LIKE', "%{$search}%");
+            });
+        }
     })
     ->get();
     

@@ -98,7 +98,7 @@ class OrdenacionDocenteController extends Controller
             if (Auth::user()->hasRole('admin')) {
                 $data['info_admin'] = $this->obtenerInformacionAdmin();
                 $data['profesores_cursos_anteriores'] = $this->obtenerProfesoresCursosAnteriores();
-            }            //$fase = 1; // Para simular y ver que tal las vistas, se puede cambiar a 2 o 3
+            }            $fase = 1; // Para simular y ver que tal las vistas, se puede cambiar a 2 o 3
             
              // Según la fase, renderizamos distintas vistas
     if ($fase == -1) {

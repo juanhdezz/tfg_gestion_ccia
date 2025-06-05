@@ -13,6 +13,7 @@ use App\Models\LibroGrupo; // Modelo para libros con cargo a grupo de investigac
 use App\Models\LibroPosgrado; // Modelo para libros con cargo a posgrado
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -32,9 +33,11 @@ class LibroController extends Controller
      * Muestra un listado de los libros solicitados
      *
      * @return \Illuminate\Http\Response
-     */
-    public function index(Request $request)
+     */    public function index(Request $request)
     {
+        // Guardar la conexión original al entrar en el contexto de libros
+        $this->guardarConexionOriginal();
+        
         // Consulta existente para LibroAsignatura
         $query = LibroAsignatura::with(['libro', 'usuario', 'asignatura']);
         
@@ -197,6 +200,9 @@ class LibroController extends Controller
  */
 public function create()
 {
+    // Guardar la conexión original al entrar en el contexto de libros
+    $this->guardarConexionOriginal();
+    
     // Obtener todas las asignaturas para el formulario
     $asignaturas = Asignatura::orderBy('nombre_asignatura')->get();
     
@@ -220,6 +226,9 @@ public function create()
      */
 public function store(Request $request)
 {
+    // Guardar la conexión original al entrar en el contexto de libros
+    $this->guardarConexionOriginal();
+    
     // Validación básica de libro (común para todos los tipos)
     $validatedLibro = $request->validate([
         'titulo' => 'required|string|max:255',
@@ -415,9 +424,11 @@ public function store(Request $request)
      * @param  int  $id_usuario
      * @param  string  $fecha_solicitud
      * @return \Illuminate\Http\Response
-     */
-    public function aprobar(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
+     */    public function aprobar(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
 {
+    // Guardar la conexión original al entrar en el contexto de libros
+    $this->guardarConexionOriginal();
+    
     try {
         $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
         $id_libro = (int) $id_libro;
@@ -603,9 +614,11 @@ public function store(Request $request)
      * @param  string  $fecha_solicitud
      * @param  string  $tipo
      * @return \Illuminate\Http\Response
-     */
-    public function denegar(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
+     */    public function denegar(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
     {
+        // Guardar la conexión original al entrar en el contexto de libros
+        $this->guardarConexionOriginal();
+        
         try {
             // Convertir la fecha a un formato adecuado para la consulta
             $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
@@ -796,9 +809,11 @@ public function store(Request $request)
      * @param  string  $fecha_solicitud
      * @param  string  $tipo
      * @return \Illuminate\Http\Response
-     */
-    public function recibir(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
+     */    public function recibir(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
     {
+        // Guardar la conexión original al entrar en el contexto de libros
+        $this->guardarConexionOriginal();
+        
         try {
             // Convertir la fecha a un formato adecuado para la consulta
             $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
@@ -979,9 +994,11 @@ public function store(Request $request)
      * @param  string  $fecha_solicitud
      * @param  string  $tipo
      * @return \Illuminate\Http\Response
-     */
-    public function marcarComoBiblioteca(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
+     */    public function marcarComoBiblioteca(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
     {
+        // Guardar la conexión original al entrar en el contexto de libros
+        $this->guardarConexionOriginal();
+        
         try {
             $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
             $id_libro = (int) $id_libro;
@@ -1151,9 +1168,11 @@ public function store(Request $request)
      * @param  string  $fecha_solicitud
      * @param  string  $tipo
      * @return \Illuminate\Http\Response
-     */
-    public function marcarComoAgotado(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
+     */    public function marcarComoAgotado(Request $request, $id_libro, $id_usuario, $fecha_solicitud, $tipo = null)
     {
+        // Guardar la conexión original al entrar en el contexto de libros
+        $this->guardarConexionOriginal();
+        
         try {
             $fecha = Carbon::parse($fecha_solicitud)->format('Y-m-d');
             $id_libro = (int) $id_libro;
@@ -1332,6 +1351,9 @@ public function store(Request $request)
  */
 public function imprimir(Request $request)
 {
+    // Guardar la conexión original al entrar en el contexto de libros
+    $this->guardarConexionOriginal();
+    
     // Obtener el filtro de estado
     $estado = $request->estado;
     $search = $request->search;
@@ -1406,8 +1428,7 @@ public function imprimir(Request $request)
     
     // Fecha actual para el encabezado del informe
     $fechaActual = Carbon::now()->format('d/m/Y H:i');
-    
-    return view('libros.imprimir', compact(
+      return view('libros.imprimir', compact(
         'librosAsignatura',
         'librosProyecto',
         'librosGrupo',
@@ -1419,4 +1440,15 @@ public function imprimir(Request $request)
         'fechaActual'
     ));
 }
+
+    /**
+     * Guarda la conexión original de base de datos al entrar en el contexto de libros
+     * Solo guarda si no existe ya una conexión original guardada
+     */
+    private function guardarConexionOriginal()
+    {
+        if (!Session::has('db_connection_original')) {
+            Session::put('db_connection_original', Session::get('db_connection', 'mysql'));
+        }
+    }
 }

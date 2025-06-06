@@ -7,12 +7,12 @@
                     <p class="text-gray-600 dark:text-gray-400 mt-1">{{ $proyecto->codigo }} - {{ $proyecto->titulo }}</p>
                 </div>
                 <div class="flex gap-3">
-                    @if(Auth::user()->id_usuario === $proyecto->id_responsable || Auth::user()->hasAnyRole(['admin', 'coordinador']))
+                    {{-- @if(Auth::user()->id_usuario === $proyecto->id_responsable || Auth::user()->hasAnyRole(['admin', 'coordinador']))
                         <a href="{{ route('proyectos.repartirCreditos', $proyecto->id_proyecto) }}" 
                            class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition duration-300">
                             Distribuir Créditos
                         </a>
-                    @endif
+                    @endif --}}
                     <a href="{{ route('proyectos.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded transition duration-300">
                         Volver a Proyectos
                     </a>
@@ -57,7 +57,7 @@
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Usuario</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Compensación Actual</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Acción</th>
+                                    {{-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Acción</th> --}}
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-300 dark:divide-gray-700">
@@ -66,14 +66,14 @@
                                         <td class="px-6 py-4 text-gray-800 dark:text-gray-200">
                                             <div class="font-medium">{{ $miembro->nombre }} {{ $miembro->apellidos }}</div>
                                             <div class="text-sm text-gray-500 dark:text-gray-400">{{ $miembro->email }}</div>
-                                        </td>
-                                        <td class="px-6 py-4 text-gray-800 dark:text-gray-200">
+                                        </td>                                        <td class="px-6 py-4 text-gray-800 dark:text-gray-200">
                                             @php
-                                                $compensacion = $miembro->compensacionesProyecto->first();
+                                                // Obtener la compensación específica de este proyecto
+                                                $compensacion = $miembro->compensacionesProyecto->where('id_proyecto', $proyecto->id_proyecto)->first();
                                             @endphp
                                             {{ $compensacion ? $compensacion->creditos_compensacion . ' créditos' : 'Sin asignar' }}
                                         </td>
-                                        <td class="px-6 py-4">
+                                        {{-- <td class="px-6 py-4">
                                             <form action="{{ route('proyectos.asignarCompensacion', $proyecto->id_proyecto) }}" method="POST" class="flex items-center gap-2">
                                                 @csrf
                                                 <input type="hidden" name="id_usuario" value="{{ $miembro->id_usuario }}">
@@ -85,7 +85,7 @@
                                                     {{ $compensacion ? 'Actualizar' : 'Asignar' }}
                                                 </button>
                                             </form>
-                                        </td>
+                                        </td> --}}
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -94,7 +94,9 @@
                 @else
                     <p class="text-gray-500 dark:text-gray-400">No hay usuarios con compensaciones asignadas a este proyecto.</p>
                 @endif
-            </div>            <!-- Asignar compensación a usuario externo -->            @if($usuariosDisponibles->count() > 0)
+            </div>           
+             <!-- Asignar compensación a usuario externo -->            
+             {{-- @if($usuariosDisponibles->count() > 0)
                 <div>
                     <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Asignar Compensación a Usuario Externo</h2>
                     
@@ -125,7 +127,7 @@
                         </div>
                     </form>
                 </div>
-            @endif
+            @endif --}}
         </div>
     </div>
 </x-app-layout>

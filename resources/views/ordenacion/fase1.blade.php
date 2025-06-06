@@ -55,7 +55,12 @@
         @endrole
 
         
-        <!-- Sección de reducciones -->
+       
+
+        <!-- Resumen (disponible para todos excepto admin) -->
+
+        @unless(auth()->user()->hasRole('admin'))
+         <!-- Sección de reducciones -->
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg mb-6 overflow-hidden">
             <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Compensaciones Docentes</h2>
@@ -224,9 +229,6 @@
                     </form>
                 @endif
             </div>        </div>
-
-        <!-- Resumen (disponible para todos excepto admin) -->
-        @unless(auth()->user()->hasRole('admin'))
             <div class="flex justify-center mt-6">
             <a href="{{ route('ordenacion.resumen') }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Ver Resumen de Ordenación Docente

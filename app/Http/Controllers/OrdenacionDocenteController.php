@@ -1722,29 +1722,42 @@ protected function esTFM($posgrado)
         $tablaOtros = $this->generarTablaOtros($bd, $idUsuario, $resultado);
           // 8. APLICAR RESTRICCIONES GLOBALES
         $this->aplicarRestriccionesGlobales($bd, $idUsuario, $limites, $limitesDocentes, $resultado);
+          // Combinar todas las tablas
+        $resultado['tablas_html'] = $tablaPosgrado;
         
-        // Combinar todas las tablas
-        $resultado['tablas_html'] = $tablaPosgrado . 
-            '<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600" style="margin: 20px auto; max-width: 75%;">' .
-            '<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">' .
-            '<tr><th colspan="3" class="px-6 py-3 text-center">Compensaciones Docentes</th></tr>' .
-            '</thead><tbody>' .
-            $tablaCargos . $tablaRepresentacion . $tablaProyectos . $tablaTesis . $tablaSexenios . $tablaOtros;
-            
-        // Mensaje si no hay compensaciones
-        if ($resultado['total_compensacion'] == 0 || ($resultado['total_compensacion'] == $resultado['creditos_posgrado'])) {
-            $resultado['tablas_html'] .= '<tr><td colspan="3" class="px-6 py-4 text-center">' .
-                '<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">'.
+        // Solo agregar la tabla principal de compensaciones si hay compensaciones distintas a posgrado
+        $hayCompensacionesNoPosgrado = ($tablaCargos . $tablaRepresentacion . $tablaProyectos . $tablaTesis . $tablaSexenios . $tablaOtros) != '';
+        
+        if ($hayCompensacionesNoPosgrado) {
+            $resultado['tablas_html'] .= '<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600" style="margin: 20px auto; max-width: 75%;">' .
+                '<thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">' .
+                '<tr><th colspan="3" class="px-6 py-3 text-center">Compensaciones Docentes</th></tr>' .
+                '</thead><tbody>' .
+                $tablaCargos . $tablaRepresentacion . $tablaProyectos . $tablaTesis . $tablaSexenios . $tablaOtros;
+        }
+        
+        // Mensaje si no hay compensaciones en absoluto
+        if ($resultado['total_compensacion'] == 0) {
+            $resultado['tablas_html'] .= '<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4">'.
                 'Actualmente no cuenta con ningún tipo de compensación docente'.
-                '</div></td></tr>';
+                '</div>';
+        } else if (!$hayCompensacionesNoPosgrado && $resultado['creditos_posgrado'] == 0) {
+            $resultado['tablas_html'] .= '<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4">'.
+                'Actualmente no cuenta con ningún tipo de compensación docente'.
+                '</div>';
+        }        
+        // Agregar restricciones al final de la tabla si hay compensaciones no posgrado
+        if ($hayCompensacionesNoPosgrado) {
+            foreach ($resultado['restricciones'] as $restriccion) {
+                $resultado['tablas_html'] .= '<tr><td colspan="3" class="px-6 py-4 text-right font-bold bg-red-50 dark:bg-red-900">' . $restriccion . '</td></tr>';
+            }
+            $resultado['tablas_html'] .= '</tbody></table>';
+        } else if ($resultado['creditos_posgrado'] > 0) {
+            // Si solo hay compensaciones de posgrado, agregar restricciones como div separado
+            foreach ($resultado['restricciones'] as $restriccion) {
+                $resultado['tablas_html'] .= '<div class="bg-red-50 dark:bg-red-900 p-4 mt-2 text-right font-bold">' . $restriccion . '</div>';
+            }
         }
-        
-        // Agregar restricciones al final de la tabla
-        foreach ($resultado['restricciones'] as $restriccion) {
-            $resultado['tablas_html'] .= '<tr><td colspan="3" class="px-6 py-4 text-right font-bold bg-red-50 dark:bg-red-900">' . $restriccion . '</td></tr>';
-        }
-        
-        $resultado['tablas_html'] .= '</tbody></table>';
         
         return $resultado;
     }
@@ -1814,7 +1827,8 @@ protected function esTFM($posgrado)
                 } else {
                     $resultado['creditos_posgrado'] = $creditosDocenciaPosgrado;
                 }
-                  $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
+                
+                $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
                 $tabla .= "<td colspan='2' class='px-6 py-4 text-right font-bold'>Restricción: (Docencia Posgrado sin TFM <= {$limitesDocentes['menor']} créd.) Total</td>";
                 $tabla .= "<td class='px-6 py-4 font-bold'>{$resultado['creditos_posgrado']}</td>";
                 $tabla .= "</tr>";
@@ -1911,16 +1925,15 @@ protected function esTFM($posgrado)
         }
         
         return '';
-    }
-      /**
+    }    /**
      * Genera la tabla de compensaciones por proyectos
      */
     private function generarTablaProyectos($bd, $idUsuario, $limites, &$resultado)
-    {
-        
+    {        try {
             // Primero verificamos si la tabla existe
-            $tableExists = DB::select("SHOW TABLES LIKE '{$bd}.compensacion_proyecto'");
+            $tableExists = DB::select("SHOW TABLES FROM {$bd} LIKE 'compensacion_proyecto'");
             if (empty($tableExists)) {
+                Log::warning("Tabla compensacion_proyecto no existe en BD: {$bd}");
                 return ''; // Si la tabla no existe, retornamos una cadena vacía
             }
             
@@ -1929,40 +1942,58 @@ protected function esTFM($posgrado)
                 ->where('compensacion_proyecto.id_usuario', $idUsuario)
                 ->select('compensacion_proyecto.creditos_compensacion', 'proyecto.titulo', 'proyecto.codigo')
                 ->get();
+            
+            Log::info("Proyectos encontrados para usuario {$idUsuario}:", [
+                'count' => $proyectos->count(),
+                'proyectos' => $proyectos->toArray()
+            ]);
                 
             if ($proyectos->count() > 0) {
-            $tabla = '<tr><th colspan="3" class="px-6 py-3 text-center bg-gray-100 dark:bg-gray-600">Compensaciones por Proyecto</th></tr>';
-            $tabla .= '<tr class="bg-gray-50 dark:bg-gray-700"><th class="px-6 py-3">Título</th><th class="px-6 py-3">Código</th><th class="px-6 py-3">Créditos</th></tr>';
-            
-            $cont = 0;
-            foreach ($proyectos as $proyecto) {
-                $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                $tabla = '<tr><th colspan="3" class="px-6 py-3 text-center bg-gray-100 dark:bg-gray-600">Compensaciones por Proyecto</th></tr>';
+                $tabla .= '<tr class="bg-gray-50 dark:bg-gray-700"><th class="px-6 py-3">Título</th><th class="px-6 py-3">Código</th><th class="px-6 py-3">Créditos</th></tr>';
                 
-                $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
-                $tabla .= "<td class='px-6 py-4'>{$proyecto->titulo}</td>";
-                $tabla .= "<td class='px-6 py-4'>{$proyecto->codigo}</td>";
-                $tabla .= "<td class='px-6 py-4'>{$proyecto->creditos_compensacion}</td>";
+                $cont = 0;
+                foreach ($proyectos as $proyecto) {
+                    $color = ($cont % 2 == 0) ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700';
+                    
+                    $tabla .= "<tr class='$color border-b dark:border-gray-600'>";
+                    $tabla .= "<td class='px-6 py-4'>{$proyecto->titulo}</td>";
+                    $tabla .= "<td class='px-6 py-4'>{$proyecto->codigo}</td>";
+                    $tabla .= "<td class='px-6 py-4'>{$proyecto->creditos_compensacion}</td>";
+                    $tabla .= "</tr>";
+                    
+                    $resultado['creditos_proyectos'] += $proyecto->creditos_compensacion;
+                    $cont++;
+                }
+                
+                // Aplicar límite de proyectos
+                if (isset($limites['Proyectos']) && $resultado['creditos_proyectos'] > $limites['Proyectos']) {
+                    $resultado['creditos_proyectos'] = $limites['Proyectos'];
+                }
+                
+                $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
+                $tabla .= "<td colspan='2' class='px-6 py-4 text-right font-bold'>Restricción: Límite {$limites['Proyectos']} créd. Total</td>";
+                $tabla .= "<td class='px-6 py-4 font-bold'>{$resultado['creditos_proyectos']}</td>";
                 $tabla .= "</tr>";
                 
-                $resultado['creditos_proyectos'] += $proyecto->creditos_compensacion;
-                $cont++;
+                $resultado['total_compensacion'] += $resultado['creditos_proyectos'];
+                
+                Log::info("Tabla de proyectos generada:", [
+                    'creditos_proyectos' => $resultado['creditos_proyectos'],
+                    'total_compensacion' => $resultado['total_compensacion'],
+                    'tabla_length' => strlen($tabla)
+                ]);
+                
+                return $tabla;
             }
             
-            // Aplicar límite de proyectos
-            if (isset($limites['Proyectos']) && $resultado['creditos_proyectos'] > $limites['Proyectos']) {
-                $resultado['creditos_proyectos'] = $limites['Proyectos'];
-            }
+            Log::info("No se encontraron proyectos para usuario {$idUsuario}");
+            return '';
             
-            $tabla .= "<tr class='bg-blue-50 dark:bg-blue-900'>";
-            $tabla .= "<td colspan='2' class='px-6 py-4 text-right font-bold'>Restricción: Límite {$limites['Proyectos']} créd. Total</td>";
-            $tabla .= "<td class='px-6 py-4 font-bold'>{$resultado['creditos_proyectos']}</td>";
-            $tabla .= "</tr>";
-            
-            $resultado['total_compensacion'] += $resultado['creditos_proyectos'];
-            return $tabla;
+        } catch (\Exception $e) {
+            Log::error('Error en generarTablaProyectos: ' . $e->getMessage());
+            return '';
         }
-        
-        return '';
     }
       /**
      * Genera la tabla de compensaciones por tesis
@@ -1971,7 +2002,7 @@ protected function esTFM($posgrado)
     {
         try {
             // Verificamos si las tablas existen
-            $tableExists = DB::select("SHOW TABLES LIKE '{$bd}.compensacion_tesis'");
+            $tableExists = DB::select("SHOW TABLES FROM {$bd} LIKE 'compensacion_tesis'");
             if (empty($tableExists)) {
                 return ''; // Si la tabla no existe, retornamos una cadena vacía
             }
@@ -2028,7 +2059,7 @@ protected function esTFM($posgrado)
     private function generarTablaSexenios($bd, $idUsuario, &$resultado)
     {
         try {
-            $tableExists = DB::select("SHOW TABLES LIKE '{$bd}.compensacion_sexenio'");
+            $tableExists = DB::select("SHOW TABLES FROM {$bd} LIKE 'compensacion_sexenio'");
             if (empty($tableExists)) {
                 return '';
             }
@@ -2064,7 +2095,7 @@ protected function esTFM($posgrado)
     private function generarTablaOtros($bd, $idUsuario, &$resultado)
     {
         try {
-            $tableExists = DB::select("SHOW TABLES LIKE '{$bd}.compensacion_otros'");
+            $tableExists = DB::select("SHOW TABLES FROM {$bd} LIKE 'compensacion_otros'");
             if (empty($tableExists)) {
                 return '';
             }
@@ -2144,16 +2175,13 @@ protected function esTFM($posgrado)
             $creditosParaElLimite12 = $limites['Gestion+Investigacion+A.Especiales'];
             $resultado['restricciones'][] = "Restricción: (Gestión ({$resultado['max_cargo']}) + Investigación ({$resultado['creditos_investigacion']}) + (Inglés,Intercambio, Práct. Empresa ({$resultado['creditos_especiales']}))) <= {$limites['Gestion+Investigacion+A.Especiales']} -> Se trunca a {$limites['Gestion+Investigacion+A.Especiales']}";
         }
-        
-        // Restricción del 50% de la docencia
+          // Restricción del 50% de la docencia
         $cOtros2 = DB::table($bd . '.compensacion_otros')
             ->join($bd . '.compensacion_otros_concepto', 'compensacion_otros.id_concepto', '=', 'compensacion_otros_concepto.id_concepto')
             ->where('compensacion_otros.id_usuario', $idUsuario)
-            ->whereHas('concepto', function($query) {
-                $query->where('tipo', '<>', 'Acciones Especiales')
-                      ->where('tipo', '<>', 'Posgrado')
-                      ->where('tipo', '<>', 'Departamento');
-            })
+            ->where('compensacion_otros_concepto.tipo', '<>', 'Acciones Especiales')
+            ->where('compensacion_otros_concepto.tipo', '<>', 'Posgrado')
+            ->where('compensacion_otros_concepto.tipo', '<>', 'Departamento')
             ->sum('compensacion_otros.creditos_compensacion');
           $redLimitadas = $creditosParaElLimite12 + $resultado['representacion_sindical'] + round($cOtros2 * 1000) / 1000;
         
@@ -2608,6 +2636,75 @@ protected function esTFM($posgrado)
                 'detalles' => config('app.debug') ? $e->getMessage() : null,
                 'total_asignaciones' => 0
             ];
+        }
+    }    /**
+     * Obtiene el detalle de compensaciones docentes para mostrar via AJAX
+     * Utiliza el método muestraReducciones existente y devuelve JSON
+     */
+    public function detalleCompensaciones()
+    {
+        try {
+            // Verificar que el usuario esté autenticado
+            if (!Auth::check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no autenticado'
+                ], 401);
+            }
+            
+            // Llamar al método existente que genera las tablas de compensaciones
+            $resultado = $this->muestraReducciones('Siguiente');
+            
+            // Log para debug
+            Log::info('Resultado de muestraReducciones:', [
+                'usuario_id' => Auth::id(),
+                'total_compensacion' => $resultado['total_compensacion'] ?? 'no definido',
+                'creditos_posgrado' => $resultado['creditos_posgrado'] ?? 'no definido',
+                'creditos_proyectos' => $resultado['creditos_proyectos'] ?? 'no definido',
+                'tablas_html_length' => isset($resultado['tablas_html']) ? strlen($resultado['tablas_html']) : 'no definido'
+            ]);
+            
+            // Verificar que se obtuvo resultado
+            if (!$resultado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo obtener información de compensaciones',
+                    'tablas_html' => '<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">Error: No se pudo obtener información de compensaciones.</div>'
+                ]);
+            }
+            
+            // Verificar que hay contenido HTML
+            if (!isset($resultado['tablas_html']) || empty($resultado['tablas_html'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se generó contenido HTML para las compensaciones',
+                    'tablas_html' => '<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">No se encontraron detalles de compensaciones docentes.</div>',
+                    'debug_info' => [
+                        'total_compensacion' => $resultado['total_compensacion'] ?? 0,
+                        'creditos_posgrado' => $resultado['creditos_posgrado'] ?? 0,
+                        'creditos_proyectos' => $resultado['creditos_proyectos'] ?? 0
+                    ]
+                ]);
+            }
+            
+            // Devolver respuesta exitosa con las tablas HTML
+            return response()->json([
+                'success' => true,
+                'tablas_html' => $resultado['tablas_html'],
+                'total_compensacion' => $resultado['total_compensacion'] ?? 0,
+                'creditos_posgrado' => $resultado['creditos_posgrado'] ?? 0,
+                'creditos_proyectos' => $resultado['creditos_proyectos'] ?? 0,
+                'restricciones' => $resultado['restricciones'] ?? []
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error en detalleCompensaciones: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage(),
+                'tablas_html' => '<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">Error al cargar los detalles de compensaciones: ' . $e->getMessage() . '</div>'
+            ], 500);
         }
     }
 }

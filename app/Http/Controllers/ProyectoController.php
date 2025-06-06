@@ -390,19 +390,23 @@ public function mostrarCompensaciones(Proyecto $proyecto)
     if (!$this->dentroDePlazoCompensaciones()) {
         return redirect()->route('proyectos.index')
                         ->with('error', 'No se pueden modificar compensaciones fuera del plazo establecido.');
-    }
-      // Obtener miembros del proyecto con sus compensaciones
-    $miembros = $proyecto->miembros()
-                        ->where('miembro_actual', 1)
-                        ->with(['compensacionesProyecto' => function($query) use ($proyecto) {
-                            $query->where('id_proyecto', $proyecto->id_proyecto);
-                        }])
-                        ->orderBy('apellidos')
-                        ->orderBy('nombre')
-                        ->get();
-      // Obtener todos los usuarios activos para el selector (excluyendo los que ya son miembros)
+    }    // Obtener usuarios que ya tienen compensaciones en este proyecto
+    $miembros = Usuario::where('miembro_actual', 1)
+                      ->with(['compensacionesProyecto' => function($query) use ($proyecto) {
+                          $query->where('id_proyecto', $proyecto->id_proyecto);
+                      }])
+                      ->whereHas('compensacionesProyecto', function($query) use ($proyecto) {
+                          $query->where('id_proyecto', $proyecto->id_proyecto);
+                      })
+                      ->orderBy('apellidos')
+                      ->orderBy('nombre')
+                      ->get();
+      
+    // Obtener todos los usuarios activos para el selector (excluyendo los que ya tienen compensaciones)
     $usuariosDisponibles = Usuario::where('miembro_actual', 1)
-                                ->whereNotIn('id_usuario', $miembros->pluck('id_usuario'))
+                                ->whereDoesntHave('compensacionesProyecto', function($query) use ($proyecto) {
+                                    $query->where('id_proyecto', $proyecto->id_proyecto);
+                                })
                                 ->orderBy('apellidos')
                                 ->orderBy('nombre')
                                 ->get();

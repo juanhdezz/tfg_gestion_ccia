@@ -447,8 +447,7 @@ public function repartirCreditos(Proyecto $proyecto)
                         ->with('error', 'Este proyecto no tiene créditos de compensación definidos.');
     }
       // Obtener todos los usuarios activos para la selección
-    $usuarios = Usuario::where('miembro_actual', 1)
-                      ->orderBy('apellidos')
+    $usuarios = Usuario::orderBy('apellidos')
                       ->orderBy('nombre')
                       ->get();
     

@@ -461,7 +461,7 @@ public function repartirCreditos(Proyecto $proyecto)
 public function guardarReparto(Request $request, Proyecto $proyecto)
 {
     // Verificar que el usuario actual es el responsable del proyecto
-    if (Auth::user()->id_usuario !== $proyecto->id_responsable && !Auth::user()->hasAnyRole(['admin', 'coordinador'])) {
+    if (Auth::user()->id_usuario !== $proyecto->id_responsable ) {
         abort(403, 'Solo el responsable del proyecto puede distribuir los créditos.');
     }
     

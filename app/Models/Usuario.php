@@ -166,10 +166,15 @@ public function getConnectionName()
     public function miembrosOrdenados()
     {
         return $this->miembros()->ordenadoPorNumero()->get();
-    }
-
-    public function compensacionesProyecto()
+    }    public function compensacionesProyecto()
 {
     return $this->hasMany(CompensacionProyecto::class, 'id_usuario', 'id_usuario');
-}
+}    /**
+     * Obtiene los proyectos donde el usuario tiene compensación
+     */
+    public function proyectos()
+    {
+        return $this->belongsToMany(Proyecto::class, 'compensacion_proyecto', 'id_usuario', 'id_proyecto')
+                    ->withPivot('creditos_compensacion');
+    }
 }

@@ -122,9 +122,7 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Solo mostrar panel de admin si es administrador -->
+        </div>        <!-- Solo mostrar panel de admin si es administrador -->
         @role('admin')
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg mb-6 overflow-hidden">
             <div class="bg-red-50 dark:bg-red-900 px-4 py-2 border-b border-red-200 dark:border-red-600">
@@ -143,20 +141,36 @@
                         <div class="ml-3">
                             <p class="text-sm text-yellow-700 dark:text-yellow-200">
                                 <strong>Administrador:</strong> Para activar el proceso de ordenación docente, 
-                                debe configurar la fase en el panel de administración correspondiente.
+                                puede cambiar la fase del sistema usando el botón de abajo.
                             </p>
                         </div>
+                    </div>                </div>
+                
+                
+                
+                <!-- Mensajes de respuesta -->
+                <div id="admin-messages" class="mb-4 hidden">
+                    <div id="admin-success" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-2">
+                        <span id="success-message"></span>
                     </div>
+                    <div id="admin-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-2">
+                        <span id="error-message"></span>
+                    </div>
+                </div>
+
+                <!-- Panel de Administración Completo -->
+                <div class="mb-6">
+                    @include('ordenacion.partials.admin_panel')
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Acciones recomendadas:</h3>
+                        <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Acciones disponibles:</h3>
                         <ul class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                            <li>• Verificar configuración de fases</li>
-                            <li>• Revisar fechas del proceso</li>
-                            <li>• Comprobar estado del sistema</li>
-                            <li>• Validar datos de profesores</li>
+                            <li>• <strong>Fase 1:</strong> Mantener Asignaturas</li>
+                            <li>• <strong>Fase 2:</strong> Asignación por Turnos</li>
+                            <li>• <strong>Fase 3:</strong> Asignación Libre</li>
+                            <li>• Verificar configuración del sistema</li>
                         </ul>
                     </div>
                     
@@ -231,17 +245,247 @@
                 Volver al Panel Principal
             </a>
         </div>
-    </div>
-
-    @push('scripts')
+    </div>    @push('scripts')
     <script>
+        // Variables globales
+        let isUpdating = false;
+        
         // Auto-refresh cada 5 minutos para comprobar si el proceso se ha activado
         setTimeout(function() {
             location.reload();
         }, 300000); // 5 minutos
         
         // Mostrar notificación de auto-refresh
-        console.log('Esta página se actualizará automáticamente cada 5 minutos para comprobar el estado del proceso.');
+        console.log('Esta página se actualizará automáticamente cada 5 minutos para comprobar el estado del proceso.');        // Event listeners para el panel de administración
+        document.addEventListener('DOMContentLoaded', function() {
+            // Botón principal de cambiar fase
+            const cambiarFaseBtn = document.getElementById('cambiar-fase-btn');
+            if (cambiarFaseBtn) {
+                cambiarFaseBtn.addEventListener('click', function() {
+                    mostrarModalCambioFase();
+                });
+            }
+
+            // Botón de avanzar turno
+            const avanzarTurnoBtn = document.getElementById('avanzar-turno-btn');
+            if (avanzarTurnoBtn) {
+                avanzarTurnoBtn.addEventListener('click', function() {
+                    avanzarTurno();
+                });
+            }
+
+            // Botón de resetear proceso
+            const resetearProcesoBtn = document.getElementById('resetear-proceso-btn');
+            if (resetearProcesoBtn) {
+                resetearProcesoBtn.addEventListener('click', function() {
+                    resetearProceso();
+                });
+            }
+
+            // Botón de generar reporte
+            const generarReporteBtn = document.getElementById('generar-reporte-btn');
+            if (generarReporteBtn) {
+                generarReporteBtn.addEventListener('click', function() {
+                    generarReporte();
+                });
+            }
+        });
+
+        function mostrarModalCambioFase() {
+            const fases = ['1', '2', '3'];
+            let opcionesHtml = fases.map(fase => 
+                `<option value="${fase}">Fase ${fase}</option>`
+            ).join('');
+
+            Swal.fire({
+                title: 'Cambiar Fase del Sistema',
+                html: `
+                    <div class="text-left">
+                        <label for="nueva-fase" class="block text-sm font-medium text-gray-700 mb-2">
+                            Seleccione la nueva fase:
+                        </label>
+                        <select id="nueva-fase" class="w-full p-2 border border-gray-300 rounded-md">
+                            <option value="">Seleccionar fase...</option>
+                            ${opcionesHtml}
+                        </select>
+                        <div class="mt-3 text-sm text-gray-600">
+                            <p><strong>Fase 1:</strong> Mantener Asignaturas</p>
+                            <p><strong>Fase 2:</strong> Asignación por Turnos</p>
+                            <p><strong>Fase 3:</strong> Asignación Libre</p>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Cambiar Fase',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#6b7280',
+                preConfirm: () => {
+                    const nuevaFase = document.getElementById('nueva-fase').value;
+                    if (!nuevaFase) {
+                        Swal.showValidationMessage('Por favor seleccione una fase');
+                        return false;
+                    }
+                    return nuevaFase;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    cambiarFase(result.value);
+                }
+            });
+        }
+
+        function cambiarFase(nuevaFase) {
+            if (isUpdating) return;
+            isUpdating = true;
+
+            fetch('/admin/cambiar-fase', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    nueva_fase: nuevaFase
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                isUpdating = false;
+                if (data.success) {
+                    mostrarMensaje('success', data.message || `Fase cambiada exitosamente a Fase ${nuevaFase}`);
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    mostrarMensaje('error', data.message || 'Error al cambiar la fase');
+                }
+            })
+            .catch(error => {
+                isUpdating = false;
+                console.error('Error:', error);
+                mostrarMensaje('error', 'Error de conexión. Intente nuevamente.');
+            });
+        }
+
+        function avanzarTurno() {
+            if (isUpdating) return;
+
+            Swal.fire({
+                title: '¿Avanzar al siguiente turno?',
+                text: 'Esta acción moverá el proceso al siguiente profesor en la cola.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, avanzar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#6b7280'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    isUpdating = true;
+
+                    fetch('/admin/avanzar-turno', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        isUpdating = false;
+                        if (data.success) {
+                            mostrarMensaje('success', data.message || 'Turno avanzado exitosamente');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            mostrarMensaje('error', data.message || 'Error al avanzar el turno');
+                        }
+                    })
+                    .catch(error => {
+                        isUpdating = false;
+                        console.error('Error:', error);
+                        mostrarMensaje('error', 'Error de conexión. Intente nuevamente.');
+                    });
+                }
+            });
+        }
+
+        function resetearProceso() {
+            if (isUpdating) return;
+
+            Swal.fire({
+                title: '¿Resetear todo el proceso?',
+                text: 'Esta acción eliminará todas las asignaciones actuales y reiniciará el proceso desde el inicio. Esta acción no se puede deshacer.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, resetear',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    isUpdating = true;
+
+                    fetch('/admin/resetear-proceso', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        isUpdating = false;
+                        if (data.success) {
+                            mostrarMensaje('success', data.message || 'Proceso reseteado exitosamente');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            mostrarMensaje('error', data.message || 'Error al resetear el proceso');
+                        }
+                    })
+                    .catch(error => {
+                        isUpdating = false;
+                        console.error('Error:', error);
+                        mostrarMensaje('error', 'Error de conexión. Intente nuevamente.');
+                    });
+                }
+            });
+        }
+
+        function generarReporte() {
+            window.open('/admin/reporte-asignaciones', '_blank');
+        }
+
+        function mostrarMensaje(tipo, mensaje) {
+            const messagesContainer = document.getElementById('admin-messages');
+            const successDiv = document.getElementById('admin-success');
+            const errorDiv = document.getElementById('admin-error');
+            const successSpan = document.getElementById('success-message');
+            const errorSpan = document.getElementById('error-message');
+
+            // Ocultar todos los mensajes primero
+            successDiv.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+
+            if (tipo === 'success') {
+                successSpan.textContent = mensaje;
+                successDiv.classList.remove('hidden');
+            } else {
+                errorSpan.textContent = mensaje;
+                errorDiv.classList.remove('hidden');
+            }
+
+            messagesContainer.classList.remove('hidden');
+
+            // Auto-hide después de 5 segundos
+            setTimeout(() => {
+                messagesContainer.classList.add('hidden');
+            }, 5000);
+        }
     </script>
     @endpush
 </x-app-layout>

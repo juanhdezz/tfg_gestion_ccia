@@ -160,13 +160,19 @@ private function dentroDePlazoCompensaciones()
             return back()->withInput()
                          ->with('error', 'Error al crear el proyecto: ' . $e->getMessage());
         }
-    }
-
-    /**
+    }    /**
      * Mostrar detalles de un proyecto específico
      */
     public function show(Proyecto $proyecto)
     {
+        // Verificar permisos: solo el responsable del proyecto o administradores pueden ver el proyecto
+        $usuario = Auth::user();
+        $esAdminOGestor = $usuario->hasAnyRole(['admin', 'secretario', 'subdirectorDocente']);
+        
+        if (!$esAdminOGestor && $proyecto->id_responsable !== $usuario->id_usuario) {
+            abort(403, 'No tienes permisos para ver este proyecto.');
+        }
+        
         // Cargar la relación con el responsable
         $proyecto->load('responsable');
         
@@ -328,11 +334,11 @@ private function dentroDePlazoCompensaciones()
 // }
 
 /**
- * Asigna compensación al responsable del proyecto
+ * Asignar compensación individual (solo para administradores)
  */
 public function asignarCompensacion(Request $request, Proyecto $proyecto)
 {
-    // Verificar permisos y plazo
+    // Verificar permisos (solo administradores)
     if (!Auth::user()->hasAnyRole(['admin', 'secretario', 'subdirectorDocente'])) {
         return redirect()->back()->with('error', 'No tienes permisos para esta acción.');
     }
@@ -341,35 +347,30 @@ public function asignarCompensacion(Request $request, Proyecto $proyecto)
         return redirect()->back()->with('error', 'No se pueden modificar compensaciones fuera del plazo establecido.');
     }
     
-    // Solo compensar al responsable del proyecto
-    if (!$proyecto->id_responsable) {
-        return redirect()->back()->with('error', 'El proyecto no tiene responsable asignado.');
-    }
+    // Solo permite asignación individual desde el formulario de administrador
+    $validated = $request->validate([
+        'id_usuario' => 'required|exists:usuario,id_usuario',
+        'creditos_compensacion' => 'required|numeric|min:0|max:100'
+    ]);
     
     try {
-        // Verificar si ya existe una compensación para el responsable
+        // Crear o actualizar compensación individual
         $compensacion = $proyecto->compensaciones()
-                                 ->where('id_usuario', $proyecto->id_responsable)
-                                 ->first();
+                               ->where('id_usuario', $validated['id_usuario'])
+                               ->first();
         
         if ($compensacion) {
-            return redirect()->back()->with('info', 'El responsable ya tiene compensación asignada.');
+            $compensacion->update(['creditos_compensacion' => $validated['creditos_compensacion']]);
+            $mensaje = 'Compensación actualizada correctamente.';
+        } else {
+            $proyecto->compensaciones()->create([
+                'id_usuario' => $validated['id_usuario'],
+                'creditos_compensacion' => $validated['creditos_compensacion']
+            ]);
+            $mensaje = 'Compensación asignada correctamente.';
         }
         
-        // Crear compensación para el responsable con los créditos del proyecto
-        $creditosProyecto = $proyecto->creditos_compensacion_proyecto ?? 0;
-        
-        if ($creditosProyecto <= 0) {
-            return redirect()->back()->with('error', 'El proyecto no tiene créditos de compensación definidos.');
-        }
-        
-        $proyecto->compensaciones()->create([
-            'id_usuario' => $proyecto->id_responsable,
-            'creditos_compensacion' => $creditosProyecto
-        ]);
-        
-        return redirect()->back()
-                         ->with('success', 'Compensación asignada al responsable correctamente.');
+        return redirect()->back()->with('success', $mensaje);
                          
     } catch (\Exception $e) {
         return redirect()->back()
@@ -390,31 +391,121 @@ public function mostrarCompensaciones(Proyecto $proyecto)
         return redirect()->route('proyectos.index')
                         ->with('error', 'No se pueden modificar compensaciones fuera del plazo establecido.');
     }
-    
-    // Obtener usuarios que ya tienen compensaciones en este proyecto
-    $usuariosConCompensaciones = Usuario::whereHas('compensacionesProyecto', function($query) use ($proyecto) {
-        $query->where('id_proyecto', $proyecto->id_proyecto);
-    })->with(['compensacionesProyecto' => function($query) use ($proyecto) {
-        $query->where('id_proyecto', $proyecto->id_proyecto);
-    }])->orderBy('apellidos')->orderBy('nombre')->get();
-    
-    // Obtener todos los usuarios activos para el selector
-    $usuariosDisponibles = Usuario::where('activo', 1)
+      // Obtener miembros del proyecto con sus compensaciones
+    $miembros = $proyecto->miembros()
+                        ->where('miembro_actual', 1)
+                        ->with(['compensacionesProyecto' => function($query) use ($proyecto) {
+                            $query->where('id_proyecto', $proyecto->id_proyecto);
+                        }])
+                        ->orderBy('apellidos')
+                        ->orderBy('nombre')
+                        ->get();
+      // Obtener todos los usuarios activos para el selector (excluyendo los que ya son miembros)
+    $usuariosDisponibles = Usuario::where('miembro_actual', 1)
+                                ->whereNotIn('id_usuario', $miembros->pluck('id_usuario'))
                                 ->orderBy('apellidos')
                                 ->orderBy('nombre')
                                 ->get();
     
-    return view('proyectos.compensaciones', compact('proyecto', 'usuariosConCompensaciones', 'usuariosDisponibles'));
+    // Verificar si hay un reparto pendiente en sesión
+    $sessionKey = "reparto_proyecto_{$proyecto->id_proyecto}";
+    $repartoPendiente = session($sessionKey);
+    
+    return view('proyectos.compensaciones', compact('proyecto', 'miembros', 'usuariosDisponibles', 'repartoPendiente'));
 }
 
 /**
- * Mostrar y gestionar los miembros de un proyecto
+ * Mostrar vista para que el responsable seleccione usuarios para compensación
  */
-public function miembros(Proyecto $proyecto)
+public function repartirCreditos(Proyecto $proyecto)
 {
-    // Si no existe la tabla usuario_proyecto, redirigir o mostrar mensaje
-    return redirect()->route('proyectos.index')
-                    ->with('error', 'La funcionalidad de miembros de proyecto no está disponible.');
+    // Verificar que el usuario actual es el responsable del proyecto o es admin
+    if (Auth::user()->id_usuario !== $proyecto->id_responsable && !Auth::user()->hasAnyRole(['admin', 'coordinador'])) {
+        abort(403, 'Solo el responsable del proyecto puede distribuir los créditos.');
+    }
+    
+    if (!$this->dentroDePlazoCompensaciones()) {
+        return redirect()->route('proyectos.index')
+                        ->with('error', 'No se pueden asignar compensaciones fuera del plazo establecido.');
+    }
+    
+    // Verificar si ya existen compensaciones asignadas
+    $compensacionesExistentes = $proyecto->compensaciones()->exists();
+    
+    if ($compensacionesExistentes) {
+        return redirect()->route('proyectos.index')
+                        ->with('error', 'Este proyecto ya tiene compensaciones asignadas.');
+    }
+    
+    // Verificar que el proyecto tiene créditos asignados
+    if (!$proyecto->creditos_compensacion_proyecto || $proyecto->creditos_compensacion_proyecto <= 0) {
+        return redirect()->route('proyectos.index')
+                        ->with('error', 'Este proyecto no tiene créditos de compensación definidos.');
+    }
+      // Obtener todos los usuarios activos para la selección
+    $usuarios = Usuario::where('miembro_actual', 1)
+                      ->orderBy('apellidos')
+                      ->orderBy('nombre')
+                      ->get();
+    
+    return view('proyectos.repartir_creditos', compact('proyecto', 'usuarios'));
 }
 
+/**
+ * Procesar la distribución de créditos de manera equitativa
+ */
+public function guardarReparto(Request $request, Proyecto $proyecto)
+{
+    // Verificar que el usuario actual es el responsable del proyecto
+    if (Auth::user()->id_usuario !== $proyecto->id_responsable && !Auth::user()->hasAnyRole(['admin', 'coordinador'])) {
+        abort(403, 'Solo el responsable del proyecto puede distribuir los créditos.');
+    }
+    
+    if (!$this->dentroDePlazoCompensaciones()) {
+        return redirect()->back()->with('error', 'No se pueden asignar compensaciones fuera del plazo establecido.');
+    }
+    
+    // Verificar si ya existen compensaciones asignadas
+    $compensacionesExistentes = $proyecto->compensaciones()->exists();
+    
+    if ($compensacionesExistentes) {
+        return redirect()->back()->with('error', 'Este proyecto ya tiene compensaciones asignadas.');
+    }
+    
+    $validated = $request->validate([
+        'usuarios_seleccionados' => 'required|array|min:1',
+        'usuarios_seleccionados.*' => 'exists:usuario,id_usuario'
+    ]);
+    
+    try {
+        $creditosTotales = $proyecto->creditos_compensacion_proyecto;
+        $numUsuarios = count($validated['usuarios_seleccionados']);
+        $creditosPorUsuario = round($creditosTotales / $numUsuarios, 2);
+        
+        // Crear las compensaciones directamente
+        foreach ($validated['usuarios_seleccionados'] as $idUsuario) {
+            $proyecto->compensaciones()->create([
+                'id_usuario' => $idUsuario,
+                'creditos_compensacion' => $creditosPorUsuario
+            ]);
+        }
+        
+        return redirect()->route('proyectos.index')
+                         ->with('success', "Compensaciones asignadas correctamente. {$creditosPorUsuario} créditos por usuario distribuidos entre {$numUsuarios} usuarios.");
+                         
+    } catch (\Exception $e) {
+        return redirect()->back()
+                         ->withInput()
+                         ->with('error', 'Error al asignar las compensaciones: ' . $e->getMessage());
+    }
 }
+
+/**
+ * Método no necesario - se mantiene por compatibilidad de rutas
+ */
+public function limpiarReparto(Request $request, Proyecto $proyecto)
+{
+    return redirect()->back()->with('info', 'Las compensaciones se asignan directamente, no hay reparto temporal que limpiar.');
+}
+
+} // Cierre de la clase ProyectoController

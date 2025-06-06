@@ -98,7 +98,7 @@ class OrdenacionDocenteController extends Controller
             if (Auth::user()->hasRole('admin')) {
                 $data['info_admin'] = $this->obtenerInformacionAdmin();
                 $data['profesores_cursos_anteriores'] = $this->obtenerProfesoresCursosAnteriores();
-            }            $fase = 1; // Para simular y ver que tal las vistas, se puede cambiar a 2 o 3
+            }            //$fase = -1; // Para simular y ver que tal las vistas, se puede cambiar a 2 o 3
             
              // Según la fase, renderizamos distintas vistas
     if ($fase == -1) {
@@ -1252,7 +1252,7 @@ if (!$usuario->categoriaDocente) {
     /**
      * Registra un log de acción en la tabla de log de ordenación
      */
-    protected function registrarLog($accion, $idAsignatura = null, $tipo = null, $grupo = null, $creditos = null, $detalles = null)
+    protected function registrarLog($accion, $idAsignatura = null, $tipo = null, $grupo = null, $creditos = null)
     {
         $dbSiguiente = $this->getDbSiguiente();
         
@@ -1264,7 +1264,7 @@ if (!$usuario->categoriaDocente) {
             'tipo' => $tipo,
             'grupo' => $grupo,
             'creditos' => $creditos,
-            'detalles' => $detalles
+            
         ]);
     }
     
@@ -2198,8 +2198,7 @@ protected function esTFM($posgrado)
             }
 
             // Registrar la acción en el log
-            $this->registrarLog('Admin: Avanzar Turno', null, null, null, null, 
-                'Turno cambiado de ' . $turnoAnterior . ' a ' . $turno->turno . ' por admin');
+            $this->registrarLog('Admin: Avanzar Turno', null, null, null, null);
 
             return response()->json([
                 'success' => true,

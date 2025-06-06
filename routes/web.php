@@ -56,12 +56,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Dashboard
     Route::get('/dashboard', function () {
         return view('dashboard');
-    })->name('dashboard');
-
-    Route::get('/proyectos/{proyecto}/compensaciones', [ProyectoController::class, 'mostrarCompensaciones'])->name('proyectos.compensaciones');
-    Route::post('/proyectos/{proyecto}/asignar-compensacion', [ProyectoController::class, 'asignarCompensacion'])->name('proyectos.asignarCompensacion');
-
-    Route::post('/usuarios/check-uniqueness', [UsuarioController::class, 'checkUniqueness'])->name('usuarios.check-uniqueness');
+    })->name('dashboard');    Route::post('/usuarios/check-uniqueness', [UsuarioController::class, 'checkUniqueness'])->name('usuarios.check-uniqueness');    /**
+     * GESTIÓN DE PROYECTOS - Accesible para usuarios autenticados (ver sus propios proyectos)
+     */
+    // Rutas de visualización para usuarios (pueden ver sus propios proyectos)
+    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
+    Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
+    
+    // Rutas para distribución directa de créditos (responsables de proyecto)
+    // Sistema simplificado: selección de usuarios → distribución equitativa automática → asignación directa
+    Route::get('proyectos/{proyecto}/repartir-creditos', [ProyectoController::class, 'repartirCreditos'])->name('proyectos.repartirCreditos');
+    Route::post('proyectos/{proyecto}/guardar-reparto', [ProyectoController::class, 'guardarReparto'])->name('proyectos.guardarReparto');
 
     /**
      * IMPERSONACIÓN DE USUARIOS - DEBEN IR AQUÍ, NO EN EL GRUPO ADMIN
@@ -328,25 +333,26 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/{id}/edit', [PlazoController::class, 'edit'])->name('edit');
         Route::put('/{id}', [PlazoController::class, 'update'])->name('update');
         Route::delete('/{id}', [PlazoController::class, 'destroy'])->name('destroy');
-    });
-
-    /**
-     * GESTIÓN DE PROYECTOS
+    });    /**
+     * GESTIÓN DE PROYECTOS - Solo administradores pueden hacer CRUD y gestionar compensaciones individuales
      */
-    // Rutas de recurso para CRUD completo
-    Route::get('proyectos', [ProyectoController::class, 'index'])->name('proyectos.index');
+    // Rutas CRUD que requieren permisos de administrador
     Route::get('proyectos/create', [ProyectoController::class, 'create'])->name('proyectos.create');
     Route::post('proyectos', [ProyectoController::class, 'store'])->name('proyectos.store');
-    Route::get('proyectos/{proyecto}', [ProyectoController::class, 'show'])->name('proyectos.show');
     Route::get('proyectos/{proyecto}/edit', [ProyectoController::class, 'edit'])->name('proyectos.edit');
     Route::put('proyectos/{proyecto}', [ProyectoController::class, 'update'])->name('proyectos.update');
     Route::delete('proyectos/{proyecto}', [ProyectoController::class, 'destroy'])->name('proyectos.destroy');
 
-    // Rutas adicionales de proyectos
+    // Rutas adicionales de proyectos para administradores
     Route::patch('proyectos/{proyecto}/cambiar-estado', [ProyectoController::class, 'cambiarEstado'])
         ->name('proyectos.cambiarEstado');
     Route::get('proyectos/{proyecto}/miembros', [ProyectoController::class, 'miembros'])
         ->name('proyectos.miembros');
+    
+    // Rutas de compensaciones individuales (solo administradores)
+    // Los responsables usan las rutas de distribución automática en la sección de usuarios autenticados
+    Route::get('proyectos/{proyecto}/compensaciones', [ProyectoController::class, 'mostrarCompensaciones'])->name('proyectos.compensaciones');
+    Route::post('proyectos/{proyecto}/asignar-compensacion', [ProyectoController::class, 'asignarCompensacion'])->name('proyectos.asignarCompensacion');
 });
 
 // Rutas para ordenación docente

@@ -45,15 +45,21 @@ class Proyecto extends BaseModel
 public function compensaciones()
 {
     return $this->hasMany(CompensacionProyecto::class, 'id_proyecto', 'id_proyecto');
-}
-
-    /**
-     * Obtiene todos los usuarios vinculados al proyecto
+}    /**
+     * Obtiene todos los usuarios que tienen compensación en este proyecto
      */
     public function usuarios()
     {
-        return $this->belongsToMany(Usuario::class, 'usuario_proyecto', 'id_proyecto', 'id_usuario')
-                    ->withPivot('rol', 'fecha_inicio', 'fecha_fin');
+        return $this->belongsToMany(Usuario::class, 'compensacion_proyecto', 'id_proyecto', 'id_usuario')
+                    ->withPivot('creditos_compensacion');
+    }
+
+    /**
+     * Obtiene los miembros del proyecto (alias para usuarios)
+     */
+    public function miembros()
+    {
+        return $this->usuarios();
     }
 
     /**
@@ -78,18 +84,21 @@ public function compensaciones()
     public function esResponsable($idUsuario)
     {
         return $this->id_responsable == $idUsuario;
+    }    public function responsableTieneCompensacion()
+    {
+        if (!$this->id_responsable) {
+            return false;
+        }
+        
+        // Forzar recarga de compensaciones si es necesario
+        if (!$this->relationLoaded('compensaciones')) {
+            $this->load('compensaciones');
+        }
+        
+        return $this->compensaciones()
+                    ->where('id_usuario', $this->id_responsable)
+                    ->exists();
     }
-
-    public function responsableTieneCompensacion()
-{
-    if (!$this->id_responsable) {
-        return false;
-    }
-    
-    return $this->compensaciones()
-                ->where('id_usuario', $this->id_responsable)
-                ->exists();
-}
 
     /**
      * Comprueba si un usuario es miembro del proyecto

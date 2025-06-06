@@ -64,7 +64,7 @@
             <div class="p-4">
                 @if($creditos_compensacion > 0)
                     <p class="text-gray-700 dark:text-gray-300 mb-2">Total de créditos de compensación: <strong>{{ $creditos_compensacion }}</strong></p>
-                    <p class="text-gray-700 dark:text-gray-300">Para ver el detalle de sus compensaciones docentes contacte con el responsable del departamento.</p>
+                    {{-- <p class="text-gray-700 dark:text-gray-300">Para ver el detalle de sus compensaciones docentes contacte con el responsable del departamento.</p> --}}
                 @else
                     <p class="text-gray-700 dark:text-gray-300">No tiene compensaciones docentes aplicadas.</p>
                 @endif

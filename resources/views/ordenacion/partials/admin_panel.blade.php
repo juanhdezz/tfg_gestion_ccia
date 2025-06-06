@@ -123,13 +123,12 @@
 <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
     <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Controles del Sistema</h3>
     
-    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <button id="avanzar-turno-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors">
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">        <button id="avanzar-turno-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors">
             🔄 Avanzar Turno
         </button>
-        <button id="cambiar-fase-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors">
+        <button id="cambiar-fase-panel-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors">
             🔧 Cambiar Fase
-        </button>        <button id="exportar-datos-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors">
+        </button><button id="exportar-datos-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors">
             📊 Exportar Datos
         </button>
         <button id="reiniciar-sistema-btn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded text-sm transition-colors">
@@ -159,11 +158,9 @@
                 </label>
                 <select id="nueva-fase" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     <option value="-1">Fase -1: Proceso Inactivo</option>
-                    <option value="0">Fase 0: Configuración Inicial</option>
                     <option value="1">Fase 1: Mantener Asignaturas</option>
                     <option value="2">Fase 2: Asignación por Turnos</option>
                     <option value="3">Fase 3: Asignación Libre</option>
-                    <option value="4">Fase 4: Proceso Finalizado</option>
                 </select>
             </div>
             <div class="mt-6 flex justify-end space-x-3">
@@ -265,9 +262,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
-    
-    // Cambiar Fase - Mostrar modal
-    document.getElementById('cambiar-fase-btn')?.addEventListener('click', function() {
+      // Cambiar Fase - Mostrar modal
+    document.getElementById('cambiar-fase-panel-btn')?.addEventListener('click', function() {
         document.getElementById('cambiar-fase-modal').classList.remove('hidden');
     });
     
@@ -287,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
                 },
-                body: JSON.stringify({ fase: parseInt(nuevaFase) })
+                body: JSON.stringify({ nueva_fase: parseInt(nuevaFase) })
             })
             .then(response => response.json())
             .then(data => {

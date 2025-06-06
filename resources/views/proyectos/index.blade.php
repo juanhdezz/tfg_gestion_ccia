@@ -152,21 +152,34 @@
         <a href="{{ route('proyectos.show', $proyecto->id_proyecto) }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white text-center py-1 px-2 rounded text-xs" title="Ver detalles">
             <span>Ver</span>
         </a>
-        
-        @if($esAdminOGestor)
+          @if($esAdminOGestor)
             <a href="{{ route('proyectos.edit', $proyecto->id_proyecto) }}" class="inline-block bg-blue-500 hover:bg-blue-600 text-white text-center py-1 px-2 rounded text-xs" title="Editar proyecto">
                 <span>Editar</span>
             </a>
         @endif
+          <!-- Botón de distribución de créditos para responsables del proyecto -->
+        @if(Auth::user()->id_usuario === $proyecto->id_responsable || $esAdminOGestor)
+            @if(!$proyecto->compensaciones()->exists() && $proyecto->activo)
+                <a href="{{ route('proyectos.repartirCreditos', $proyecto->id_proyecto) }}" class="inline-block bg-orange-500 hover:bg-orange-600 text-white text-center py-1 px-2 rounded text-xs" title="Distribuir créditos del proyecto">
+                    <span>Distribuir</span>
+                </a>
+            @endif
+        @endif
         
-        <!-- Estado de compensación - visible para todos los usuarios -->
-        @if($proyecto->responsableTieneCompensacion())
-            <span class="inline-block bg-green-500 text-white text-center py-1 px-2 rounded text-xs cursor-default" title="Responsable ya compensado">
+        <!-- Enlaces de compensaciones para administradores -->
+        @if($puedeAsignarCompensaciones)
+            <a href="{{ route('proyectos.compensaciones', $proyecto->id_proyecto) }}" class="inline-block bg-purple-500 hover:bg-purple-600 text-white text-center py-1 px-2 rounded text-xs" title="Gestionar compensaciones">
+                <span>Compensaciones</span>
+            </a>
+        @endif
+          <!-- Estado de compensación - visible para todos los usuarios -->
+        @if($proyecto->compensaciones()->exists())
+            <span class="inline-block bg-green-500 text-white text-center py-1 px-2 rounded text-xs cursor-default" title="Proyecto ya tiene compensaciones distribuidas">
                 Compensado
             </span>
         @else
             @if($puedeAsignarCompensaciones)
-                <!-- Solo los gestores pueden compensar -->
+                <!-- Solo los gestores pueden compensar al responsable -->
                 <form action="{{ route('proyectos.asignarCompensacion', $proyecto->id_proyecto) }}" method="POST" class="inline-block">
                     @csrf
                     <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white text-center py-1 px-2 rounded text-xs" title="Compensar al responsable">

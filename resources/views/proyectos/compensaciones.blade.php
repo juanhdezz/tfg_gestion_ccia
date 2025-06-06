@@ -1,15 +1,22 @@
 <!-- filepath: c:\xampp\htdocs\laravel\tfg_gestion_ccia\resources\views\proyectos\compensaciones.blade.php -->
 <x-app-layout>
     <div class="container mx-auto p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <div class="flex justify-between items-center mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">            <div class="flex justify-between items-center mb-6">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Compensaciones del Proyecto</h1>
                     <p class="text-gray-600 dark:text-gray-400 mt-1">{{ $proyecto->codigo }} - {{ $proyecto->titulo }}</p>
                 </div>
-                <a href="{{ route('proyectos.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded transition duration-300">
-                    Volver a Proyectos
-                </a>
+                <div class="flex gap-3">
+                    @if(Auth::user()->id_usuario === $proyecto->id_responsable || Auth::user()->hasAnyRole(['admin', 'coordinador']))
+                        <a href="{{ route('proyectos.repartirCreditos', $proyecto->id_proyecto) }}" 
+                           class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition duration-300">
+                            Distribuir Créditos
+                        </a>
+                    @endif
+                    <a href="{{ route('proyectos.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded transition duration-300">
+                        Volver a Proyectos
+                    </a>
+                </div>
             </div>
 
             @if(session('success'))
@@ -22,9 +29,7 @@
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
                     <p>{{ session('error') }}</p>
                 </div>
-            @endif
-
-            <!-- Información del proyecto -->
+            @endif            <!-- Información del proyecto -->
             <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-md mb-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -42,9 +47,8 @@
                 </div>
             </div>
 
-            <!-- Miembros del proyecto con compensaciones -->
-            <div class="mb-8">
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Miembros del Proyecto</h2>
+            <!-- Usuarios con compensaciones asignadas -->            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Usuarios con Compensaciones Asignadas</h2>
                 
                 @if($miembros->count() > 0)
                     <div class="overflow-x-auto">
@@ -60,7 +64,8 @@
                                 @foreach($miembros as $miembro)
                                     <tr>
                                         <td class="px-6 py-4 text-gray-800 dark:text-gray-200">
-                                            {{ $miembro->nombre }} {{ $miembro->apellidos }}
+                                            <div class="font-medium">{{ $miembro->nombre }} {{ $miembro->apellidos }}</div>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ $miembro->email }}</div>
                                         </td>
                                         <td class="px-6 py-4 text-gray-800 dark:text-gray-200">
                                             @php
@@ -87,12 +92,9 @@
                         </table>
                     </div>
                 @else
-                    <p class="text-gray-500 dark:text-gray-400">No hay miembros asignados a este proyecto.</p>
+                    <p class="text-gray-500 dark:text-gray-400">No hay usuarios con compensaciones asignadas a este proyecto.</p>
                 @endif
-            </div>
-
-            <!-- Asignar compensación a usuarios no miembros -->
-            @if($usuariosDisponibles->count() > 0)
+            </div>            <!-- Asignar compensación a usuario externo -->            @if($usuariosDisponibles->count() > 0)
                 <div>
                     <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Asignar Compensación a Usuario Externo</h2>
                     

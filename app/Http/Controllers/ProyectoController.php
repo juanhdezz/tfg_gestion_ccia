@@ -391,8 +391,7 @@ public function mostrarCompensaciones(Proyecto $proyecto)
         return redirect()->route('proyectos.index')
                         ->with('error', 'No se pueden modificar compensaciones fuera del plazo establecido.');
     }    // Obtener usuarios que ya tienen compensaciones en este proyecto
-    $miembros = Usuario::where('miembro_actual', 1)
-                      ->with(['compensacionesProyecto' => function($query) use ($proyecto) {
+    $miembros = Usuario::with(['compensacionesProyecto' => function($query) use ($proyecto) {
                           $query->where('id_proyecto', $proyecto->id_proyecto);
                       }])
                       ->whereHas('compensacionesProyecto', function($query) use ($proyecto) {
@@ -403,8 +402,7 @@ public function mostrarCompensaciones(Proyecto $proyecto)
                       ->get();
       
     // Obtener todos los usuarios activos para el selector (excluyendo los que ya tienen compensaciones)
-    $usuariosDisponibles = Usuario::where('miembro_actual', 1)
-                                ->whereDoesntHave('compensacionesProyecto', function($query) use ($proyecto) {
+    $usuariosDisponibles = Usuario::whereDoesntHave('compensacionesProyecto', function($query) use ($proyecto) {
                                     $query->where('id_proyecto', $proyecto->id_proyecto);
                                 })
                                 ->orderBy('apellidos')

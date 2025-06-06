@@ -77,8 +77,8 @@ Cada funcionalidad está segmentada por perfil de usuario:
 ## 🚀 Instalación rápida
 
 ```bash
-git clone https://github.com/tuusuario/intranet-ccia.git
-cd intranet-ccia
+git clone https://github.com/juanhdezz/tfg_gestion_ccia
+cd tfg_gestion_ccia
 cp .env.example .env
 composer install
 php artisan migrate --seed
@@ -113,7 +113,7 @@ Todo el desarrollo está documentado, incluyendo:
 **Juan Ricardo Hernández Sánchez-Agesta**  
 Estudiante del Doble Grado en Ingeniería Informática y ADE  
 Universidad de Granada – ETSIIT  
-[LinkedIn](https://linkedin.com/in/tu-usuario) | [Portfolio](https://tuweb.dev)
+[LinkedIn](https://www.linkedin.com/in/juan-hernandez-sag/) | [Portfolio](https://portfolio-web-juanhdezzs-projects.vercel.app/)
 
 ---
 

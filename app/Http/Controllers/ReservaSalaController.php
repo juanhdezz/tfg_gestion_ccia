@@ -258,7 +258,7 @@ class ReservaSalaController extends Controller
             if ($usuario) {
                 // Enviar notificación por correo
                 //Temporalmente uso mi correo para pruebas
-                $response = Mail::to('jhernandezsanchezagesta@gmail.com')->send(new Notification($usuario, $reserva, 'Validada'));
+                $response = Mail::to($usuario->correo)->send(new Notification($usuario, $reserva, 'Validada'));
                 if ($response) {
                     Log::info('Correo enviado exitosamente a ' . $usuario->email . ' (validación automática)');
                 } else {
@@ -1015,7 +1015,7 @@ public function procesarValidacion(Request $request, $id_sala, $fecha, $hora_ini
              ($nuevoEstado === 'Rechazada' ? ' - ' . $request->observaciones : '')
          ]);
          //Temporalmente uso mi correo para pruebas
-        $response = Mail::to('jhernandezsanchezagesta@gmail.com')->send(new Notification($usuario, $nuevaReserva, $nuevoEstado));
+        $response = Mail::to($usuario->correo)->send(new Notification($usuario, $nuevaReserva, $nuevoEstado));
         if ($response) {
             Log::info('Correo enviado exitosamente a ' . $usuario->email);
         } else {

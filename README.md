@@ -1,12 +1,39 @@
-# 🧠 Intranet CCIA - Gestión Interna de Departamento
+# 📚 Trabajo Final de Grado en Ingeniería Informática - Desarrollo de aplicación web para la gestión Interna del departamento de Ciencias de la Computación e Inteligencia Artificial
 
-Proyecto desarrollado como Trabajo de Fin de Grado (TFG) en Ingeniería Informática, orientado a modernizar y reemplazar una aplicación obsoleta de gestión administrativa interna del Departamento de Ciencias de la Computación e Inteligencia Artificial (CCIA) de la Universidad de Granada.
+## Resumen del TFG
 
-## 🎯 Objetivo
+**Título:** Desarrollo de aplicación web para la gestión Interna del departamento de Ciencias de la Computación e Inteligencia Artificial  
+**Autor:** Juan Ricardo Hernández Sánchez-Agesta  
+**Director:** Miguel García Silvente
+
+**Contexto:**  
+El Departamento de Ciencias de la Computación e Inteligencia Artificial (CCIA) de la Universidad de Granada utilizaba una herramienta obsoleta, desarrollada en PHP puro, difícil de mantener y escalar. La falta de acceso al código fuente hacía inviable su migración directa. Este proyecto reconstruye desde cero la aplicación para modernizarla y adaptarla a las necesidades actuales.
+
+**Objetivos:**
+- Sustituir una aplicación heredada por un sistema moderno basado en Laravel 11 con MVC.
+- Rediseñar la base de datos y la interfaz de usuario.
+- Implementar control de acceso por roles y permisos.
+- Garantizar escalabilidad, accesibilidad y seguridad.
+- Aplicar una metodología ágil Kanban para un desarrollo iterativo e incremental.
+
+**Metodología:**  
+Desarrollo web con Laravel 11, Blade, TailwindCSS y Alpine.js. Se adoptó una arquitectura MVC en tres capas, con control de versiones Git y gestión visual de tareas mediante Kanban. El sistema se construyó de forma iterativa con entregas frecuentes y validación continua mediante reuniones con el tutor.
+
+**Resultados:**  
+- Aplicación modular, mantenible y escalable adaptada a los flujos reales del departamento.
+- Mejora significativa en la experiencia de usuario y en la organización de los procesos administrativos.
+- Base de datos optimizada y segura.
+- Documentación técnica detallada y sistema preparado para ampliaciones futuras.
+
+**Conclusiones:**  
+El nuevo sistema sustituye eficazmente al anterior, solucionando sus limitaciones técnicas y funcionales. Se recomienda como futuras líneas de trabajo la integración de servicios de inteligencia artificial para automatizar tareas administrativas, y mejoras en la experiencia de usuario mediante interfaces más inteligentes y personalizadas.
+
+
+## Objetivo
 
 Desarrollar desde cero una **aplicación web moderna, segura, escalable y mantenible**, que reemplace un sistema legacy en PHP puro, utilizando **Laravel 11**, **Blade**, **TailwindCSS** y una **base de datos MySQL optimizada**. El sistema gestiona múltiples procesos administrativos no triviales como asignaciones docentes, tutorías, reservas de salas, y solicitudes académicas.
 
-## 🏗️ Arquitectura del Sistema
+## Arquitectura del Sistema
 
 La aplicación está diseñada en base al patrón **MVC (Modelo-Vista-Controlador)** y organizada en **cuatro capas**:
 
@@ -15,7 +42,7 @@ La aplicación está diseñada en base al patrón **MVC (Modelo-Vista-Controlado
 - **Base de Datos (MySQL)**: Diseño normalizado, relacional y optimizado para operaciones complejas.
 - **Cliente (navegador)**: Accede vía HTTP a través de vistas renderizadas en el servidor.
 
-## 🧩 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 ├── app/                  # Controladores, modelos, servicios, políticas
@@ -56,11 +83,16 @@ La aplicación está diseñada en base al patrón **MVC (Modelo-Vista-Controlado
 
 - Gestión de usuarios con roles personalizados
 - Gestión de asignaturas, asignaciones y grupos
-- Sistema de tutorías por horarios semanales
-- Control y visualización de plazos administrativos
-- Módulo de reservas de salas con validación y notificaciones
-- Sistema de solicitudes académicas con flujos de aprobación
-- Doble base de datos para cursos actuales y próximos
+- Gestión de despachos
+- Gestión de asignaciones
+- Sistema de tutorías con alta personalización 
+- Página de configuración de ciertos parámetros
+- Gestión de proyectos de investigación (Operaciones CRUD + Control de compensaciones y distribución de créditos)
+- Control y visualización de plazos administrativos que habilitan funcionalidades
+- Módulo de reservas de salas con validación y notificaciones por correo electrónico
+- Gestión de salas para las reservas
+- Sistema de solicitudes de libros con cargo a múltiples (limitados) motivos académicos con flujos de aprobación estrictos y porocedurales
+- Gestión doble de las bases de datos para cursos actuales y próximos
 
 ## 🗂️ Diseño basado en roles
 
@@ -69,22 +101,13 @@ Cada funcionalidad está segmentada por perfil de usuario:
 | Rol           | Funcionalidades disponibles |
 |---------------|-----------------------------|
 | Admin         | Gestión total del sistema   |
-| Profesor      | Acceso a asignaciones, tutorías, solicitudes |
-| Becario       | Funcionalidades limitadas por asignación |
-| Invitado      | Acceso parcial y controlado |
-| Estudiante    | Consulta limitada de asignaturas |
+| Secretario      | Gestión total del CURSO ACTUAL |
+| SubdirectorDocente       | Funcionalidades relacionadas con la ordenación docente |
+| GestorOrdenacionDocente      | Funcionalidades correctivas relacionadas con la ordenación docente |
+| Contratado    | Acceso a información personal (Asignaturas, proyectos, etc.) |
+| General    | Consulta limitada a definir por el administrador en cada momento |
 
-## 🚀 Instalación rápida
 
-```bash
-git clone https://github.com/juanhdezz/tfg_gestion_ccia
-cd tfg_gestion_ccia
-cp .env.example .env
-composer install
-php artisan migrate --seed
-npm install && npm run dev
-php artisan serve
-```
 
 ## 📚 Documentación
 
@@ -95,31 +118,17 @@ Todo el desarrollo está documentado, incluyendo:
 - Scripts de sanitización de datos
 - Guía de despliegue y pruebas
 
-## 🧠 Aprendizajes clave
 
-> “El mayor reto fue transformar procesos administrativos complejos, sin código previo, en funcionalidades sólidas y mantenibles, aprendiendo Laravel desde cero. Si sobreviví a eso, ¡puedo con cualquier monolito!”
 
-## 🧭 Futuras mejoras
+## Futuras mejoras
 
-- Integración con APIs externas para docencia y bibliotecas
+- Integración con APIs externas para docencia , bibliotecas y plataformas
 - Incorporación de analítica y dashboards predictivos
+- Implementación de sistema de elección de docencia basados en algoritmos de ML
 - Soporte multilingüe (ES/EN)
-- Migración a arquitectura de microservicios
 
 ---
 
-## 👨‍💻 Autor
-
-**Juan Ricardo Hernández Sánchez-Agesta**  
-Estudiante del Doble Grado en Ingeniería Informática y ADE  
-Universidad de Granada – ETSIIT  
-[LinkedIn](https://www.linkedin.com/in/juan-hernandez-sag/) | [Portfolio](https://portfolio-web-juanhdezzs-projects.vercel.app/)
-
----
-
-## 📝 Licencia
-
-Este proyecto se publica bajo la licencia MIT. Si lo usas, cita al autor. Si mejoras algo, comparte. Y si lo rompes… haz una issue primero 😉.
 
 
 
@@ -147,9 +156,10 @@ Este proyecto se publica bajo la licencia MIT. Si lo usas, cita al autor. Si mej
 
 
 
-## 🚀 Instrucciones de Instalación de la Aplicación
 
-### 📌 Requisitos Previos
+## Instrucciones de Instalación de la Aplicación
+
+### Requisitos Previos
 
 Antes de comenzar, asegúrate de tener instalados los siguientes programas:
 
@@ -160,7 +170,7 @@ Antes de comenzar, asegúrate de tener instalados los siguientes programas:
 
 ---
 
-### 🏗️ Instalación Paso a Paso
+### Instalación Paso a Paso
 
 #### 1️⃣ Instalar XAMPP
 

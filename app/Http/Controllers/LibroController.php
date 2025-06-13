@@ -585,7 +585,7 @@ public function store(Request $request)
             $libro = Libro::find($id_libro);
 
             try {
-                Mail::to('jhernandezsanchezagesta@gmail.com')->send(new Notification($usuario, $libro, 'Aceptado'));
+                Mail::to($usuario->correo)->send(new Notification($usuario, $libro, 'Aceptado'));
                 Log::info("Correo de aprobación enviado exitosamente a {$usuario->email} para libro con ID: {$id_libro}");
             } catch (\Exception $e) {
                 Log::error("Error al enviar correo de aprobación a {$usuario->email}: " . $e->getMessage());
@@ -1140,10 +1140,10 @@ public function store(Request $request)
                 $libro = Libro::find($id_libro);
 
                 try {
-                    Mail::to('jhernandezsanchezagesta@gmail.com')->send(new Notification($usuario, $libro, 'Biblioteca'));
-                    Log::info("Correo de notificación biblioteca enviado exitosamente a {$usuario->email} para libro con ID: {$id_libro}");
+                    Mail::to($usuario->correo)->send(new Notification($usuario, $libro, 'Biblioteca'));
+                    Log::info("Correo de notificación biblioteca enviado exitosamente a {$usuario->correo} para libro con ID: {$id_libro}");
                 } catch (\Exception $e) {
-                    Log::error("Error al enviar correo de notificación biblioteca a {$usuario->email}: " . $e->getMessage());
+                    Log::error("Error al enviar correo de notificación biblioteca a {$usuario->correo}: " . $e->getMessage());
                 }
             }
 
